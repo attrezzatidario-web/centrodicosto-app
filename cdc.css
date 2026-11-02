@@ -3632,3 +3632,9 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 .am-r:last-child { border-bottom: 0; }
 .am-r small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
 .am-r > b { white-space: nowrap; }
+
+/* v148: prodotto senza foto — simbolo al posto del riquadro grigio */
+.pv-img:not(.has):not(.sm), .pv-card .pv-img:not(.has) { background: radial-gradient(circle at 30% 20%, #fff, color-mix(in srgb, var(--accent) 9%, #fff)); border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line)); }
+.pv-img b.ph { display: grid; place-items: center; width: 42%; max-width: 64px; aspect-ratio: 1; font-size: 0; color: color-mix(in srgb, var(--accent) 60%, var(--muted)); opacity: .9; }
+.pv-img b.ph svg { width: 100%; height: 100%; display: block; }
+.pv-img.big b.ph { max-width: 84px; }

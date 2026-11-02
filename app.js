@@ -3395,7 +3395,9 @@
   const pvHexX = {};
   const pvHex = name => { const N = amNorm(name), parts = N.split('/').map(s => s.trim()).filter(Boolean); const one = p => { const h = PV_COL.find(([k]) => p.includes(k)); return h ? h[1] : pvHexX[p] || '#c9ccd1'; }; if (parts.length > 1) { const a = one(parts[0]), b = one(parts[1]); return a.startsWith('linear') ? a : `linear-gradient(135deg,${a} 0 55%,${b} 55%)`; } return one(N); };
   const pvSw = name => `<i class="pv-sw" style="background:${pvHex(name)}" title="${esc(name)}"></i>`;
-  const pvThumb = (cat, it, c, cls = '') => { const cc = c || it.c[0], u = pvImg(cat, cc), sm = cls === 'sm'; return `<span class="pv-img ${cls}${u ? ' has' : ''}"${sm ? ` style="--sw:${pvHex(cc[1])}"` : ''}>${u ? pvImgTag(u, cls === 'big' ? 'f' : 't') : ''}${sm ? '' : `<b>${esc(it.n.split(/\s+/).map(w => w[0]).join('').slice(0, 2))}</b>`}</span>`; };
+  // v148: prodotto senza foto → simbolo (scatola) al posto del riquadro grigio con le iniziali
+  const PV_PH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>';
+  const pvThumb = (cat, it, c, cls = '') => { const cc = c || it.c[0], u = pvImg(cat, cc), sm = cls === 'sm'; return `<span class="pv-img ${cls}${u ? ' has' : ''}"${sm ? ` style="--sw:${pvHex(cc[1])}"` : ''}>${u ? pvImgTag(u, cls === 'big' ? 'f' : 't') : ''}${sm || u ? '' : `<b class="ph">${PV_PH}</b>`}</span>`; };
   // preventivi salvati in Config come «pv:id»
   const pvList = () => Object.keys(db.config || {}).filter(k => k.startsWith('pv:')).map(k => ({ ...cfg(k), key: k })).filter(p => p && p.id).sort((a, b) => String(b.num).localeCompare(String(a.num)));
   const pvGet = id => { const p = cfg('pv:' + id); return p ? JSON.parse(JSON.stringify(p)) : null; };
