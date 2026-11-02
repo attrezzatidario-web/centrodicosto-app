@@ -2504,6 +2504,9 @@
   const gasCC = () => isMain() ? 'ATTREZZATI' : '';
   const gasNomi = () => { const c = cfg('gasNomi'); return c && typeof c === 'object' ? c : {}; };
   const gasName = p => String(gasNomi()[plate(p)] || '').trim();
+  // v138: anagrafica dei mezzi { TARGA: { dip: [id dipendenti che possono segnare i rifornimenti], centro } }
+  const gasMezzi = () => { const c = cfg('gasMezzi'); return c && typeof c === 'object' ? c : {}; };
+  const gasDrv = p => [].concat((gasMezzi()[plate(p)] || {}).dip || []).map(id => { const d = (db.dipendenti || []).find(x => String(x.id) === String(id)); return d ? `${d.nome || ''} ${String(d.cognome || '').slice(0, 1)}.`.trim() : ''; }).filter(Boolean);
   const gasRentTot = () => Object.values(gasRent()).reduce((a, v) => a + num(v), 0);
   const monthSpan = (a, b) => { const o = []; let [y, m] = a.split('-').map(Number); const [y2, m2] = b.split('-').map(Number); while (y < y2 || (y === y2 && m <= m2)) { o.push(`${y}-${pad(m)}`); if (++m > 12) { m = 1; y++; } } return o; };
   const gasRows = () => db.gasolio || [];
@@ -2549,7 +2552,9 @@
     const warn = gasOk() ? '' : `<div class="card gl-warn"><b>Aggiorna lo script Google per salvare i dati del gasolio.</b><span>Lo script collegato è la versione ${esc(db.v || '—')}: serve la cdc-1.2 (Code.gs nuovo). Finché non lo aggiorni l'importazione è bloccata.</span></div>`;
     const perL = gasP ? mLabel(gasP) : months.length ? `${mLabel(months[0])} – ${mLabel(months[months.length - 1])}` : '';
     if (!rows.length) {
-      body.innerHTML = warn + `<div class="gl-hero ga-hero gl-hero-empty"><div class="gh-top"><div class="gh-art">${gasArt(0)}</div><div class="gh-main"><span class="gh-lbl">${isMain() ? 'Gasolio Attrezzati' : 'Gasolio'}</span><h3>Nessun rifornimento registrato</h3><p>Importa il tuo file Excel con «Importa» oppure aggiungi un rifornimento.</p></div></div></div>`;
+      const reg = [...new Set([...Object.keys(gasRent()), ...Object.keys(gasMezzi())].map(plate))];
+      body.innerHTML = warn + `<div class="gl-hero ga-hero gl-hero-empty"><div class="gh-top"><div class="gh-art">${gasArt(0)}</div><div class="gh-main"><span class="gh-lbl">${isMain() ? 'Gasolio Attrezzati' : 'Gasolio'}</span><h3>Nessun rifornimento registrato</h3><p>Aggiungi i tuoi mezzi con «+ Mezzo», poi registra i rifornimenti o importa il file Excel.</p></div></div></div>` +
+        (reg.length ? `<div class="card"><div class="card-h"><h3>Mezzi</h3><span class="muted small">${reg.length} registrati</span></div><div class="ga-veh">${reg.map(p => `<div class="gv-c" data-gname="${esc(p)}"><div class="gv-top"><span class="gv-plate"><i>I</i><b>${esc(plateFmt(p))}</b></span></div>${gasName(p) ? `<div class="gv-nick">${esc(gasName(p))}</div>` : ''}${gasDrv(p).length ? `<div class="gv-name">${esc(gasDrv(p).join(', '))}</div>` : ''}</div>`).join('')}</div></div>` : '');
       return;
     }
     const V = gasVehicles(all);
@@ -2581,7 +2586,7 @@
         </div></div>
         <div class="gh-kpis">${K.map(([l, , , s], i) => `<div class="gh-k"><span>${l}</span><b data-gak="${i}">0</b><small>${s}</small></div>`).join('')}</div>
       </div>
-      <div class="card"><div class="card-h"><h3>${Object.keys(RENT).length ? 'Mezzi principali' : 'Mezzi'}</h3><span class="ga-vh"><span class="muted small">clic per vedere i rifornimenti</span><button class="btn sm" id="ga-allv" type="button"></button></span></div><div class="ga-veh" id="ga-veh"></div></div>
+      <div class="card"><div class="card-h"><h3>${Object.keys(RENT).length || Object.keys(gasMezzi()).length ? 'Mezzi principali' : 'Mezzi'}</h3><span class="ga-vh"><span class="muted small">clic per vedere i rifornimenti</span><button class="btn sm" id="ga-allv" type="button"></button></span></div><div class="ga-veh" id="ga-veh"></div></div>
       <div class="card"><div class="card-h"><h3>Costo dei mezzi a noleggio</h3><span class="ga-vh"><span class="muted small">${rm.length} ${rm.length === 1 ? 'mese' : 'mesi'} di noleggio · ${ivaLbl()}</span><button class="btn sm" id="ga-rent" type="button">Nomi e noleggi</button></span></div><div class="mx-wrap" id="ga-cost"></div></div>
       <div class="gl-2">
         <div class="card"><div class="card-h"><h3>${gasP ? 'Litri giorno per giorno' : 'Litri mese per mese'}</h3><span class="muted small" id="ga-tr-s"></span></div><div class="mbars ga-bars" id="ga-tr"></div></div>
@@ -2600,7 +2605,7 @@
     $$('[data-gak]', body).forEach(el => { const i = +el.dataset.gak; el._v = 0; if (K[i][1]) countTo(el, K[i][1], K[i][2]); else el.textContent = K[i][2](0); });
 
     // mezzi
-    const mainP = Object.keys(RENT).map(plate);
+    const mainP = [...new Set([...Object.keys(RENT), ...Object.keys(gasMezzi())].map(plate))];
     const vs = [...new Set([...mainP, ...plates])].map(p => { const x = V.get(p) || { s: [], uso: '—', owner: '', seg: new Map() }; const v = rows.filter(r => plate(r.targa) === p); let k = 0, kl = 0; x.seg.forEach((d, id) => { if (v.some(r => r.id === id)) { k += d; kl += num(v.find(r => r.id === id).litri); } }); const last = v.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)))[0]; const kms = x.s.map(r => num(r.km)).filter(Boolean); return { p, v, l: gSum(v, 'litri'), k, cons: kl ? k / kl : 0, uso: x.uso, owner: x.owner, last, odo: kms.length ? Math.max(...kms) : 0 }; }).sort((a, b) => b.l - a.l);
     vs.forEach(x => { x.main = mainP.includes(x.p); x.rent = num(RENT[x.p] ?? RENT[Object.keys(RENT).find(k => plate(k) === x.p)]); x.fuel = gCost(x.v); });
     vs.sort((a, b) => (b.main - a.main) || (a.main ? mainP.indexOf(a.p) - mainP.indexOf(b.p) : b.l - a.l));
@@ -2610,15 +2615,15 @@
     const bAll = $('#ga-allv'); bAll.hidden = !others.length || !mainP.length; bAll.textContent = showAll ? 'Nascondi altri mezzi' : `Altri ${others.length} mezzi`;
     $('#ga-veh').innerHTML = shown.map((x, i) => `<div class="gv-c${gasF.targa === x.p ? ' on' : ''}" data-gtarga="${esc(x.p)}" style="--d:${120 + i * 60}ms">
         <div class="gv-top"><span class="gv-plate"><i>I</i><b>${esc(plateFmt(x.p))}</b></span><span class="gv-l"><b>${L(x.l, 0)}</b><small>${fmtNum(pct(x.l, lit), 0)}%</small></span></div>
-        ${gasName(x.p) ? `<div class="gv-nick" data-gname="${esc(x.p)}" title="Cambia nome">${esc(gasName(x.p))}<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg></div>` : x.main ? `<button type="button" class="gv-addn" data-gname="${esc(x.p)}">+ Dai un nome</button>` : ''}
-        <div class="gv-name">${esc(x.uso)}${x.owner ? ` <em>· ${esc(x.owner)}</em>` : ''}</div>
+        ${gasName(x.p) ? `<div class="gv-nick" data-gname="${esc(x.p)}" title="Cambia nome">${esc(gasName(x.p))}<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg></div>` : `<button type="button" class="gv-addn" data-gname="${esc(x.p)}">${x.main ? '+ Dai un nome' : '+ Registra mezzo'}</button>`}
+        <div class="gv-name">${gasDrv(x.p).length ? `Guida: ${esc(gasDrv(x.p).join(', '))}` : `${esc(x.uso)}${x.owner ? ` <em>· ${esc(x.owner)}</em>` : ''}`}</div>
         <div class="gv-tank"><i style="width:${(x.l / mv * 100).toFixed(1)}%"></i></div>
-        ${x.main ? `<div class="gv-rent"><span>Noleggio <b>${eur0(x.rent * gMul())}</b>/mese</span><span>Totale periodo <b>${eur0((x.rent * rm.length + x.fuel) * gMul())}</b></span></div>` : ''}
+        ${x.main && x.rent ? `<div class="gv-rent"><span>Noleggio <b>${eur0(x.rent * gMul())}</b>/mese</span><span>Totale periodo <b>${eur0((x.rent * rm.length + x.fuel) * gMul())}</b></span></div>` : ''}
         <div class="gv-st"><div><small>Pieni</small><b>${x.v.length}</b></div><div><small>Km</small><b>${x.k ? fmtNum(x.k, 0) : '—'}</b></div><div><small>km/L</small><b>${x.cons ? fmtNum(x.cons, 1) : '—'}</b></div><div><small>Ultimo</small><b>${x.last && validD(x.last.data) ? parseD(x.last.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : '—'}</b></div></div>
       </div>`).join('');
 
     // costo dei mezzi a noleggio
-    const mm = vs.filter(x => x.main), oth = vs.filter(x => !x.main);
+    const mm = vs.filter(x => x.main && x.rent), oth = vs.filter(x => !(x.main && x.rent));
     const cr = x => { const rp = x.rent * rm.length, t = rp + x.fuel; return `<td><span class="gv-plate sm"><i>I</i><b>${esc(plateFmt(x.p))}</b></span> ${gasName(x.p) ? `<b class="ga-nm">${esc(gasName(x.p))}</b>` : ''}<span class="m2">${esc(x.uso)}</span></td><td>${eur0(x.rent * gMul())}</td><td>${eur0(rp * gMul())}</td><td>${fmtNum(x.l, 0)} L</td><td>${hasCost ? eur0(x.fuel * gMul()) : '—'}</td><td><b>${eur0(t * gMul())}</b></td><td>${fmtNum(pct(t, totC), 1)}%</td><td>${x.k ? fmtNum(t * gMul() / x.k, 3) + ' €' : '—'}</td>`; };
     const oL = gSum(oth.flatMap(x => x.v), 'litri'), oF = oth.reduce((a, x) => a + x.fuel, 0);
     if (!mm.length) $('#ga-cost').innerHTML = `<div class="ga-cn">Nessun mezzo a noleggio. Con «Nomi e noleggi» aggiungi targa e canone mensile: entrano nei costi insieme al carburante.</div>`;
@@ -2776,6 +2781,43 @@
         write([{ action: 'upsert', sheet: 'Config', row: { chiave: 'gasNoleggio', valore: JSON.stringify(o) } }, { action: 'upsert', sheet: 'Config', row: { chiave: 'gasNomi', valore: JSON.stringify(nm) } }]);
         toast('Mezzi salvati'); return true;
       });
+  }
+  // v138: scheda del mezzo — targa, nome, noleggio, centro di costo e dipendenti che possono segnare i rifornimenti (app Presenze)
+  function formGasMezzo(p0) {
+    p0 = plate(p0 || '');
+    const M = gasMezzi(), R = gasRent(), N = gasNomi(), m = M[p0] || {}, sel = [].concat(m.dip || []).map(String);
+    const D = (db.dipendenti || []).filter(d => d.stato !== 'cessato' || sel.includes(String(d.id))).sort((a, b) => String(a.nome).localeCompare(String(b.nome)));
+    const known = p0 && (M[p0] || R[p0] != null || N[p0]);
+    openSheet(known ? 'Mezzo' : 'Nuovo mezzo', `
+      <div class="f-row">
+        <label class="f"><span>Targa</span><input name="targa" required${p0 ? '' : ' data-focus'} value="${esc(p0)}" autocapitalize="characters" placeholder="Es. AB123CD"></label>
+        <label class="f"><span>Nome</span><input name="nome"${p0 ? ' data-focus' : ''} value="${esc(N[p0] || '')}" placeholder="Es. Furgone 1"></label>
+      </div>
+      <div class="f-row">
+        <label class="f"><span>Noleggio € al mese</span><input name="canone" inputmode="decimal" value="${num(R[p0]) ? esc(fmtIn(R[p0])) : ''}" placeholder="vuoto se è di proprietà"></label>
+        <label class="f"><span>Centro di costo</span><input name="centro" value="${esc(m.centro || gasCC())}"></label>
+      </div>
+      <div class="f"><span>Chi può segnare i rifornimenti</span>
+        ${D.length ? `<div style="display:grid;gap:8px;margin-top:6px">${D.map(d => `<label class="rp-o"><input type="checkbox" name="dip" value="${esc(d.id)}"${sel.includes(String(d.id)) ? ' checked' : ''}><span>${esc(`${d.nome || ''} ${d.cognome || ''}`.trim())}${d.mansione ? ` <span class="muted small">· ${esc(d.mansione)}</span>` : ''}</span></label>`).join('')}</div>
+        <p class="muted small" style="margin:8px 0 0">Il dipendente lo segna dall'app Presenze (deve avere l'accesso collegato alla sua scheda).</p>` : '<p class="muted small" style="margin:4px 0 0">Nessun dipendente: aggiungili nella sezione Dipendenti.</p>'}
+      </div>`,
+      fd => {
+        const p = plate(fd.get('targa')); if (!p) return toast('Inserisci la targa');
+        const M2 = { ...gasMezzi() }, R2 = { ...gasRent() }, N2 = { ...gasNomi() };
+        if (p0 && p0 !== p) { delete M2[p0]; delete R2[p0]; delete N2[p0]; }
+        M2[p] = { dip: fd.getAll('dip').map(String), centro: String(fd.get('centro') || '').trim().toUpperCase() };
+        const v = num(fd.get('canone')), n = String(fd.get('nome') || '').trim();
+        if (v > 0) R2[p] = v; else delete R2[p];
+        if (n) N2[p] = n; else delete N2[p];
+        write([{ action: 'upsert', sheet: 'Config', row: { chiave: 'gasMezzi', valore: JSON.stringify(M2) } }, { action: 'upsert', sheet: 'Config', row: { chiave: 'gasNoleggio', valore: JSON.stringify(R2) } }, { action: 'upsert', sheet: 'Config', row: { chiave: 'gasNomi', valore: JSON.stringify(N2) } }]);
+        toast('Mezzo salvato'); return true;
+      },
+      known ? () => {
+        if (!confirm('Togliere questo mezzo dall\'elenco? I rifornimenti già registrati restano.')) return;
+        const M2 = { ...gasMezzi() }, R2 = { ...gasRent() }; delete M2[p0]; delete R2[p0];
+        write([{ action: 'upsert', sheet: 'Config', row: { chiave: 'gasMezzi', valore: JSON.stringify(M2) } }, { action: 'upsert', sheet: 'Config', row: { chiave: 'gasNoleggio', valore: JSON.stringify(R2) } }]);
+        toast('Mezzo tolto'); return true;
+      } : null);
   }
   function formGasPrice() {
     openSheet('Prezzo del gasolio', `<p class="muted small" style="margin:0 0 12px">Prezzo medio al litro IVA esclusa, usato per stimare i costi dei rifornimenti che non hanno un prezzo proprio.</p>
@@ -9357,7 +9399,8 @@
       if (t.closest('#ga-add')) { formGas(); return; }
       if (t.closest('#ga-price') || t.closest('#ga-price2')) { formGasPrice(); return; }
       if (t.closest('#ga-rent')) { formGasRent(); return; }
-      const gnm = t.closest('[data-gname]'); if (gnm) { e.stopPropagation(); formGasRent(gnm.dataset.gname); return; }
+      if (t.closest('#ga-mz')) { formGasMezzo(); return; }
+      const gnm = t.closest('[data-gname]'); if (gnm) { e.stopPropagation(); formGasMezzo(gnm.dataset.gname); return; }
       if (t.closest('#ga-allv')) { gasShowAll = !gasShowAll; renderGas(); return; }
       if (t.closest('#ga-prev') || t.closest('#ga-next')) { const o = [...$('#ga-per').options].map(x => x.value), i = o.indexOf(gasP) + (t.closest('#ga-prev') ? 1 : -1); if (i >= 0 && i < o.length) { gasP = o[i]; gasAnim = true; renderGas(); } return; }
       const gap = t.closest('[data-gaper]'); if (gap) { gasP = gap.dataset.gaper; gasAnim = true; renderGas(); return; }

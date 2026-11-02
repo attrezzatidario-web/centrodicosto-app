@@ -24,7 +24,7 @@
   const BTN = { in: ['Timbra l\'entrata', 'go'], pausa: ['Inizia la pausa', 'pause'], rientro: ['Torna dalla pausa', 'go'], out: ['Timbra l\'uscita', 'stop'] };
   const ASS = { ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', altro: 'Altra assenza' };
   const AST = { attesa: ['wait', 'In attesa'], approvata: ['ok', 'Approvata'], rifiutata: ['no', 'Rifiutata'], comunicata: ['info', 'Comunicata'] };
-  const IC = { go: '<path d="M5 12h12M13 6l6 6-6 6"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>', pause: '<path d="M9 6v12M15 6v12"/>', plus: '<path d="M12 5v14M5 12h14"/>', out: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>', key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>', grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/>', pin: '<path d="M12 21s-7-5.6-7-11.2A7 7 0 0 1 19 9.8C19 15.4 12 21 12 21z"/><circle cx="12" cy="10" r="2.6"/>', check: '<path d="M5 12l5 5L20 7"/>' };
+  const IC = { go: '<path d="M5 12h12M13 6l6 6-6 6"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>', pause: '<path d="M9 6v12M15 6v12"/>', plus: '<path d="M12 5v14M5 12h14"/>', out: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>', key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>', grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/>', pin: '<path d="M12 21s-7-5.6-7-11.2A7 7 0 0 1 19 9.8C19 15.4 12 21 12 21z"/><circle cx="12" cy="10" r="2.6"/>', check: '<path d="M5 12l5 5L20 7"/>', fuel: '<path d="M5 20V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15M4 20h11M5 10h9M14 8l3 2v7a1.5 1.5 0 0 0 3 0V9l-2-3"/>' };
   const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ''}</svg>`;
 
   let url = LS.get('cdc_url', '') || SCRIPT_URL; if (url === 'local') url = SCRIPT_URL;
@@ -37,7 +37,7 @@
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: tok, ...extra }), credentials: 'omit', referrerPolicy: 'no-referrer' });
     const j = await r.json();
     if (!j.ok && j.auth) throw new AuthErr(j.error || 'Sessione scaduta: entra di nuovo');
-    if (!j.ok) throw new Error(/sconosciuta/i.test(j.error || '') ? 'Il gestionale va aggiornato alla versione cdc-5.0 per usare Presenze' : j.error || 'Operazione non riuscita');
+    if (!j.ok) throw new Error(/sconosciuta/i.test(j.error || '') ? 'Il gestionale va aggiornato (script Google cdc-5.5) per usare questa funzione' : j.error || 'Operazione non riuscita');
     return j.result;
   }
   const netErr = e => e instanceof TypeError ? 'Nessuna connessione: controlla internet e riprova' : e.message;
@@ -48,6 +48,7 @@
     if (!window.CDC_DEMO) { await loadJs('../settori.js?v=129'); await loadJs('../demo.js?v=129'); }
     D0 = window.CDC_DEMO(LS.get('cdc_demo_set', '') || 'veicoli');
     const extra = LS.get('cdc_pz_demo', { p: [], a: [], del: [] });
+    const g0 = (D0.gasolio || [])[0]; D0.mezzi = g0 ? [{ targa: g0.targa, nome: g0.uso || '' }] : []; D0.rif = [];
     D0.presenze.push(...extra.p.filter(p => p.dip === 'dpd1')); D0.assenze.push(...extra.a); D0.assenze = D0.assenze.filter(a => !extra.del.includes(a.id));
   }
   const demoSave = (k, v) => { const x = LS.get('cdc_pz_demo', { p: [], a: [], del: [] }); x[k].push(v); LS.set('cdc_pz_demo', x); };
@@ -56,7 +57,7 @@
     const d = D0.dipendenti[0], n = new Date(), oggi = ymd(n), from = addD(oggi, -70);
     const P = D0.presenze.filter(p => p.dip === d.id && p.data >= from), T = P.filter(p => p.data === oggi).sort((a, b) => String(a.ora).localeCompare(String(b.ora))), last = T.length ? T[T.length - 1].tipo : '';
     return { dip: { id: d.id, nome: d.nome, cognome: d.cognome, mansione: d.mansione, sede: d.sede, ore: d.ore, ferie: d.ferie, permessi: d.permessi, assunzione: d.assunzione }, oggi, ora: `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`, stato: last, next: NEXT[last] || ['in'],
-      presenze: P, assenze: D0.assenze.filter(a => a.dip === d.id), set: D0.config.pzSet || {}, azienda: (D0.config.azienda && D0.config.azienda.nome) || 'Azienda demo', user: me };
+      mezzi: D0.mezzi, rif: D0.rif.slice(0, 6), presenze: P, assenze: D0.assenze.filter(a => a.dip === d.id), set: D0.config.pzSet || {}, azienda: (D0.config.azienda && D0.config.azienda.nome) || 'Azienda demo', user: me };
   }
   async function call(action, extra = {}) {
     if (!DEMO) return post(action, extra);
@@ -64,6 +65,7 @@
     const d = D0.dipendenti[0];
     if (action === 'pzTimbra') { const m = demoMe(); if (!m.next.includes(extra.tipo)) throw new Error('Timbratura non valida in questo momento'); const p = { id: 'dz' + Date.now(), dip: d.id, data: m.oggi, ora: m.ora, tipo: extra.tipo, fonte: 'app', nota: '' }; D0.presenze.push(p); demoSave('p', p); return Object.assign(demoMe(), { fatto: p }); }
     if (action === 'pzRichiesta') { const a = { id: 'dza' + Date.now(), dip: d.id, tipo: extra.tipo, dal: extra.dal, al: extra.al, ore: extra.tipo === 'permesso' ? Number(extra.ore) || 0 : '', motivo: extra.motivo || '', stato: extra.tipo === 'malattia' ? 'comunicata' : 'attesa', risposta: '', creato: new Date().toISOString(), deciso: '' }; D0.assenze.push(a); demoSave('a', a); return demoMe(); }
+    if (action === 'pzRifornimento') { D0.rif.unshift({ id: 'dr' + Date.now(), data: demoMe().oggi, targa: extra.targa, litri: Number(String(extra.litri).replace(',', '.')) || 0, km: Number(extra.km) || 0 }); return demoMe(); }
     if (action === 'pzAnnulla') { D0.assenze = D0.assenze.filter(a => a.id !== extra.id); demoSave('del', extra.id); return demoMe(); }
     return demoMe();
   }
@@ -136,6 +138,9 @@
       <section class="pz-card"><div class="pz-ch"><h3>Oggi</h3><span class="pz-live" id="pz-today">${hTxt(w.min)}</span></div>
         ${w.L.length ? `<ol class="pz-tl">${w.L.map(p => `<li class="t-${esc(p.tipo)}"><b>${String(p.ora).slice(0, 5)}</b><span>${esc(TIPI[p.tipo] || p.tipo)}${p.fonte === 'manuale' ? ' <em>corretta dal titolare</em>' : ''}${p.pending ? ' <em>invio…</em>' : ''}</span></li>`).join('')}${w.open ? '<li class="t-now"><b>adesso</b><span>in corso…</span></li>' : ''}</ol>` : '<p class="pz-empty">Nessuna timbratura oggi</p>'}
         ${w.pause >= 1 ? `<p class="pz-sub">Pausa: ${hTxt(w.pause)}</p>` : ''}</section>
+      ${(M.mezzi || []).length ? `<section class="pz-card"><div class="pz-ch"><h3>Rifornimenti</h3><span>${esc(M.mezzi.map(m => m.nome || m.targa).join(' · '))}</span></div>
+        <button type="button" class="pz-btn primary wide" data-rif>${svg('fuel')}Segna un rifornimento</button>
+        ${(M.rif || []).length ? `<div style="margin-top:8px">${M.rif.map(r => `<div class="pz-req"><div><b>${nf(Number(r.litri) || 0)} L · ${esc(r.targa)}</b><small>${esc(cap(dLong(String(r.data).slice(0, 10))))}${Number(r.km) ? ` · ${Number(r.km).toLocaleString('it-IT')} km` : ''}</small></div></div>`).join('')}</div>` : ''}</section>` : ''}
       <section class="pz-card"><div class="pz-ch"><h3>Questa settimana</h3><span>${hTxt(wk)} su ${nf(target)} h</span></div><div class="pz-prog"><i style="width:${Math.min(100, wk / 60 / target * 100).toFixed(1)}%"></i></div></section>`;
   }
   function vStorico() {
@@ -234,6 +239,27 @@
       });
     };
   }
+  // v138: rifornimento del mezzo assegnato dal titolare
+  function rifForm() {
+    const L = M.mezzi || []; if (!L.length) return;
+    sheet('Rifornimento', `<form id="pz-gf" class="pz-form">
+      ${L.length > 1 ? `<label class="pz-f"><span>Mezzo</span><select name="targa">${L.map(m => `<option value="${esc(m.targa)}">${esc(m.targa)}${m.nome ? ' · ' + esc(m.nome) : ''}</option>`).join('')}</select></label>` : `<input type="hidden" name="targa" value="${esc(L[0].targa)}"><p class="pz-sub" style="margin-top:-4px">${esc(L[0].targa)}${L[0].nome ? ' · ' + esc(L[0].nome) : ''}</p>`}
+      <div class="pz-row"><label class="pz-f"><span>Litri</span><input name="litri" inputmode="decimal" required placeholder="0,00"></label><label class="pz-f"><span>Km del mezzo</span><input name="km" inputmode="numeric" placeholder="contachilometri"></label></div>
+      <label class="pz-f"><span>Importo pagato € (facoltativo)</span><input name="importo" inputmode="decimal" placeholder="come sullo scontrino"></label>
+      <label class="pz-f"><span>Note (facoltativo)</span><input name="note" maxlength="200" placeholder="Es. distributore, cantiere"></label>
+      <p class="pz-err" id="pz-gerr"></p>
+      <button type="submit" class="pz-btn primary wide">Salva rifornimento</button></form>`);
+    const f = $('#pz-gf');
+    f.onsubmit = async ev => {
+      ev.preventDefault(); $('#pz-gerr').textContent = '';
+      const lt = Number(String(f.litri.value).replace(',', '.'));
+      if (!(lt > 0)) return void ($('#pz-gerr').textContent = 'Scrivi i litri');
+      await busyB(f.querySelector('[type=submit]'), 'Salvo…', async () => {
+        try { setM(await call('pzRifornimento', { targa: f.targa.value, litri: f.litri.value, km: f.km.value.replace(/\D/g, ''), importo: f.importo.value, note: f.note.value.trim() })); closeSheet(); render(); toast('Rifornimento salvato', true); }
+        catch (e) { if (e instanceof AuthErr) return toLogin(e.message); $('#pz-gerr').textContent = netErr(e); }
+      });
+    };
+  }
   function menu() {
     const gest = me && (me.ruolo !== 'dipendente' || Object.values(me.sezioni || {}).some(Boolean));
     sheet(`${me && me.nome || ''}`, `<p class="pz-sub" style="margin-top:-6px">${esc(me && me.email || '')}</p><div class="pz-menu">
@@ -309,6 +335,7 @@
     if (t.closest('[data-close]')) return closeSheet();
     const mn = t.closest('[data-mon]'); if (mn && !mn.disabled) { const [y, m] = mon.split('-').map(Number); mon = ymd(new Date(y, m - 1 + Number(mn.dataset.mon), 1)).slice(0, 7); render(); return; }
     const rq = t.closest('[data-req]'); if (rq) return reqForm(rq.dataset.req);
+    if (t.closest('[data-rif]')) return rifForm();
     const an = t.closest('[data-annulla]'); if (an) { if (!confirm('Annullare questa richiesta?')) return; busyB(an, '…', async () => { try { setM(await call('pzAnnulla', { id: an.dataset.annulla })); render(); toast('Richiesta annullata', true); } catch (er) { toast(netErr(er)); } }); return; }
     if (t.closest('#pz-menu')) return menu();
     if (t.closest('[data-retry]')) { $('#pz-main').innerHTML = '<div class="pz-loading"><div class="pz-spin"></div></div>'; return refresh(); }
