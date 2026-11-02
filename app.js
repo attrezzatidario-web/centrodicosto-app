@@ -325,7 +325,8 @@
       const a = art.trim(), low = a.toLowerCase(), f = fem ? (pl ? FEM_P : FEM_S)[low] : null;
       return (f ? likeCase(f, a) : a) + art.slice(a.length) + n;
     }]);
-    if (s.acq && s.acq !== 'Attrezzatura') R.push(
+    // v140: in «veicoli» la sezione si chiama Acquisti (voce di menu e titolo) ma «attrezzatura» resta nei testi e nelle categorie
+    if (s.id !== 'veicoli' && s.acq && s.acq !== 'Attrezzatura') R.push(
       [/([Aa])cquisti (?:di )?attrezzatura/g, '$1cquisti'], [/([Dd])ell'attrezzatura/g, (m, d) => (d === 'D' ? 'D' : 'd') + 'egli acquisti'],
       [/\bad Attrezzatura\b/g, 'agli Acquisti'], [/\bin Attrezzatura\b/g, 'negli Acquisti'], [/\bdi attrezzatura\b/g, 'di acquisti'],
       [/\bAttrezzatura\b/g, 'Acquisti'], [/\battrezzatura\b/g, 'acquisti'], [/(?<!E )\bATTREZZATURA\b/g, 'ACQUISTI'], [/\bAttrezz\./g, 'Acquisti']);

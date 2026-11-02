@@ -25,7 +25,7 @@
   const L = [
     { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', s: 'Veicoli e attrezzature', d: 'Officine, allestimenti, ricambi, abbigliamento da lavoro, spedizioni e mezzi',
       ic: '<path d="M2 7h11v9H2zM13 10h4l3 3v3h-7z"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
-      sede: ['Piazzale', 'Piazzali'], acq: 'Attrezzatura',
+      sede: ['Piazzale', 'Piazzali'], acq: 'Acquisti',
       mod: { piazzali: true, gls: true, gasolio: true, lyreco: true, amazon: true, torental: true, incassi: true, clienti: true, fornitori: true, magazzino: true, vendite: true }, cat: null },
 
     { id: 'bar', n: 'Bar e caffetteria', s: 'Bar', d: 'Bar, caffetterie, pasticcerie e gelaterie',
