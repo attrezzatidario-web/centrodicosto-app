@@ -3624,3 +3624,11 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 .lnk-no select { flex: 1; min-width: 180px; }
 .lnk-l { display: grid; gap: 8px; }
 .lnk-r { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+
+/* v147: movimenti nella scheda articolo */
+.am-h { display: flex; justify-content: space-between; align-items: baseline; margin: 18px 0 6px; font-size: 13px; }
+.am-list { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.am-r { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.am-r:last-child { border-bottom: 0; }
+.am-r small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.am-r > b { white-space: nowrap; }

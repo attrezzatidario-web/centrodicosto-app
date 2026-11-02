@@ -8578,6 +8578,15 @@
     const mgm = $('#mg-mag'); if (mgm) mgm.onchange = () => { mgMag = mgm.value; renderMag(); };
     const qi = $('#mg-q'); if (qi) qi.oninput = () => { mgQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { const p = qi.selectionStart; renderMag(); const x = $('#mg-q'); x.focus(); try { x.setSelectionRange(p, p); } catch {} }, 160); };
   }
+  // v147: movimenti dell'articolo dentro la sua scheda (carichi, scarichi, inventari)
+  function artMovHtml(a) {
+    const TP = { carico: ['Carico', 'paid'], scarico: ['Scarico', 'late'], rettifica: ['Inventario', 'soon'] };
+    const M = GX.mov().filter(m => m.articolo === a.id).sort((x, y) => String(y.data).localeCompare(String(x.data)) || String(y.creato).localeCompare(String(x.creato)));
+    const nc = M.filter(m => num(m.quantita) > 0).length, ns = M.filter(m => num(m.quantita) < 0).length;
+    return `<div class="am-h"><b>Movimenti</b><span class="muted small">${M.length ? `${nc} carichi · ${ns} scarichi` : ''}</span></div>
+      <div class="am-list">${M.map(m => { const q = num(m.quantita), t = TP[m.tipo] || TP.rettifica, sub = [m.causale, m.note, magMulti() ? magOf(m) : ''].filter(Boolean).join(' · ');
+      return `<div class="am-r"><div><b>${esc(dIt(m.data))}</b> <span class="chip ${t[1]}">${t[0]}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div><b class="${q < 0 ? 'gx-neg' : 'gx-pos'}">${q > 0 ? '+' : ''}${fmtNum(q, q % 1 ? 2 : 0)} ${esc(a.um || '')}</b></div>`; }).join('') || '<div class="am-r"><span class="muted">Nessun movimento</span></div>'}</div>`;
+  }
   function artForm(a) {
     const n = !a || !a.id; a = a && a.id ? { ...a } : { id: uid(), um: 'PZ', iva: 22, creato: today(), codice: artNext(), ...(a || {}) };
     const g = n ? 0 : (giacMap().get(a.id) || 0);
@@ -8589,7 +8598,7 @@
       <label class="f"><span>Categoria</span><input name="categoria" list="art-cats" value="${esc(a.categoria || '')}"><datalist id="art-cats">${CAT.map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
       <div class="f-row f3">${f('costo', 'Costo d\'acquisto €', 'number', 'IVA esclusa')}${f('prezzo', 'Prezzo di vendita €', 'number', 'IVA esclusa')}<label class="f"><span>IVA</span><select name="iva">${IVE.map(v => `<option value="${v}"${num(a.iva) === v ? ' selected' : ''}>${v}%</option>`).join('')}</select></label></div>
       <div class="f-row">${f('scorta', 'Scorta minima', 'number', 'avviso sotto questa quantità')}${n ? f('giac0', 'Giacenza iniziale', 'number', '0') : `<div class="f"><span>Giacenza attuale</span><div class="gx-giac"><b>${fmtNum(g, g % 1 ? 2 : 0)} ${esc(a.um || '')}</b><button type="button" class="btn sm" data-gx="mov-art" data-id="${esc(a.id)}">Carico / scarico</button></div></div>`}</div>
-      <label class="f"><span>Note</span><input name="note" value="${esc(a.note || '')}"></label>`, fd => {
+      <label class="f"><span>Note</span><input name="note" value="${esc(a.note || '')}"></label>${n ? '' : artMovHtml(a)}`, fd => {
       const o = { ...a };
       ['descrizione', 'codice', 'codForn', 'um', 'barcode', 'categoria', 'fornitore', 'note'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });
       if (!o.codice) o.codice = artNext();
