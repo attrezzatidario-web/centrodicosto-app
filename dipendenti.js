@@ -36,7 +36,7 @@
     alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>', back: '<path d="M15 18l-6-6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>', go: '<path d="M9 6l6 6-6 6"/>',
     key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>', phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>', xls: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8l8 8M16 8l-8 8"/>',
     pdf: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 14h6M9 17h4"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',
-    check: '<path d="M5 12l5 5L20 7"/>', trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>', fuel: '<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 7h5v4H7z"/>'
+    pin: '<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>', check: '<path d="M5 12l5 5L20 7"/>', trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', x: '<path d="M6 6l12 12M18 6 6 18"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>', copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>', fuel: '<path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16M3 21h13M7 7h5v4H7z"/>'
   };
   const svg = (k, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}" aria-hidden="true">${IC[k] || ''}</svg>`;
 
@@ -177,7 +177,7 @@
     const isDay = S.pmode !== 'mese';
     const head = `<div class="dp-ph"><div class="seg dp-fs">${[['giorno', 'Giorno'], ['mese', 'Mese']].map(([k, l]) => `<button type="button" data-dp="pmode:${k}" class="${(isDay ? 'giorno' : 'mese') === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="dp-nav"><button type="button" class="icon-btn" data-dp="${isDay ? 'dprev' : 'mprev'}" aria-label="Precedente">‹</button><b>${isDay ? esc(dLong(S.day).replace(/^./, c => c.toUpperCase())) : esc(mLbl(S.mon))}</b><button type="button" class="icon-btn" data-dp="${isDay ? 'dnext' : 'mnext'}" aria-label="Successivo"${(isDay ? S.day >= today() : S.mon >= today().slice(0, 7)) ? ' disabled' : ''}>›</button>${isDay && S.day !== today() ? '<button type="button" class="btn sm" data-dp="dtoday">Oggi</button>' : ''}</div>
-      ${isDay ? '' : `<div class="dp-ex"><button type="button" class="btn sm" data-dp="xls">${svg('xls')}Excel</button><button type="button" class="btn sm" data-dp="pdf">${svg('pdf')}PDF</button></div>`}</div>`;
+      <div class="dp-ex">${isDay ? '' : `<button type="button" class="btn sm" data-dp="xls">${svg('xls')}Excel</button><button type="button" class="btn sm" data-dp="pdf">${svg('pdf')}PDF</button>`}<button type="button" class="btn sm" data-dp="mappa">${svg('pin')}Mappa</button></div></div>`;
     const A = active().sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'it'));
     if (!A.length) return `<div class="card">${head}<div class="empty">Aggiungi i dipendenti per vedere le presenze</div></div>`;
     if (isDay) {
@@ -384,6 +384,41 @@
     } catch (e) { C.busy(); C.toast('PDF non creato: ' + e.message); }
   }
 
+  /* ---------- v144: mappa delle posizioni di entrata e uscita (file HTML scaricabile) ---------- */
+  const parseLuogo = s => { const m = String(s || '').match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)(?:\s*±\s*(\d+))?/); return m ? { lat: +m[1], lon: +m[2], acc: m[3] ? +m[3] : 0 } : null; };
+  function mappaForm() {
+    const isDay = S.pmode !== 'mese', [y, m] = S.mon.split('-').map(Number), dal = isDay ? S.day : `${S.mon}-01`, al = isDay ? S.day : `${S.mon}-${pad(new Date(y, m, 0).getDate())}`;
+    const L = DIP().slice().sort((a, b) => (a.stato === 'cessato') - (b.stato === 'cessato') || nameOf(a).localeCompare(nameOf(b), 'it'));
+    C.openSheet('Mappa delle timbrature', `<p class="muted small" style="margin:0 0 12px">Scarichi un file che si apre sul computer con la mappa: pallino verde per l'entrata, rosso per l'uscita.</p>
+      <label class="f"><span>Dipendente</span><select name="dip"><option value="">Tutti i dipendenti</option>${L.map(d => `<option value="${esc(d.id)}">${esc(nameOf(d))}${d.stato === 'cessato' ? ' (cessato)' : ''}</option>`).join('')}</select></label>
+      <div class="f-row"><label class="f"><span>Dal</span><input type="date" name="dal" value="${esc(dal)}" required></label><label class="f"><span>Al</span><input type="date" name="al" value="${esc(al)}" required></label></div>`,
+      fd => { const r = exportMappa(String(fd.get('dip') || ''), String(fd.get('dal') || ''), String(fd.get('al') || '')); return r; }, null, 'Scarica la mappa');
+  }
+  function exportMappa(dipId, dal, al) {
+    if (!dal || !al || al < dal) { C.toast('Controlla le date'); return false; }
+    const P = PRE().filter(p => (p.tipo === 'in' || p.tipo === 'out') && String(p.data).slice(0, 10) >= dal && String(p.data).slice(0, 10) <= al && (!dipId || String(p.dip) === dipId))
+      .sort((a, b) => String(a.data).localeCompare(String(b.data)) || String(a.ora).localeCompare(String(b.ora)));
+    const pts = []; let senza = 0;
+    P.forEach(p => { const g = parseLuogo(p.luogo); if (!g) { senza++; return; } pts.push({ n: nameOf(dipOf(p.dip) || {}), d: C.dIt(String(p.data).slice(0, 10)), o: String(p.ora).slice(0, 5), t: p.tipo, lat: g.lat, lon: g.lon, a: g.acc }); });
+    if (!pts.length) { C.toast(P.length ? 'Nessuna di queste timbrature ha la posizione' : 'Nessuna timbratura in questo periodo'); return false; }
+    const who = dipId ? nameOf(dipOf(dipId) || {}) : 'Tutti i dipendenti', per = dal === al ? C.dIt(dal) : `${C.dIt(dal)} – ${C.dIt(al)}`;
+    const data = JSON.stringify(pts).replace(/</g, '\\u003c'), H = s => esc(s);
+    const html = `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mappa timbrature · ${H(who)}</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;color:#1f2430;display:flex;flex-direction:column;height:100vh}header{padding:12px 16px;border-bottom:1px solid #e3e7ee}header b{font-size:16px}header span{color:#6b7385;margin-left:8px}.lg{float:right;color:#6b7385}.lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 12px;vertical-align:-1px}main{flex:1;display:flex;min-height:0}#m{flex:1}#l{width:300px;overflow:auto;border-left:1px solid #e3e7ee}#l div{padding:8px 12px;border-bottom:1px solid #f0f2f6;cursor:pointer}#l div:hover{background:#f5f7fb}#l small{display:block;color:#6b7385}@media(max-width:700px){main{flex-direction:column}#l{width:auto;height:35%;border-left:0;border-top:1px solid #e3e7ee}}</style></head><body>
+<header><span class="lg"><i style="background:#1baf7a"></i>Entrata<i style="background:#d94b3d"></i>Uscita</span><b>${H(who)}</b><span>${H(per)} · ${pts.length} posizioni</span></header>
+<main><div id="m"></div><div id="l"></div></main>
+<script>const P=${data};const E=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const l=document.getElementById('l');l.innerHTML=P.map((p,i)=>'<div data-i="'+i+'"><b>'+E(p.n)+'</b><small>'+E(p.d)+' · '+E(p.o)+' · '+(p.t==='in'?'Entrata':'Uscita')+'</small></div>').join('');
+if(window.L){const m=L.map('m');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(m);const k=P.map(p=>{const c=p.t==='in'?'#1baf7a':'#d94b3d';return L.circleMarker([p.lat,p.lon],{radius:9,color:'#fff',weight:2,fillColor:c,fillOpacity:1}).addTo(m).bindPopup('<b>'+E(p.n)+'</b><br>'+(p.t==='in'?'Entrata':'Uscita')+' · '+E(p.d)+' alle '+E(p.o)+(p.a?'<br>precisione ±'+p.a+' m':'')+'<br><a target="_blank" href="https://www.google.com/maps?q='+p.lat+','+p.lon+'">Apri in Google Maps</a>')});
+m.fitBounds(L.latLngBounds(P.map(p=>[p.lat,p.lon])).pad(.2),{maxZoom:17});l.onclick=e=>{const d=e.target.closest('[data-i]');if(!d)return;const i=+d.dataset.i;m.setView([P[i].lat,P[i].lon],17);k[i].openPopup()}}
+else{l.onclick=e=>{const d=e.target.closest('[data-i]');if(d){const p=P[+d.dataset.i];window.open('https://www.google.com/maps?q='+p.lat+','+p.lon)}};document.getElementById('m').innerHTML='<p style="padding:20px">Per vedere la mappa serve la connessione internet. Dalla lista a destra puoi aprire ogni posizione in Google Maps.</p>'}</script></body></html>`;
+    const slug = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tutti';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })); a.download = `mappa-timbrature-${dipId ? slug(who) : 'tutti'}-${dal}${al !== dal ? '_' + al : ''}.html`;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+    C.toast(`Mappa scaricata · ${pts.length} posizioni${senza ? ` (${senza} timbrature senza posizione)` : ''}`); return true;
+  }
+
   /* ---------- eventi ---------- */
   function bind(el) {
     const re = () => render(el, C);
@@ -407,6 +442,7 @@
       else if (k === 'set') setForm();
       else if (k === 'xls') exportXls().catch(e => C.toast(e.message));
       else if (k === 'pdf') exportPdf();
+      else if (k === 'mappa') mappaForm();
       else if (k === 'pzlink') pzLink();
       else if (k === 'copy') { const v = b.dataset.dp.slice(5); (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => C.toast('Copiato'), () => C.toast(v)); }
       else if (k === 'credok') { S.creds = null; re(); }
