@@ -3610,3 +3610,17 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 .acq-s em { font-style: normal; color: var(--accent); }
 .acq-a { display: flex; gap: 8px; flex-wrap: wrap; }
 .acq-a svg { width: 15px; height: 15px; }
+
+/* v141: Acquisti — DDT e fatture collegati */
+#m-mode { margin: 0 0 12px; }
+.acq-tbl .acq-dn { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; margin-right: 8px; }
+.acq-clip { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.acq-ch { display: grid; gap: 10px; }
+.acq-ch .btn { justify-content: center; padding: 14px; }
+.lnk > div { display: grid; gap: 8px; margin-top: 6px; }
+.lnk-ok, .lnk-no { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.lnk-ok { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.lnk-t { display: grid; flex: 1; min-width: 140px; } .lnk-t small { color: var(--muted); font-size: 12px; }
+.lnk-no select { flex: 1; min-width: 180px; }
+.lnk-l { display: grid; gap: 8px; }
+.lnk-r { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }

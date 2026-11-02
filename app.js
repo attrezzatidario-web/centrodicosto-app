@@ -690,7 +690,8 @@
     $$('.nav a').forEach(x => x.classList.toggle('active', x.dataset.view === navV));
     document.body.dataset.view = navV; dockApply();
     $$('.sub-tabs a').forEach(x => x.classList.toggle('on', x.dataset.st === view));
-    $('#title').textContent = TITLES[view];
+    $('#title').textContent = ['attrezzatura', 'movimenti', 'articoli'].includes(view) ? (settore().acq || 'Acquisti') : TITLES[view];
+    { const at = $('#add-top span'), acqV = ['attrezzatura', 'movimenti', 'articoli'].includes(view); if (at) at.textContent = acqV ? 'Registra DDT o fattura' : view === 'gasolio' ? 'Nuovo rifornimento' : view === 'fatture' ? 'Nuova fattura' : 'Nuovo movimento'; }
     $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'lyreco' || view === 'amazon';
     $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
     if (view !== 'movimenti') { sel.clear(); selMode = false; $('#selbar').hidden = true; document.body.classList.remove('has-sel'); }
@@ -900,6 +901,12 @@
     });
   }
   function renderMov() {
+    const vm = $('#v-movimenti'); let dbx = $('#m-docs');
+    if (!dbx) { const seg = document.createElement('div'); seg.id = 'm-mode'; vm.querySelector('.sub-tabs').after(seg); dbx = document.createElement('div'); dbx.id = 'm-docs'; seg.after(dbx); }
+    $('#m-mode').innerHTML = `<div class="gx-seg"><button type="button" data-mvmode="doc" class="${mvMode === 'doc' ? 'on' : ''}">DDT e fatture</button><button type="button" data-mvmode="righe" class="${mvMode === 'righe' ? 'on' : ''}">Righe di costo</button></div>`;
+    const docs = mvMode === 'doc';
+    [...vm.children].forEach(c => { if (c.classList.contains('sub-tabs') || c.id === 'm-mode') return; c.hidden = c.id === 'm-docs' ? !docs : docs; });
+    if (docs) { sub('DDT e fatture dei fornitori: collegali tra loro e carica la merce in magazzino'); renderAcqDocs(dbx); return; }
     fillFilters();
     const list = filtered();
     const T = sumT(list);
@@ -5494,6 +5501,47 @@
   const faDdt = r => String(r.ddt || '').split(/[,;\s]+/).map(x => x.replace(/[^0-9a-z]/gi, '').toUpperCase()).filter(x => x.length > 2);
   const normDoc = memo(s => String(s || '').replace(/[^0-9a-z]/gi, '').toUpperCase());
   const fornKey = s => String(s || '').toUpperCase().replace(/S\.?R\.?L\.?|S\.?P\.?A\.?|ITALIA|[^A-Z0-9 ]/g, ' ').trim().split(/\s+/)[0] || '';
+  /* ---------- v141: Acquisti = DDT e fatture dei fornitori, collegati tra loro ---------- */
+  const ddtNums = f => String(f.ddt || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+  // DDT dell'archivio collegati a una fattura: stesso fornitore e numero richiamato dalla fattura, oppure il DDT indica la fattura
+  const ddtOfFa = f => { const n = new Set(ddtNums(f).map(normDoc)), fk = fornKey(f.fornitore), nf = normDoc(f.numero); return (db.docforn || []).filter(d => d.tipo === 'ddt' && fornKey(d.fornitore) === fk && ((normDoc(d.numero) && n.has(normDoc(d.numero))) || (nf && normDoc(d.fattura) === nf))); };
+  const faOfDdt = d => { const fk = fornKey(d.fornitore), nd = normDoc(d.numero), nf = normDoc(d.fattura); return faRows().find(f => fornKey(f.fornitore) === fk && ((nf && normDoc(f.numero) === nf) || (nd && ddtNums(f).map(normDoc).includes(nd)))) || null; };
+  const ACQ_ATT = '<svg class="acq-clip" viewBox="0 0 24 24" aria-label="allegato"><path d="M20 11.5 12.3 19.2a5 5 0 0 1-7.1-7.1l8-8a3.4 3.4 0 0 1 4.8 4.8l-8 8a1.7 1.7 0 0 1-2.4-2.4l7.3-7.3"/></svg>';
+  let acqQ = '', acqSt = '', mvMode = 'doc';
+  function acqDocs() {
+    const used = new Set(), P = [];
+    faRows().forEach(f => { const ds = ddtOfFa(f); ds.forEach(d => used.add(d.id)); P.push({ f, ds, data: f.data, forn: f.fornitore }); });
+    (db.docforn || []).filter(d => d.tipo === 'ddt' && !used.has(d.id)).forEach(d => P.push({ f: null, ds: [d], data: d.data, forn: d.fornitore }));
+    return P.sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  }
+  const acqSt0 = p => p.f && p.ds.length ? 'ok' : p.f ? 'noddt' : 'nofa';
+  const ACQ_ST = { ok: ['✓ Collegati', 'paid'], nofa: ['Manca la fattura', 'soon'], noddt: ['Senza DDT', ''] };
+  function renderAcqDocs(box) {
+    const P = acqDocs(), q = nh(acqQ), M = db.magmov || [];
+    const L = P.filter(p => (!acqSt || acqSt0(p) === acqSt) && (!q || nh([p.forn, p.f && p.f.numero, ...p.ds.map(d => d.numero)].join(' ')).includes(q)));
+    const cnt = k => P.filter(p => acqSt0(p) === k).length;
+    box.innerHTML = `<div class="gx-bar"><label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="acq-q" placeholder="Cerca fornitore o numero…" value="${esc(acqQ)}"></label>
+        <div class="gx-act"><button type="button" class="btn sm" data-acqnew="ddt">+ DDT arrivato</button><button type="button" class="btn sm primary" data-acqnew="fa">+ Fattura</button></div></div>
+      <div class="gx-chips"><button type="button" class="chip-f${acqSt ? '' : ' on'}" data-acqst="">Tutti <em>${P.length}</em></button>${Object.entries(ACQ_ST).map(([k, v]) => `<button type="button" class="chip-f${acqSt === k ? ' on' : ''}" data-acqst="${k}">${v[0].replace('✓ ', '')} <em>${cnt(k)}</em></button>`).join('')}</div>
+      ${!P.length ? `<div class="card gx-note"><span><b>Nessun documento</b> · registra il DDT quando arriva la merce, poi la fattura: si collegano tra loro e i prodotti entrano in magazzino.</span></div>`
+      : `<div class="card gx-list"><table class="gx-tbl acq-tbl"><thead><tr><th>Data</th><th>Fornitore</th><th>DDT</th><th>Fattura</th><th class="r">Totale</th><th>Stato</th></tr></thead><tbody>
+      ${L.slice(0, 300).map(p => {
+        const ids = [p.f && p.f.id, ...p.ds.map(d => d.id)].filter(Boolean), np = M.filter(m => ids.includes(m.doc)).length, st = ACQ_ST[acqSt0(p)], tot = p.f ? num(p.f.totale) : p.ds.reduce((x, d) => x + num(d.totale), 0);
+        return `<tr data-acqopen="${p.f ? 'fa:' + esc(p.f.id) : 'ddt:' + esc(p.ds[0].id)}"><td data-l="Data">${esc(dIt(p.data))}</td><td data-l="Fornitore"><b>${esc(p.forn || '—')}</b>${np ? `<small>${np} ${np === 1 ? 'prodotto' : 'prodotti'} in magazzino</small>` : ''}</td>
+          <td data-l="DDT">${p.ds.length ? p.ds.map(d => `<span class="acq-dn">n. ${esc(d.numero || '—')}${d.file ? ACQ_ATT : ''}</span>`).join('') : '<span class="muted">—</span>'}</td>
+          <td data-l="Fattura">${p.f ? `<span class="acq-dn">n. ${esc(p.f.numero || '—')}${p.f.pdf ? ACQ_ATT : ''}</span>` : '<span class="muted">—</span>'}</td>
+          <td class="r" data-l="Totale">${tot ? eur(tot) : '—'}</td><td data-l="Stato"><span class="chip ${st[1]}">${st[0]}</span></td></tr>`;
+      }).join('')}</tbody></table>${L.length > 300 ? '<p class="muted small gx-more">Mostrati 300 documenti: usa la ricerca.</p>' : ''}</div>`}`;
+    const qi = $('#acq-q'); if (qi) qi.oninput = () => { acqQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { const ps = qi.selectionStart; renderAcqDocs(box); const x = $('#acq-q'); x.focus(); try { x.setSelectionRange(ps, ps); } catch {} }, 160); };
+  }
+  function acqNew(k) {
+    const go = () => k === 'fa' ? (aiReady() ? readFatAI() : formFat()) : docFornForm(null, { tipo: 'ddt' });
+    if (!$('#sheet').hidden) { closeSheet(); setTimeout(go, 280); } else go();
+  }
+  function acqAsk() {
+    openSheet('Cosa vuoi registrare?', `<div class="acq-ch"><button type="button" class="btn primary" data-acqnew="ddt">DDT arrivato con la merce</button><button type="button" class="btn" data-acqnew="fa">Fattura del fornitore</button></div><p class="muted small" style="margin:10px 0 0">Dopo potrai collegare il DDT alla sua fattura (e viceversa) e allegare entrambi i documenti.</p>`, () => true, null, 'Chiudi');
+  }
+
   // v117: indice degli acquisti per numero di documento e per codice (prima ogni fattura scorreva tutti gli acquisti: con 1.500 fatture e 12.000 acquisti la sezione impiegava ~10 s)
   // vale solo per l'operazione in corso: si ricostruisce alla successiva, così segue sempre le modifiche
   let faIx = null;
@@ -5663,7 +5711,7 @@
       <div class="f-row"><label class="f"><span>Data</span><input name="data" type="date" required value="${esc(validD(r.data) ? r.data : today())}"></label><label class="f"><span>Scadenza</span><input name="scadenza" type="date" value="${esc(validD(r.scadenza) ? r.scadenza : '')}"></label></div>
       <div class="f-row fa-3"><label class="f"><span>Imponibile €</span><input name="imponibile" inputmode="decimal" value="${esc(fmtIn(r.imponibile))}"></label><label class="f"><span>IVA €</span><input name="imposta" inputmode="decimal" value="${esc(fmtIn(r.imposta))}"></label><label class="f"><span>Totale €</span><input name="totale" inputmode="decimal" value="${esc(fmtIn(r.totale))}" placeholder="calcolato"></label></div>
       <div class="f-row"><label class="f"><span>Centro di costo</span><select name="centro"><option value="">—</option>${opt(centri(), r.centro)}</select></label><label class="f"><span>Stato</span><select name="stato">${opt(['da pagare', 'pagata'], faPaid(r) ? 'pagata' : 'da pagare')}</select></label></div>
-      <label class="f"><span>DDT / ordini collegati</span><input name="ddt" value="${esc(r.ddt)}" placeholder="numeri separati da virgola"></label>
+      <div class="f lnk"><span>DDT collegati</span><div id="fa-lnk"></div></div>
       <label class="f"><span>Note</span><input name="note" value="${esc(r.note)}"></label>
       <div class="ad-box" id="fa-doc"></div>
       ${modOn('magazzino') ? `<div class="acq">${magMulti() ? `<div class="f-row">${magSel(acqMag(r.id), 'mag', 'Magazzino dove entra la merce')}</div>` : magSel('')}<div id="fa-acq"></div>${R.length ? `<button type="button" class="link" data-faacq>Usa le ${R.length} righe lette dalla fattura</button>` : ''}</div>` : ''}`,
@@ -5678,10 +5726,33 @@
         const mag = AL.length ? magNeed(fd) : ''; if (mag === null) return;
         const mo = AL.length || hadM ? acqOps(AL, { doc: row.id, data: row.data, fornitore: row.fornitore, mag, causale: 'Fattura fornitore' + (row.numero ? ' n. ' + row.numero : '') }) : [];
         delete row.mag;
-        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo]);
+        // DDT collegati: la fattura ne richiama i numeri, ogni DDT indica la fattura
+        const LD = GX.dfo().filter(x => lkSel.has(x.id)), lo = [];
+        row.ddt = [...lkExtra, ...LD.map(x => x.numero).filter(Boolean)].join(', ');
+        LD.forEach(x => { if (normDoc(x.fattura) !== normDoc(row.numero) || fornKey(x.fornitore) !== fornKey(row.fornitore)) lo.push({ action: 'upsert', sheet: 'DocForn', row: { ...x, fattura: row.numero } }); });
+        lk0.filter(x => !lkSel.has(x.id) && normDoc(x.fattura) === normDoc(r.numero)).forEach(x => lo.push({ action: 'upsert', sheet: 'DocForn', row: { ...x, fattura: '' } }));
+        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo, ...lo]);
+        if (nxt) setTimeout(() => { if (nxt === 'new') docFornForm(null, { tipo: 'ddt', fornitore: row.fornitore, fattura: row.numero }); else { const dx = GX.dfo().find(x => x.id === nxt); if (dx) docFornForm(dx); } }, 320);
         faP = ''; toast((isNew ? 'Fattura salvata' : 'Fattura aggiornata') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '')); return true;
       }, isNew ? null : () => { const mv = GX.mov().filter(m => m.doc === r.id); if (!confirm(`Eliminare questa fattura?${mv.length ? ' I prodotti caricati con la fattura escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'Fatture', id: r.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Fattura eliminata'); return true; });
     const AQ = modOn('magazzino') ? acqBox($('#fa-acq'), acqInit(r.id), 'solo la merce arrivata senza DDT: quella del DDT è già in magazzino') : null;
+    // DDT collegati: spunta quelli del fornitore, registrane uno nuovo o aprilo
+    const lk0 = r.fornitore ? ddtOfFa(r) : [], lkSel = new Set(lk0.map(x => x.id)), lkBox = $('#fa-lnk'), fIn = $('#sheet-form [name=fornitore]');
+    const lkExtra = ddtNums(r).filter(x => !lk0.some(d => normDoc(d.numero) === normDoc(x)));
+    let nxt = '';
+    const drawLk = () => {
+      const fk = fornKey(fIn.value), C = GX.dfo().filter(x => x.tipo === 'ddt' && fk && fornKey(x.fornitore) === fk && (lkSel.has(x.id) || !faOfDdt(x) || faOfDdt(x).id === r.id)).sort((a, b) => String(b.data).localeCompare(String(a.data))).slice(0, 60);
+      lkBox.innerHTML = `${lkSel.size ? `<div class="lnk-st"><span class="chip paid">✓ Collegata a ${lkSel.size} DDT</span></div>` : ''}
+        ${C.length ? `<div class="lnk-l">${C.map(x => `<div class="lnk-r"><label class="rp-o"><input type="checkbox" data-lkd="${esc(x.id)}"${lkSel.has(x.id) ? ' checked' : ''}><span><b>DDT n. ${esc(x.numero || '—')}</b> <span class="muted small">${esc(dIt(x.data))}${num(x.totale) ? ' · ' + eur(x.totale) : ''} · ${x.file ? 'allegato' : 'da allegare'}</span></span></label><button type="button" class="btn sm ghost" data-lk="${esc(x.id)}">Apri</button></div>`).join('')}</div>` : `<p class="muted small" style="margin:0">${fk ? 'Nessun DDT registrato di questo fornitore.' : 'Scrivi prima il fornitore per vedere i suoi DDT.'}</p>`}
+        ${lkExtra.length ? `<p class="muted small" style="margin:0">Richiamati ma non registrati: ${lkExtra.map(esc).join(', ')}</p>` : ''}
+        <div><button type="button" class="btn sm" data-lk="new">+ Registra un DDT</button></div>`;
+    };
+    if (lkBox) {
+      lkBox.onchange = e => { const id = e.target.dataset.lkd; if (!id) return; if (e.target.checked) lkSel.add(id); else lkSel.delete(id); drawLk(); };
+      lkBox.onclick = e => { const b = e.target.closest('button[data-lk]'); if (!b) return; e.preventDefault(); nxt = b.dataset.lk; $('#sheet-form').requestSubmit(); };
+      fIn.addEventListener('change', drawLk);
+      drawLk();
+    }
     const fab = $('[data-faacq]'); if (fab && AQ) fab.onclick = e => { e.preventDefault(); AQ.set(R.filter(x => x.descrizione).map(x => { const a = artFind(x.codice) || artFind(x.descrizione); return { d: a ? artLbl(a) : String(x.descrizione).trim(), q: num(x.quantita) || 1, c: num(x.prezzo) || '' }; })); fab.remove(); };
     // v111: il documento della fattura (PDF o foto) si allega anche a mano e resta nell'archivio
     adBox($('#fa-doc'), () => file, f => { file = f; }, r.pdf, `Fattura ${r.numero || ''}`);
@@ -9186,26 +9257,46 @@
       <div class="ad-box" id="df-doc"></div>
       <div class="f-row"><label class="f"><span>Fornitore</span><input name="fornitore" list="df-forn" required value="${esc(d.fornitore)}" data-focus placeholder="Es. Edilmateriali Rossi"><datalist id="df-forn">${forn.map(x => `<option value="${esc(x)}">`).join('')}</datalist></label><label class="f"><span>Numero documento</span><input name="numero" value="${esc(d.numero)}" placeholder="Es. 1452"></label></div>
       <div class="f-row"><label class="f"><span>Data</span><input name="data" type="date" required value="${esc(validD(d.data) ? d.data : today())}"></label><label class="f"><span>Totale € (facoltativo)</span><input name="totale" inputmode="decimal" value="${esc(d.totale === '' || d.totale == null ? '' : fmtIn(d.totale))}" placeholder="IVA inclusa"></label></div>
-      <label class="f" data-dffa><span>Fattura che lo comprende (facoltativo)</span><input name="fattura" value="${esc(d.fattura || '')}" placeholder="numero della fattura, quando arriva"></label>
+      <div class="f lnk" data-dffa><span>Fattura collegata</span><div id="df-lnk"></div></div>
       <label class="f"><span>Note</span><input name="note" value="${esc(d.note || '')}" placeholder="es. merce per il cantiere di via Roma"></label>
       ${modOn('magazzino') ? `<div class="acq" data-dfacq>${magMulti() ? `<div class="f-row">${magSel(acqMag(d.id), 'mag', 'Magazzino dove entra la merce')}</div>` : magSel('')}<div id="df-acq"></div></div>` : ''}`, async fd => {
       if (d.tipo === 'fattura') return;
       const AL = AQ && d.tipo === 'ddt' ? AQ.get() : [], hadM = GX.mov().some(m => m.doc === d.id);
       const mag = AL.length ? magNeed(fd) : ''; if (mag === null) return;
-      const o = { ...d, fornitore: String(fd.get('fornitore') || '').trim(), numero: String(fd.get('numero') || '').trim(), data: String(fd.get('data') || today()), fattura: String(fd.get('fattura') || '').trim(), note: String(fd.get('note') || '').trim() };
+      const o = { ...d, fornitore: String(fd.get('fornitore') || '').trim(), numero: String(fd.get('numero') || '').trim(), data: String(fd.get('data') || today()), fattura: d.tipo === 'ddt' ? (lkF ? String(lkF.numero || '') : '') : d.fattura || '', note: String(fd.get('note') || '').trim() };
       const tt = String(fd.get('totale') || '').trim(); o.totale = tt === '' ? '' : num(tt);
       if (!o.fornitore) { toast('Scrivi il fornitore'); return; }
-      if (n && !file && !isLocal()) { toast('Allega il documento (PDF o foto)'); return; }
       if (file && !isLocal()) {
         try { busy('Salvo il documento nel tuo Drive…'); o.file = await api('uploadDoc', { name: `${(DF_T[o.tipo] || DF_T.altro)[0]} ${o.fornitore} ${o.numero} ${o.data}.${file.ext}`.replace(/[\\/]/g, '-').replace(/\s+/g, ' '), mime: file.mime, data: file.data }); o.nomeFile = file.name; o.mime = file.mime; }
         catch (e) { busy(); toast('Documento non salvato: ' + e.message); return; }
         busy();
       }
       const mo = AL.length || hadM ? acqOps(AL, { doc: o.id, data: o.data, fornitore: o.fornitore, mag, causale: 'DDT fornitore' + (o.numero ? ' n. ' + o.numero : '') }) : [];
-      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo]); toast((n ? 'Documento archiviato' : 'Documento aggiornato') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '')); return true;
+      // la fattura collegata richiama il numero di questo DDT; quella scollegata non più
+      const lo = [], nn = normDoc(o.numero), f0 = d0 ? faOfDdt(d0) : null;
+      if (o.tipo === 'ddt' && lkF && o.numero && !ddtNums(lkF).map(normDoc).includes(nn)) lo.push({ action: 'upsert', sheet: 'Fatture', row: { ...lkF, ddt: [...ddtNums(lkF), o.numero].join(', ') } });
+      if (f0 && (!lkF || f0.id !== lkF.id)) { const old0 = normDoc(d0.numero); lo.push({ action: 'upsert', sheet: 'Fatture', row: { ...f0, ddt: ddtNums(f0).filter(x => normDoc(x) !== old0).join(', ') } }); }
+      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo, ...lo]); toast((n ? 'DDT registrato' : 'Documento aggiornato') + (lkF && o.tipo === 'ddt' ? ' · collegato alla fattura' : '') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : ''));
+      if (nxt) { const nx = nxt, fid = lkF && lkF.id; setTimeout(() => { if (nx === 'new') formFat({ fornitore: o.fornitore, ddt: o.numero, data: today() }); else { const fx = faRows().find(x => x.id === fid); if (fx) formFat(fx); } }, 320); }
+      return true;
     }, n ? null : () => { const mv = GX.mov().filter(m => m.doc === d.id); if (!confirm(`Togliere questo documento dall'archivio? Il file resta nel tuo Google Drive.${mv.length ? ' I prodotti caricati con questo documento escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'DocForn', id: d.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Documento tolto dall\'archivio'); return true; }, n ? 'Archivia' : 'Salva');
     const AQ = modOn('magazzino') ? acqBox($('#df-acq'), acqInit(d.id)) : null;
     $('#sheet-form').classList.add('wide');
+    // fattura collegata: scegli tra quelle del fornitore, registrala adesso o aprila
+    const lkBox = $('#df-lnk'), fIn = $('#sheet-form [name=fornitore]');
+    let lkF = d.fornitore ? faOfDdt(d) : null, nxt = '';
+    const drawLk = () => {
+      if (!lkBox) return;
+      if (lkF) { lkBox.innerHTML = `<div class="lnk-ok"><span class="chip paid">✓ Collegati</span><span class="lnk-t"><b>Fattura n. ${esc(lkF.numero || '—')}</b><small>${esc(dIt(lkF.data))}${num(lkF.totale) ? ' · ' + eur(lkF.totale) : ''}${lkF.pdf ? ' · allegata' : ' · da allegare'}</small></span><button type="button" class="btn sm" data-lk="open">Apri</button><button type="button" class="btn sm ghost" data-lk="un">Scollega</button></div>`; return; }
+      const fk = fornKey(fIn.value), C = faRows().filter(f => fk && fornKey(f.fornitore) === fk).sort((a, b) => String(b.data).localeCompare(String(a.data))).slice(0, 80);
+      lkBox.innerHTML = `<div class="lnk-no"><select data-lk="sel"><option value="">${fk ? (C.length ? 'Non ancora arrivata' : 'Nessuna fattura di questo fornitore') : 'Scrivi prima il fornitore'}</option>${C.map(f => `<option value="${esc(f.id)}">n. ${esc(f.numero || '—')} · ${esc(dIt(f.data))}${num(f.totale) ? ' · ' + eur(f.totale) : ''}</option>`).join('')}</select><button type="button" class="btn sm" data-lk="new">+ Registra la fattura</button></div>`;
+    };
+    if (lkBox) {
+      lkBox.onclick = e => { const b = e.target.closest('button[data-lk]'); if (!b) return; e.preventDefault(); const k = b.dataset.lk; if (k === 'un') { lkF = null; drawLk(); return; } nxt = k; $('#sheet-form').requestSubmit(); };
+      lkBox.onchange = e => { if (e.target.dataset.lk === 'sel') { lkF = faRows().find(f => f.id === e.target.value) || null; drawLk(); } };
+      fIn.addEventListener('change', () => { if (!lkF) drawLk(); });
+      drawLk();
+    }
     adBox($('#df-doc'), () => file, f => { file = f; }, d.file, `${d.numero || 'documento'}`);
     const seg = $('.df-seg'), fa = $('[data-dffa]');
     const upd = () => { fa.hidden = d.tipo !== 'ddt'; const ab = $('[data-dfacq]'); if (ab) ab.hidden = d.tipo !== 'ddt'; };
@@ -9328,7 +9419,7 @@
     $$('[data-close]').forEach(b => (b.onclick = closeSheet));
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#pv-zoom')) { pvZoomClose(); return; } if (e.key === 'Escape' && $('#pv-menu')) { $('#pv-menu').remove(); return; } if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
     document.addEventListener('click', e => { if (pvZoomClick(e)) return; if (pvMenuClick(e.target)) { e.stopPropagation(); } }, true);
-    $('#fab').onclick = () => view === 'gasolio' ? formGas() : view === 'fatture' ? (aiReady() ? readFatAI() : formFat()) : formMov(); $('#add-top').onclick = () => formMov();
+    $('#fab').onclick = () => view === 'gasolio' ? formGas() : view === 'fatture' ? (aiReady() ? readFatAI() : formFat()) : ['movimenti', 'attrezzatura', 'articoli'].includes(view) ? acqAsk() : formMov(); $('#add-top').onclick = () => ['movimenti', 'attrezzatura', 'articoli'].includes(view) ? acqAsk() : formMov();
 
     document.addEventListener('click', e => {
       const t = e.target;
@@ -9504,6 +9595,10 @@
       if (t.closest('#ga-price') || t.closest('#ga-price2')) { formGasPrice(); return; }
       if (t.closest('#ga-rent')) { formGasRent(); return; }
       if (t.closest('#ga-mz')) { formGasMezzo(); return; }
+      const acn = t.closest('[data-acqnew]'); if (acn) { acqNew(acn.dataset.acqnew); return; }
+      const aco = t.closest('[data-acqopen]'); if (aco) { const [k, id] = aco.dataset.acqopen.split(':'); if (k === 'fa') { const fx = faRows().find(x => x.id === id); if (fx) formFat(fx); } else { const dx = GX.dfo().find(x => x.id === id); if (dx) docFornForm(dx); } return; }
+      const acs = t.closest('[data-acqst]'); if (acs) { acqSt = acs.dataset.acqst; renderMov(); return; }
+      const mvm = t.closest('[data-mvmode]'); if (mvm) { mvMode = mvm.dataset.mvmode; renderMov(); return; }
       const gnm = t.closest('[data-gname]'); if (gnm) { e.stopPropagation(); formGasMezzo(gnm.dataset.gname); return; }
       if (t.closest('#ga-allv')) { gasShowAll = !gasShowAll; renderGas(); return; }
       if (t.closest('#ga-prev') || t.closest('#ga-next')) { const o = [...$('#ga-per').options].map(x => x.value), i = o.indexOf(gasP) + (t.closest('#ga-prev') ? 1 : -1); if (i >= 0 && i < o.length) { gasP = o[i]; gasAnim = true; renderGas(); } return; }
