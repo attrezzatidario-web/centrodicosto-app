@@ -1346,7 +1346,7 @@
     sub('');
     renderMe();
     renderSetMod();
-    renderDocSet(); renderSrvSet();
+    renderDocSet(); renderPagSet(); renderSrvSet();
     renderBackup();
     const nd = db.movimenti.filter(r => !validD(r.data)).length;
     const stat = (l, v, s2) => `<div class="st-stat"><span>${l}</span><b>${v}</b>${s2 ? `<small>${s2}</small>` : ''}</div>`;
@@ -5423,7 +5423,7 @@
       const ty = y + rows.length * 6.5 + 1;
       fill(C.navy); doc.roundedRect(tx - 4, ty - 5, tw + 4, 11, 2, 2, 'F'); color(C.white); font('bold', 11); doc.text('Totale', tx, ty + 2); doc.text(eur(t.tot), W - M - 2, ty + 2, { align: 'right' });
       // note
-      const notes = [SOLO ? `Lavorazione sui capi forniti dal cliente${p.capi ? ': ' + p.capi : ''}${num(p.spz) ? ` (${fmtNum(num(p.spz), 0)} pezzi)` : ''}.` : '', p.note, `Prezzi in euro IVA esclusa. Preventivo valido ${num(p.valid) || 30} giorni (fino al ${scad}).`, SOLO ? 'Nessuna responsabilità da parte nostra per qualsiasi danno, difetto o evento che riguardi i capi forniti dal cliente.' : ''].filter(Boolean);
+      const notes = [SOLO ? `Lavorazione sui capi forniti dal cliente${p.capi ? ': ' + p.capi : ''}${num(p.spz) ? ` (${fmtNum(num(p.spz), 0)} pezzi)` : ''}.` : '', p.note, `Prezzi in euro IVA esclusa. Preventivo valido ${num(p.valid) || 30} giorni (fino al ${scad}).`, SOLO ? 'Nessuna responsabilità da parte nostra per qualsiasi danno, difetto o evento che riguardi i capi forniti dal cliente.' : '', ...(payInfo().pv ? payLines(true) : [])].filter(Boolean);
       color(C.navy); font('bold', 9); doc.text('Note', M, y + 1);
       color(C.ink2); font('normal', 8.3); let ny = y + 7; notes.forEach(n => { const ls = doc.splitTextToSize(n, CW - tw - 14); doc.text(ls, M, ny); ny += ls.length * 4 + 2; });
       // v124: sola stampa → il logo da applicare, così il cliente vede cosa viene stampato
@@ -8422,15 +8422,45 @@
       <div class="f-row">${f('piva', 'Partita IVA', '11 cifre')}${f('cf', 'Codice fiscale', 'se diverso dalla P.IVA')}</div>
       ${f('indirizzo', 'Indirizzo della sede', 'Via e numero civico')}
       <div class="f-row f3">${f('cap', 'CAP')}${f('citta', 'Città')}${f('prov', 'Prov.', 'RM')}</div>
-      <div class="f-row"><label class="f"><span>Regime fiscale</span><select name="regime"><option value="RF01"${a.regime !== 'RF19' ? ' selected' : ''}>Ordinario (RF01)</option><option value="RF19"${a.regime === 'RF19' ? ' selected' : ''}>Forfettario (RF19)</option></select></label>${f('iban', 'IBAN per i bonifici', 'IT…')}</div>
+      <div class="f-row"><label class="f"><span>Regime fiscale</span><select name="regime"><option value="RF01"${a.regime !== 'RF19' ? ' selected' : ''}>Ordinario (RF01)</option><option value="RF19"${a.regime === 'RF19' ? ' selected' : ''}>Forfettario (RF19)</option></select></label></div>
       <div class="f-row f3">${f('email', 'Email')}${f('pec', 'PEC')}${f('tel', 'Telefono')}</div>`, fd => {
       const o = { ...a };
-      ['nome', 'piva', 'cf', 'indirizzo', 'cap', 'citta', 'prov', 'regime', 'iban', 'email', 'pec', 'tel'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });
-      o.piva = o.piva.replace(/\s|^IT/gi, ''); o.prov = o.prov.toUpperCase().slice(0, 2); o.iban = o.iban.replace(/\s+/g, '').toUpperCase(); o.cf = o.cf.toUpperCase();
+      ['nome', 'piva', 'cf', 'indirizzo', 'cap', 'citta', 'prov', 'regime', 'email', 'pec', 'tel'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });
+      o.piva = o.piva.replace(/\s|^IT/gi, ''); o.prov = o.prov.toUpperCase().slice(0, 2); o.cf = o.cf.toUpperCase();
       if (o.piva && !/^\d{11}$/.test(o.piva)) toast('Attenzione: la partita IVA italiana ha 11 cifre');
       setConfig('azienda', o); toast('Dati dell\'azienda salvati'); done && setTimeout(done, 50); return true;
     }, null, 'Salva');
     $('#sheet-form').classList.add('wide');
+  }
+  /* ---------- v150: dati per il pagamento (IBAN, banca, altri metodi) ---------- */
+  const fmtIban = v => String(v || '').replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim();
+  const ibanOk = v => { const t = String(v || '').replace(/\s+/g, '').toUpperCase(); if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(t)) return false; const r = (t.slice(4) + t.slice(0, 4)).replace(/[A-Z]/g, c => c.charCodeAt(0) - 55); let m = 0; for (const ch of r) m = (m * 10 + +ch) % 97; return m === 1 && (!/^IT/.test(t) || t.length === 27); };
+  const payInfo = () => { const p = cfg('pagamenti') || {}, a = cfg('azienda') || {}; return { intestatario: p.intestatario || '', banca: p.banca || '', iban: String(p.iban || a.iban || '').replace(/\s+/g, '').toUpperCase(), bic: p.bic || '', altri: p.altri || '', note: p.note || '', pv: p.pv !== false }; };
+  const payLines = (bank = true) => { const p = payInfo(), L = []; if (p.iban && bank) L.push(`Bonifico a ${p.intestatario || ORG.n}${p.banca ? ' · ' + p.banca : ''} · IBAN ${fmtIban(p.iban)}${p.bic ? ' · BIC ' + p.bic : ''}`); if (p.altri) L.push(p.altri); if (p.note) L.push(p.note); return L; };
+  function pagForm(done) {
+    const p = payInfo();
+    const f = (k, l, ph = '', v = p[k]) => `<label class="f"><span>${l}</span><input name="${k}" value="${esc(v || '')}" placeholder="${esc(ph)}" autocomplete="off"></label>`;
+    openSheet('Dati per il pagamento', `<p class="pvx-intro">Compaiono su fatture e preventivi, e l'IBAN viene scritto anche nel file XML della fattura elettronica.</p>
+      ${f('intestatario', 'Intestatario del conto', ORG.n)}
+      ${f('banca', 'Banca', 'Es. Banca Intesa')}
+      <div class="f-row">${f('iban', 'IBAN', 'IT00 X000 0000 0000 0000 0000 000')}${f('bic', 'BIC / SWIFT', 'facoltativo')}</div>
+      ${f('altri', 'Altri modi di pagamento', 'Es. PayPal: nome@email.it · Satispay')}
+      <label class="f"><span>Condizioni di pagamento</span><textarea name="note" rows="2" placeholder="Es. Bonifico anticipato. Indicare il numero del documento nella causale.">${esc(p.note)}</textarea></label>
+      <label class="rp-o"><input type="checkbox" name="pv"${p.pv ? ' checked' : ''}><span><b>Mostra anche sui preventivi</b><small>Sotto le note del preventivo</small></span></label>`, fd => {
+      const o = {}; ['intestatario', 'banca', 'iban', 'bic', 'altri', 'note'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });
+      o.iban = o.iban.replace(/\s+/g, '').toUpperCase(); o.bic = o.bic.replace(/\s+/g, '').toUpperCase(); o.pv = fd.has('pv');
+      if (o.iban && !ibanOk(o.iban)) { toast('L\'IBAN non è valido: controlla le cifre (in Italia sono 27 caratteri)'); return false; }
+      setConfig('pagamenti', o); toast('Dati di pagamento salvati'); done && setTimeout(done, 50); return true;
+    }, null, 'Salva');
+    $('#sheet-form').classList.add('wide');
+  }
+  function renderPagSet() {
+    const el = $('#s-pag'); if (!el) return;
+    const p = payInfo(), has = !!p.iban;
+    el.innerHTML = `<div class="st-row"><div class="st-l"><b>${has ? esc(p.intestatario || ORG.n) : 'Conto per i bonifici'}</b><small>${has ? esc([p.banca, fmtIban(p.iban), p.bic ? 'BIC ' + p.bic : ''].filter(Boolean).join(' · ')) : '<b class="st-warn">Manca l\'IBAN: sulle fatture non compaiono le coordinate per pagarti</b>'}</small></div><button type="button" class="btn sm${has ? '' : ' primary'}" data-gx="pag">${has ? 'Modifica' : 'Aggiungi'}</button></div>`
+      + (p.altri ? `<div class="st-row"><div class="st-l"><b>Altri modi di pagamento</b><small>${esc(p.altri)}</small></div></div>` : '')
+      + (p.note ? `<div class="st-row"><div class="st-l"><b>Condizioni di pagamento</b><small>${esc(p.note)}</small></div></div>` : '')
+      + `<div class="st-row"><div class="st-l"><b>Dove compaiono</b><small>Fatture (PDF e XML)${p.pv ? ' e preventivi' : ''}. Sulle fatture l'IBAN si vede quando il pagamento è un bonifico o una Ri.Ba.</small></div></div>`;
   }
   function renderDocSet() {
     const el = $('#s-doc'); if (!el) return;
@@ -8944,7 +8974,7 @@
         didParseCell: h => { if (h.section === 'head' && h.column.index >= 3 + o0) h.cell.styles.halign = 'right'; if (FOTO && h.section === 'body') h.cell.styles.valign = 'middle'; },
         didDrawCell: h => { if (!FOTO || h.section !== 'body' || h.column.index !== 0) return; const l = ALL[h.row.index]; if (!l || l.h) return; const im = photoOf(l); if (!im) return; fitImg(im, h.cell.x + 1, h.cell.y + 1, h.cell.width - 2, h.cell.height - 2); } });
       y = doc.lastAutoTable.finalY + 6;
-      const need = isD ? 42 : 50; if (y + need > H - 22) { doc.addPage(); y = 20; }
+      const need = isD ? 42 : 50 + (payLines(true).length > 1 ? 10 : 0); if (y + need > H - 22) { doc.addPage(); y = 20; }
       if (showP) {
         // riepilogo IVA e totali
         const rx = W - M - 78;
@@ -8956,8 +8986,10 @@
       }
       if (!isD) {
         color(C.muted); font('bold', 7); doc.text('PAGAMENTO', M, y + 3); color(C.ink); font('normal', 8.6);
-        doc.text([d.pagamento || '—', d.scadenza ? `scadenza ${dIt(d.scadenza)}` : '', /bonifico|ri\.?ba/i.test(d.pagamento || '') && az.iban ? `IBAN ${az.iban}` : ''].filter(Boolean).join('   ·   '), M, y + 8);
-        y += 14;
+        doc.text([d.pagamento || '—', d.scadenza ? `scadenza ${dIt(d.scadenza)}` : ''].filter(Boolean).join('   ·   '), M, y + 8);
+        let yy = y + 8;
+        payLines(/bonifico|ri\.?ba/i.test(d.pagamento || '')).forEach(t => { const ls = doc.splitTextToSize(t, CW); yy += 4.6; doc.text(ls, M, yy); yy += (ls.length - 1) * 4.2; });
+        y = yy + 6;
       } else {
         const sw = (CW - 8) / 3;
         [['Data e ora inizio trasporto', ''], ['Firma del conducente', ''], ['Firma del destinatario', '']].forEach(([l], i) => { const x = M + i * (sw + 4); stroke(C.line); doc.roundedRect(x, y, sw, 18, 2, 2, 'S'); color(C.muted); font('normal', 7); doc.text(l, x + 3, y + 4.5); });
@@ -9010,7 +9042,7 @@
         <div class="gx-docact">${miss.some(x => x[0] === 'az') ? '<button type="button" class="btn sm primary" data-gx="az">Completa i dati della tua azienda</button>' : ''}${miss.some(x => x[0] === 'cli') && cliOf(f.cliente) ? `<button type="button" class="btn sm primary" data-gx="cli-open" data-id="${esc(f.cliente)}">Completa il cliente</button>` : ''}</div>`, () => true, null, 'Chiudi');
       return;
     }
-    const az = { nome: ORG.n, ...(cfg('azienda') || {}) }, R = jp(f.righe, []);
+    const az = { nome: ORG.n, ...(cfg('azienda') || {}) }, R = jp(f.righe, []), pgi = payInfo();
     const x = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c])).replace(/[^\x20-\x7E -ÿ]/g, ' ').trim();
     const n2 = v => (Math.round(num(v) * 100) / 100).toFixed(2);
     const nq = v => { const s = String(Math.round(num(v) * 1e8) / 1e8); const dec = (s.split('.')[1] || '').length; return num(v).toFixed(Math.min(8, Math.max(2, dec))); };
@@ -9032,7 +9064,7 @@
   <FatturaElettronicaBody>
     <DatiGenerali><DatiGeneraliDocumento><TipoDocumento>${f.tipo === 'TD24' ? 'TD24' : 'TD01'}</TipoDocumento><Divisa>EUR</Divisa><Data>${x(f.data)}</Data><Numero>${x(f.numero)}</Numero>${az.regime === 'RF19' && T.tot > 77.47 ? '<DatiBollo><BolloVirtuale>SI</BolloVirtuale><ImportoBollo>2.00</ImportoBollo></DatiBollo>' : ''}<ImportoTotaleDocumento>${n2(T.tot)}</ImportoTotaleDocumento>${f.note ? `<Causale>${x(String(f.note).slice(0, 200))}</Causale>` : ''}</DatiGeneraliDocumento>${ddtRef.map(dd => `<DatiDDT><NumeroDDT>${x(dd.n)}</NumeroDDT><DataDDT>${x(dd.data)}</DataDDT>${dd.lines.map(n => `<RiferimentoNumeroLinea>${n}</RiferimentoNumeroLinea>`).join('')}</DatiDDT>`).join('')}</DatiGenerali>
     <DatiBeniServizi>${lines.map((l, i) => `<DettaglioLinee><NumeroLinea>${i + 1}</NumeroLinea>${l.c ? `<CodiceArticolo><CodiceTipo>INTERNO</CodiceTipo><CodiceValore>${x(l.c)}</CodiceValore></CodiceArticolo>` : ''}<Descrizione>${x(String(l.d || '').slice(0, 1000)) || '-'}</Descrizione><Quantita>${nq(l.q || 1)}</Quantita>${l.um ? `<UnitaMisura>${x(l.um)}</UnitaMisura>` : ''}<PrezzoUnitario>${nq(l.p)}</PrezzoUnitario>${num(l.sc) ? `<ScontoMaggiorazione><Tipo>SC</Tipo><Percentuale>${n2(l.sc)}</Percentuale></ScontoMaggiorazione>` : ''}<PrezzoTotale>${n2(lnTot(l))}</PrezzoTotale><AliquotaIVA>${n2(l.iva)}</AliquotaIVA>${num(l.iva) === 0 ? '<Natura>N2.2</Natura>' : ''}</DettaglioLinee>`).join('')}${Object.entries(T.by).map(([a, v]) => `<DatiRiepilogo><AliquotaIVA>${n2(a)}</AliquotaIVA>${num(a) === 0 ? '<Natura>N2.2</Natura>' : ''}<ImponibileImporto>${n2(v.imp)}</ImponibileImporto><Imposta>${n2(v.iva)}</Imposta>${num(a) ? '<EsigibilitaIVA>I</EsigibilitaIVA>' : ''}</DatiRiepilogo>`).join('')}</DatiBeniServizi>
-    <DatiPagamento><CondizioniPagamento>TP02</CondizioniPagamento><DettaglioPagamento><ModalitaPagamento>${mp}</ModalitaPagamento>${validD(f.scadenza) ? `<DataScadenzaPagamento>${x(f.scadenza)}</DataScadenzaPagamento>` : ''}<ImportoPagamento>${n2(T.tot)}</ImportoPagamento>${mp === 'MP05' && az.iban ? `<IBAN>${x(az.iban)}</IBAN>` : ''}</DettaglioPagamento></DatiPagamento>
+    <DatiPagamento><CondizioniPagamento>TP02</CondizioniPagamento><DettaglioPagamento><ModalitaPagamento>${mp}</ModalitaPagamento>${validD(f.scadenza) ? `<DataScadenzaPagamento>${x(f.scadenza)}</DataScadenzaPagamento>` : ''}<ImportoPagamento>${n2(T.tot)}</ImportoPagamento>${mp === 'MP05' && pgi.iban ? `${pgi.banca ? `<IstitutoFinanziario>${x(pgi.banca).slice(0, 80)}</IstitutoFinanziario>` : ''}<IBAN>${x(pgi.iban)}</IBAN>${pgi.bic ? `<BIC>${x(pgi.bic)}</BIC>` : ''}` : ''}</DettaglioPagamento></DatiPagamento>
   </FatturaElettronicaBody>
 </p:FatturaElettronica>
 `;
@@ -9055,6 +9087,7 @@
       e.preventDefault();
       if (k === 'more') { GXL[id] = gxN(id) + 300; return render(); }
       if (k === 'az') return azForm(() => { render(); });
+      if (k === 'pag') return pagForm(() => { renderPagSet(); });
       if (k === 'inc-new') return incForm();
       if (k === 'forn-new') return fornForm();
       if (k === 'forn-imp') return fornImport();
