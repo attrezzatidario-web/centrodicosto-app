@@ -8888,7 +8888,9 @@
       tot();
     };
     // sotto la riga: giacenza, prezzo d'acquisto e margine (solo per te: nascosti nella vista cliente)
-    const dxInfo = l => { const g = l.art && artOf(l.art) && modOn('magazzino') ? `in magazzino: ${fmtNum(giacMap().get(l.art) || 0, 0)} ${esc(artOf(l.art).um || '')}` : '', a = docAcq(l), net = num(l.p) * (1 - num(l.sc) / 100);
+    // v153: con più magazzini la giacenza mostrata è quella del magazzino scelto nel documento
+    const dxMag = () => { const s = magMulti() ? $('#sheet-form [name=mag]') : null; return s && s.value ? s.value : ''; };
+    const dxInfo = l => { const mg = dxMag(), g = l.art && artOf(l.art) && modOn('magazzino') ? `${mg ? esc(mg) : 'in magazzino'}: ${fmtNum(giacMap(mg).get(l.art) || 0, 0)} ${esc(artOf(l.art).um || '')}` : '', a = docAcq(l), net = num(l.p) * (1 - num(l.sc) / 100);
       const m = !pvCli && a != null && a > 0 ? `acquisto ${eur(a)} · <span class="${net > a ? 'dx-mok' : 'dx-mko'}">margine ${net ? fmtNum((net - a) / net * 100, 0) : '—'}%</span>` : '';
       const src = l.sup && PV_SUP[l.sup] && l.sup !== 'mag' ? (l.sup === 'srv' ? 'servizio' : PV_SUP[l.sup].n) : '';
       return g || m || src ? `<small class="dx-g">${[src, g, m].filter(Boolean).join(' · ')}</small>` : ''; };
@@ -8902,6 +8904,7 @@
     const reprice = () => { const nm = cliName(); let n2 = 0; R.forEach(l => { if (l.sup && !l.man && pvCats[l.sup]) { const v = docPrice(nm, l.it, l.vc); if (v != null && v !== num(l.p)) { l.p = v; n2++; } } }); return n2; };
     const addSel = arr => { const nm = cliName(); arr.forEach(x => { const nl = docLineFrom(x, nm), ex = R.find(l => l.sup === nl.sup && l.it === nl.it && l.vc === nl.vc && l.d === nl.d); if (ex) ex.q = num(ex.q) + num(nl.q); else { const b0 = R.findIndex(l => !l.art && !l.sup && !String(l.d || '').trim()); if (b0 >= 0) R[b0] = nl; else R.push(nl); } }); draw(); };
     box.addEventListener('input', e => { const r = e.target.closest('.dx-r'), k = e.target.dataset.k; if (!r || !k) return; const l = R[+r.dataset.i]; l[k] = e.target.value; if (k === 'd') { l.art = ''; l.c = ''; delete l.sup; delete l.it; delete l.vc; delete l.srv; l.acq = ''; } if (k === 'p') l.man = 1; tot(); });
+    const dxMagSel = $('#sheet-form [name=mag]'); if (dxMagSel) dxMagSel.addEventListener('change', tot);
     $('#sheet-form [name=cliente]').addEventListener('change', () => { ricDraw(); const n2 = reprice(); if (n2) { draw(); toast(`Prezzi aggiornati per il cliente (${n2} righe)`); } });
     $('#dx-ric').addEventListener('change', e => { if (!e.target.matches('[data-dxric]')) return; const v = String(e.target.value || '').trim(); if (v !== '' && (isNaN(num(v)) || num(v) < 0)) return toast('Scrivi un ricarico valido'); cliRicSet(cliName(), v); const n2 = reprice(); draw(); toast(n2 ? `Ricarico salvato · ${n2} prezzi aggiornati` : 'Ricarico salvato'); });
     box.addEventListener('change', e => {
