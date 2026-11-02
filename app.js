@@ -1647,7 +1647,7 @@
     $('#sheet-title').textContent = title;
     $('#sheet-body').innerHTML = html;
     const ok = $('#sheet-ok'); ok.textContent = okLabel; ok.type = 'submit'; ok.onclick = null; ok.hidden = false;
-    $('#sheet-del').hidden = !del;
+    $('#sheet-del').hidden = !del; $('#sheet-del').textContent = 'Elimina';
     $('#sheet-form').classList.remove('wide', 'xwide', 'dk-sheet'); $('#sheet-ok').classList.remove('dp-danger');
     onSubmit = submit; onDelete = del;
     clearTimeout(closeSheet._t);
@@ -2954,6 +2954,55 @@
             <div class="db-an">preventivi ai clienti con i cataloghi dei fornitori · non sono spese</div>` : '<div class="db-an">Crea il primo preventivo con i cataloghi di tutti i fornitori</div>'}
           </a>`;
   }
+
+  /* ---------- v155: Dashboard a blocchi (mostra/nascondi e ordine) ----------
+     Ordine e blocchi visibili: 1) scelta dell'utente (Config dash_<email>) 2) base del gestionale decisa dall'amministratore (Config dashBase) 3) tutto acceso. */
+  const DASH_B = [
+    { k: 'pl', t: 'Ricavi, costi e utile', d: 'Quanto guadagni mese per mese', w: 12, av: () => modOn('incassi') || modOn('vendite') },
+    { k: 'hero', t: 'Spesa totale e indicatori', d: 'Totale del periodo, media mensile, da controllare', w: 12 },
+    { k: 'aree', t: 'Schede delle aree di spesa', d: 'Una scheda per ogni area (attrezzatura, GLS, gasolio…)', w: 12, av: () => AREAS.length > 1 },
+    { k: 'trend', t: 'Spesa mese per mese', d: 'Grafico a barre', w: 7 },
+    { k: 'peso', t: 'Peso delle aree', d: 'Quanto pesa ogni area sul totale', w: 5 },
+    { k: 'pz', t: 'Forniture per piazzale', d: 'Acquisti divisi per centro o piazzale', w: 7 },
+    { k: 'fatture', t: 'Fatture fornitori', d: 'Da pagare e scadute', w: 5 },
+    { k: 'extra', t: 'Preventivi / listino', d: 'Riepilogo dei preventivi o del listino', w: 5 },
+    { k: 'verifica', t: 'Cose da verificare', d: 'Controlli e anomalie nei dati', w: 7, top: 1 },
+    { k: 'feed', t: 'Ultimi movimenti', d: 'Le ultime registrazioni di tutte le aree', w: 5, top: 1 },
+    { k: 'ai', t: 'Analisi con IA', d: 'Domande e riepilogo automatico', w: 12 },
+    { k: 'tops', t: 'Classifiche', d: 'Centri, destinazioni, mezzi, categorie, fornitori', w: 12 }
+  ];
+  const dashKey = () => 'dash_' + ((me && me.email) || '');
+  const dashNorm = r => { const o = (r && Array.isArray(r.o) ? r.o : []).filter((k, i, a) => DASH_B.some(b => b.k === k) && a.indexOf(k) === i); DASH_B.forEach(b => { if (!o.includes(b.k)) o.push(b.k); }); return { o, h: (r && Array.isArray(r.h) ? r.h : []).filter(k => DASH_B.some(b => b.k === k)) }; };
+  const dashLay = () => { const u = cfg(dashKey()), b = cfg('dashBase'); return dashNorm(u && u.o ? u : b && b.o ? b : null); };
+  function dashCompose(BL) {
+    const L = dashLay(), rows = []; let cur = [], sum = 0;
+    const flush = () => { if (!cur.length) return; if (cur.length === 1) cur[0].sp = 12; else if (cur.every(x => x.w === 5)) cur.forEach(x => { x.sp = 6; }); else { cur.forEach(x => { x.sp = x.w; }); cur[cur.length - 1].sp += 12 - sum; } rows.push(...cur); cur = []; sum = 0; };
+    L.o.forEach(k => {
+      const b = DASH_B.find(x => x.k === k); if (!b || L.h.includes(k) || (b.av && !b.av())) return;
+      const html = BL[k](); if (!html) return;
+      if (b.w === 12) { flush(); rows.push({ k, w: 12, sp: 12, items: [html] }); return; }
+      if (cur.length === 2 && sum === 12 && b.w === 5 && cur[1].w === 5) { cur[1].items.push(html); return; }
+      if (sum + b.w > 12) flush();
+      cur.push({ k, w: b.w, items: [html], top: b.top }); sum += b.w;
+    });
+    flush();
+    return `<div class="dsh">${rows.map(x => `<div class="dsh-b${x.top ? ' dsh-top' : ''}" data-dsh="${x.k}" style="--sp:${x.sp}">${x.items.length > 1 ? `<div class="db-side">${x.items.join('')}</div>` : x.items[0]}</div>`).join('')}</div>`;
+  }
+  function dashEdit() {
+    const L = dashLay(), admin = !!(me && me.admin) && !DEMO, hasU = !!cfg(dashKey()), hasB = !!cfg('dashBase');
+    let ord = L.o.filter(k => { const b = DASH_B.find(x => x.k === k); return b && (!b.av || b.av()); }), hid = new Set(L.h), forAll = false;
+    const row = k => { const b = DASH_B.find(x => x.k === k); return `<div class="dsh-r" data-k="${k}"><label class="sw"><input type="checkbox" data-dshon${hid.has(k) ? '' : ' checked'}><span class="sw-ui"></span><span class="sw-t"><b>${esc(b.t)}</b><small>${esc(b.d)}</small></span></label><span class="dsh-mv"><button type="button" class="icon-btn" data-dshmv="-1" aria-label="Sposta su"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button><button type="button" class="icon-btn" data-dshmv="1" aria-label="Sposta giù"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button></span></div>`; };
+    openSheet('Personalizza la dashboard', `<p class="muted small" style="margin:0 0 10px">Accendi o spegni i blocchi e usa le frecce per cambiare l'ordine.</p><div class="dsh-list" id="dsh-list">${ord.map(row).join('')}</div>
+      ${admin ? `<div class="dsh-adm"><label class="sw"><input type="checkbox" id="dsh-all"><span class="sw-ui"></span><span class="sw-t"><b>Salva come base del gestionale</b><small>Vale per tutti gli utenti che non hanno una scelta personale</small></span></label></div>` : ''}`,
+      () => {
+        const o = $$('#dsh-list .dsh-r').map(r => r.dataset.k), h = $$('#dsh-list .dsh-r').filter(r => !r.querySelector('[data-dshon]').checked).map(r => r.dataset.k), val = { o, h };
+        if (admin && $('#dsh-all').checked) { setConfig('dashBase', val); if (hasU) write([{ action: 'delete', sheet: 'Config', id: dashKey() }]); }
+        else setConfig(dashKey(), val);
+        LS.set('cdc_snap', null); ovAnim = false; toast('Dashboard aggiornata'); return true;
+      }, (hasU || (admin && hasB)) ? () => { const ops = []; if (hasU) ops.push({ action: 'delete', sheet: 'Config', id: dashKey() }); if (admin && $('#dsh-all') && $('#dsh-all').checked && hasB) ops.push({ action: 'delete', sheet: 'Config', id: 'dashBase' }); if (!ops.length) { toast('Spunta «Salva come base» per ripristinare la base del gestionale'); return; } write(ops); LS.set('cdc_snap', null); toast('Ripristinata'); return true; } : null, 'Salva');
+    $('#sheet-del').textContent = 'Ripristina';
+    $('#dsh-list').addEventListener('click', e => { const mv = e.target.closest('[data-dshmv]'); if (!mv) return; const r = mv.closest('.dsh-r'), d = +mv.dataset.dshmv, sib = d < 0 ? r.previousElementSibling : r.nextElementSibling; if (!sib) return; if (d < 0) sib.before(r); else sib.after(r); r.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); });
+  }
   function renderOverview() {
     const D = ovRows();
     const months = [...new Set(AREAS.flatMap(a => D[a.k].map(ovMonthOf[a.k])).filter(k => /^\d{4}-\d\d$/.test(k)))].sort();
@@ -3020,8 +3069,9 @@
     const F = P.fat, open = F.filter(r => !faPaid(r)), late = F.filter(faLate);
     let TK = null; try { const TD = trData(); if (TD && TD.kit && TD.kit.length) { const pr = TD.kit.map(k => trCalc(k, TD).fattura).filter(v => v > 0); TK = { n: TD.kit.length, s: (TD.sing || []).length, min: Math.min(...pr), max: Math.max(...pr), tr: num(TD.transferta), kits: TD.kit.map(k => ({ n: trShort(k.n), cod: k.cod, p: trCalc(k, TD).fattura })).sort((a, b) => b.p - a.p) }; } } catch { TK = null; }
 
-    body.innerHTML = ovPL() + `
-      <div class="gl-hero db-hero">
+    const BL = {
+      pl: () => ovPL(),
+      hero: () => `<div class="gl-hero db-hero">
         <div class="db-top">
           <div class="db-hl">
             <span class="gh-lbl">Spesa totale · ${esc(per)}</span>
@@ -3039,9 +3089,8 @@
           <div class="gh-k"><span>Documenti registrati</span><b data-ovk="1">0</b><small>${['acquisti', areaOn('gls') && 'spedizioni', areaOn('gas') && 'pieni', (areaOn('ly') || areaOn('am')) && 'fatture e ordini'].filter(Boolean).join(', ')}</small></div>
           <div class="gh-k"><span>Da controllare</span><b data-ovk="2">0</b><small>${CK.length ? `${ckW} importanti` : 'tutto in ordine'}</small></div>
         </div>
-      </div>
-
-      <div class="db-areas"${AREAS.length < 2 ? ' hidden' : ''}>${AREAS.map((a, i) => { const st = stats[a.k](), nt = note[a.k]();
+      </div>`,
+      aree: () => `<div class="db-areas"${AREAS.length < 2 ? ' hidden' : ''}>${AREAS.map((a, i) => { const st = stats[a.k](), nt = note[a.k]();
         return `<a class="card db-area a-${a.k}" href="#${a.go}" style="--d:${120 + i * 70}ms">
           <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24">${a.ic}</svg></span><span class="db-at"><span class="lb-d">${a.t}</span><span class="lb-m">${ovShort[a.k]}</span></span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
           <div class="db-av"><b data-ova="${i}">0 €</b></div>
@@ -3049,24 +3098,19 @@
           ${spark(a.k, i)}
           <div class="db-as">${st.map(([v, l]) => `<div><b>${esc(String(v))}</b><small>${l}</small></div>`).join('')}</div>
           ${nt ? `<div class="db-an">${esc(nt)}</div>` : ''}
-        </a>`; }).join('')}</div>
-
-      <div class="db-row">
-        <div class="card ov-trend"><div class="card-h"><h3>Spesa mese per mese</h3><span class="muted small">${ivaLbl()} · tocca un mese per vederlo</span></div>
+        </a>`; }).join('')}</div>`,
+      trend: () => `<div class="card ov-trend"><div class="card-h"><h3>Spesa mese per mese</h3><span class="muted small">${ivaLbl()} · tocca un mese per vederlo</span></div>
           <div class="ov-bars" id="ov-bars"></div>
-          <div class="ov-leg db-leg">${AREAS.map(a => `<span class="a-${a.k}"><i></i>${ovShort[a.k]}</span>`).join('')}${!ovP && undated ? `<span class="muted">${esc(eur0(undated))} di attrezzatura senza data non sono nel grafico</span>` : ''}</div></div>
-        <div class="card db-split"><div class="card-h"><h3>Peso delle aree</h3><span class="muted small">${esc(ovP ? mLabel(ovP) : 'tutto il periodo')}</span></div>
+          <div class="ov-leg db-leg">${AREAS.map(a => `<span class="a-${a.k}"><i></i>${ovShort[a.k]}</span>`).join('')}${!ovP && undated ? `<span class="muted">${esc(eur0(undated))} di attrezzatura senza data non sono nel grafico</span>` : ''}</div></div>`,
+      peso: () => `<div class="card db-split"><div class="card-h"><h3>Peso delle aree</h3><span class="muted small">${esc(ovP ? mLabel(ovP) : 'tutto il periodo')}</span></div>
           ${AREAS.slice().sort((a, b) => V[b.k] - V[a.k]).map((a, i) => `<a class="db-sr a-${a.k}" href="#${a.go}" style="--d:${200 + i * 60}ms">
             <span class="db-st"><b>${a.t}</b><span><em>${T ? fmtNum(pct(V[a.k], T), 1) : 0}%</em><strong>${eur0(V[a.k])}</strong></span></span>
             <span class="db-sb"><i style="width:${T ? (V[a.k] / Math.max(...AREAS.map(x => V[x.k]), 1) * 100).toFixed(1) : 0}%"></i></span>
             <small>${PV ? (PV[a.k] ? `${V[a.k] >= PV[a.k] ? '+' : '−'}${eur0(Math.abs(V[a.k] - PV[a.k]))} rispetto a ${esc(MESI[Number(prevK.slice(5)) - 1])}` : 'nessuna spesa il mese prima') : `media ${eur0(byM.length ? byM.reduce((s, x) => s + x[a.k], 0) / byM.length : 0)} al mese`}</small>
           </a>`).join('')}
           <div class="db-stot"><span>Totale</span><b>${eur(T)}</b></div>
-        </div>
-      </div>
-
-      <div class="db-row">
-        <div class="card db-pz"><div class="card-h"><h3>${pzGen ? 'Acquisti per centro' : 'Forniture per piazzale'}</h3><span class="muted small">${pzGen ? 'Attrezzatura' : [areaOn('ly') && 'Lyreco', areaOn('am') && 'Amazon'].filter(Boolean).join(' + ')} · ${ivaLbl()}</span></div>
+        </div>`,
+      pz: () => `<div class="card db-pz"><div class="card-h"><h3>${pzGen ? 'Acquisti per centro' : 'Forniture per piazzale'}</h3><span class="muted small">${pzGen ? 'Attrezzatura' : [areaOn('ly') && 'Lyreco', areaOn('am') && 'Amazon'].filter(Boolean).join(' + ')} · ${ivaLbl()}</span></div>
           ${pz.length ? `<div class="db-pzl">${pz.map((x, i) => `<div class="db-pr${x.c.cod === LY_NONE ? ' na' : ''}" style="--d:${200 + i * 45}ms">
               <span class="db-pn">${x.c.cod === LY_NONE ? '?' : i + 1}</span>
               <span class="db-pm"><span class="db-pt"><b>${esc(x.c.n)}</b><strong>${eur0(x.t)}</strong></span>
@@ -3074,41 +3118,37 @@
                 <small>${pzGen ? `${x.n} righe` : esc(x.c.cod)}${x.c.citta ? ' · ' + esc(x.c.citta) : ''} · ${fmtNum(pct(x.t, pzT), 1)}%${x.ly > 0 ? ` · Lyreco ${eur0(x.ly)}` : ''}${x.am > 0 ? ` · Amazon ${eur0(x.am)}` : ''}</small></span>
             </div>`).join('')}</div>
             <div class="ov-leg db-leg">${pzGen ? '<span class="a-att"><i></i>Attrezzatura</span>' : (areaOn('ly') ? '<span class="a-ly"><i></i>Lyreco</span>' : '') + (areaOn('am') ? '<span class="a-am"><i></i>Amazon</span>' : '')}<span class="muted">${pz.filter(x => x.c.cod !== LY_NONE).length} ${pzGen ? 'centri' : 'piazzali'} · ${eur0(pzT)}</span></div>` : `<div class="empty">${pzGen ? 'Nessun acquisto nel periodo' : 'Nessuna fornitura nel periodo'}</div>`}
-        </div>
-        <div class="db-side">
-          <a class="card db-mini a-fat" href="#fatture">
+        </div>`,
+      fatture: () => `<a class="card db-mini a-fat" href="#fatture">
             <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><span class="db-at">Fatture fornitori</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
             <div class="db-mv"><b>${eur0(open.reduce((a, r) => a + num(r.totale), 0))}</b><span>da pagare · ${open.length} di ${F.length} fatture</span>${late.length ? `<span class="ov-d up">${late.length} ${late.length === 1 ? 'scaduta' : 'scadute'}</span>` : ''}</div>
             <div class="ov-fbar">${F.length ? `<i style="flex:${F.length - open.length}" class="pd"></i><i style="flex:${open.length - late.length}" class="op"></i><i style="flex:${late.length}" class="lt"></i>` : ''}</div>
             ${open.length ? `<div class="db-ml">${open.slice().sort((a, b) => String(a.scadenza || '9').localeCompare(String(b.scadenza || '9'))).slice(0, 3).map(r => `<div class="db-mli${faLate(r) ? ' late' : ''}"><span><b>${esc(String(r.fornitore || '—').split(/\s+/).slice(0, 2).join(' '))}</b><small>n. ${esc(r.numero || '—')}${validD(r.scadenza) ? ` · ${faLate(r) ? 'scaduta il' : 'scade il'} ${esc(shortDate(r.scadenza))}` : ''}</small></span><strong>${eur(num(r.totale))}</strong></div>`).join('')}</div>` : ''}
             <div class="db-an">non sommate alla spesa: sono già negli acquisti</div>
-          </a>
-          ${modOn('torental') ? `<a class="card db-mini a-tr" href="#torental">
+          </a>`,
+      extra: () => `${modOn('torental') ? `<a class="card db-mini a-tr" href="#torental">
             <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M3 7h12v9H3zM15 10h3.5L21 13v3h-6"/><circle cx="7" cy="17.5" r="1.7"/><circle cx="17.5" cy="17.5" r="1.7"/><path d="M6 10.5h6"/></svg></span><span class="db-at">Listino Torental</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
             ${TK ? `<div class="db-mv"><b>${TK.n} kit</b><span>da ${eur0(TK.min)} a ${eur0(TK.max)}</span></div>
             <div class="db-ml">${TK.kits.slice(0, 3).map(k => `<div class="db-mli"><span><b>${esc(k.n)}</b><small>${k.cod ? 'cod. ' + esc(k.cod) : 'senza codice'}</small></span><strong>${eur(k.p)}</strong></div>`).join('')}</div>
             <div class="db-an">listino di vendita, non è una spesa · ${TK.s} articoli singoli · transferta ${eur0(TK.tr)}/giorno</div>` : '<div class="db-an">Importa il listino dalla sezione Torental</div>'}
-          </a>` : ovPvMini()}
-        </div>
-      </div>
-
-      <div class="db-row db-row2">
-        <div class="card ov-ck" id="ov-ck"><div class="card-h"><h3>Cose da verificare</h3><span class="muted small">${CK.length ? `${CK.length} punti · ${ckW} importanti` : 'tutto coincide'}</span></div>
+          </a>` : ovPvMini()}`,
+      verifica: () => `<div class="card ov-ck" id="ov-ck"><div class="card-h"><h3>Cose da verificare</h3><span class="muted small">${CK.length ? `${CK.length} punti · ${ckW} importanti` : 'tutto coincide'}</span></div>
         <div class="ov-ckf">${[['', 'Tutte', CK.length], ...['att', 'gls', 'gas', 'ly', 'am', 'fat'].filter(areaOn).map(k => [k, ovShort[k], CK.filter(x => x.a === k).length])].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="ov-cf${k === '' ? ' on' : ''}" data-ckf="${k}">${k ? `<i class="a-${k}"></i>` : ''}${l}<b>${n}</b></button>`).join('')}</div>
-        ${CK.length ? `<div class="ov-cl">${CK.map((x, i) => `<button type="button" class="ov-ci ${x.t}" data-ovgo="${x.go}" data-cka="${x.a}" style="--d:${150 + Math.min(i, 12) * 45}ms"${i >= 4 ? ' data-more="1"' : ''}><span class="ov-cl-l"></span><span class="ov-cm"><span class="ov-ct"><em class="ov-tag t-${x.a}">${ovShort[x.a]}</em><b>${x.h}</b></span><small>${x.d}</small></span><b class="ov-cv">${x.v}</b><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div>${CK.length > 4 ? `<button type="button" class="db-more" id="ov-ckmore">Mostra tutti i ${CK.length} punti</button>` : ''}` : '<div class="empty">Tutto coincide: nessuna anomalia trovata</div>'}</div>
-        <div class="card db-feed"><div class="card-h"><h3>Ultimi movimenti</h3><span class="muted small">tutte le aree</span></div><div class="ov-feed" id="ov-feed"></div></div>
-      </div>
-      <div class="card ov-aic db-ai" id="ov-ai"></div>
-      <div class="ov-3 db-tops" id="ov-tops"></div>`;
+        ${CK.length ? `<div class="ov-cl">${CK.map((x, i) => `<button type="button" class="ov-ci ${x.t}" data-ovgo="${x.go}" data-cka="${x.a}" style="--d:${150 + Math.min(i, 12) * 45}ms"${i >= 4 ? ' data-more="1"' : ''}><span class="ov-cl-l"></span><span class="ov-cm"><span class="ov-ct"><em class="ov-tag t-${x.a}">${ovShort[x.a]}</em><b>${x.h}</b></span><small>${x.d}</small></span><b class="ov-cv">${x.v}</b><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div>${CK.length > 4 ? `<button type="button" class="db-more" id="ov-ckmore">Mostra tutti i ${CK.length} punti</button>` : ''}` : '<div class="empty">Tutto coincide: nessuna anomalia trovata</div>'}</div>`,
+      feed: () => `<div class="card db-feed"><div class="card-h"><h3>Ultimi movimenti</h3><span class="muted small">tutte le aree</span></div><div class="ov-feed" id="ov-feed"></div></div>`,
+      ai: () => '<div class="card ov-aic db-ai" id="ov-ai"></div>',
+      tops: () => '<div class="ov-3 db-tops" id="ov-tops"></div>'
+    };
+    body.innerHTML = dashCompose(BL);
 
-    countTo($('.k-ovt', body), T, eur0); ovPLAfter(body);
+    { const kt = $('.k-ovt', body); if (kt) countTo(kt, T, eur0); } ovPLAfter(body);
     const KV = [avgM, nDocs, CK.length];
     $$('[data-ovk]', body).forEach(el => { const i = +el.dataset.ovk; el._v = 0; countTo(el, KV[i], i ? x => fmtNum(Math.round(x), 0) : eur0); });
     $$('[data-ova]', body).forEach(el => { const a = AREAS[+el.dataset.ova]; el._v = 0; countTo(el, V[a.k], eur0); });
 
     // barre impilate
     const mx = Math.max(...byM.map(x => x.t), 1);
-    $('#ov-bars').innerHTML = byM.length ? byM.map((x, i) => `<div class="ov-b${x.m === ovP ? ' on' : ''}" data-ovm="${x.m}" title="${esc(mLabel(x.m))}: ${esc(eur(x.t))}\n${AREAS.filter(a => x[a.k]).map(a => `${ovShort[a.k]}: ${eur(x[a.k])}`).join('\n')}"><span class="ov-bv">${esc(eur0(x.t))}</span><div class="ov-bc" style="height:${Math.max(1.5, x.t / mx * 100).toFixed(1)}%;--d:${i * 45}ms">${AREAS.slice().reverse().map(a => x[a.k] > 0 ? `<i class="a-${a.k}" style="flex:${x[a.k]}"></i>` : '').join('')}</div><span class="ov-bl">${esc(MESI[Number(x.m.slice(5)) - 1].slice(0, 3))}${x.m.slice(0, 4) !== String(new Date().getFullYear()) ? ' ' + x.m.slice(2, 4) : ''}</span></div>`).join('') : '<div class="empty">Nessun dato con data</div>';
+    const ovBars = $('#ov-bars'); if (ovBars) ovBars.innerHTML = byM.length ? byM.map((x, i) => `<div class="ov-b${x.m === ovP ? ' on' : ''}" data-ovm="${x.m}" title="${esc(mLabel(x.m))}: ${esc(eur(x.t))}\n${AREAS.filter(a => x[a.k]).map(a => `${ovShort[a.k]}: ${eur(x[a.k])}`).join('\n')}"><span class="ov-bv">${esc(eur0(x.t))}</span><div class="ov-bc" style="height:${Math.max(1.5, x.t / mx * 100).toFixed(1)}%;--d:${i * 45}ms">${AREAS.slice().reverse().map(a => x[a.k] > 0 ? `<i class="a-${a.k}" style="flex:${x[a.k]}"></i>` : '').join('')}</div><span class="ov-bl">${esc(MESI[Number(x.m.slice(5)) - 1].slice(0, 3))}${x.m.slice(0, 4) !== String(new Date().getFullYear()) ? ' ' + x.m.slice(2, 4) : ''}</span></div>`).join('') : '<div class="empty">Nessun dato con data</div>';
 
     // ultimi movimenti
     // v132: per ogni area solo le 8 righe più recenti (prima si ordinavano tutte le righe di tutte le aree per tenerne 8)
@@ -3121,7 +3161,7 @@
       ...lyFeed,
       ...top8(P.am).map(o => ({ a: 'am', d: o.data, t: String(o.articoli || 'Ordine Amazon').split(/\s*\|\s*/)[0], s: lyName(o.cdc || LY_NONE), v: amV(o), go: 'amazon' }))
     ].filter(x => areaOn(x.a)).sort((a, b) => String(b.d).localeCompare(String(a.d))).slice(0, 8);
-    $('#ov-feed').innerHTML = feed.length ? feed.map((x, i) => `<a class="ov-fr a-${x.a}" href="#${x.go}" style="--d:${250 + i * 50}ms"><span class="ov-fi"><svg viewBox="0 0 24 24">${AREAS.find(a => a.k === x.a).ic}</svg></span><span class="ov-fm"><b>${esc(x.t)}</b><small>${esc(shortDate(x.d))}${x.s ? ' · ' + esc(x.s) : ''}</small></span><b class="ov-fv">${x.v == null ? '—' : esc(eur(x.v))}</b></a>`).join('') : '<div class="empty">Nessun movimento</div>';
+    const ovFeed = $('#ov-feed'); if (ovFeed) ovFeed.innerHTML = feed.length ? feed.map((x, i) => `<a class="ov-fr a-${x.a}" href="#${x.go}" style="--d:${250 + i * 50}ms"><span class="ov-fi"><svg viewBox="0 0 24 24">${AREAS.find(a => a.k === x.a).ic}</svg></span><span class="ov-fm"><b>${esc(x.t)}</b><small>${esc(shortDate(x.d))}${x.s ? ' · ' + esc(x.s) : ''}</small></span><b class="ov-fv">${x.v == null ? '—' : esc(eur(x.v))}</b></a>`).join('') : '<div class="empty">Nessun movimento</div>';
 
     renderOvAI(() => ovSummary(P, V, byM, CK));
     // classifiche
@@ -3136,7 +3176,7 @@
     const bFor = (areaOn('ly') || areaOn('am')) && box('Categorie · forniture', T4s[0] && T4s[0].l === 'Lyreco' ? 'lyreco' : 'amazon', T4s, eur0, 'righe', null, 'a-am');
     const bCat = box('Categorie di spesa', 'articoli', top5(P.att, r => r.categoria || 'Altro', sumT), eur0, 'righe', null, 'a-att'), bFr = box('Fornitori principali', 'movimenti', top5(P.att, r => String(r.fornitore || '').trim() || '—', sumT), eur0, 'righe', null, 'a-att');
     const TB = [box('Centri · attrezzatura', 'attrezzatura', T1, eur0, 'righe', null, 'a-att'), bGls, bGas, bFor, bCat, bFr].filter(Boolean).slice(0, 4);
-    $('#ov-tops').classList.toggle('n3', TB.length === 3); $('#ov-tops').innerHTML = TB.join('');
+    const ovTops = $('#ov-tops'); if (ovTops) { ovTops.classList.toggle('n3', TB.length === 3); ovTops.innerHTML = TB.join(''); }
   }
 
   /* =========================================================
@@ -9568,6 +9608,7 @@
       if (t.closest('#m-imp') || t.closest('#zb-imp')) { importExcel(false); return; }
       const th = t.closest('[data-theme-set]'); if (th) { const v = th.dataset.themeSet; try { localStorage.setItem('cdc_theme', v); } catch {} applyTheme(v, true); toast(v === 'auto' ? 'Tema automatico' : v === 'dark' ? 'Tema scuro' : 'Tema chiaro'); return; }
       if (t.closest('.iva-tg')) { ivaOn = !ivaOn; try { localStorage.setItem('cdc_iva', ivaOn ? '1' : '0'); } catch {} if (view === 'attrezzatura') ccAnim = true; if (view === 'home') ovAnim = true; render(); toast(ivaOn ? 'Importi con IVA inclusa' : 'Importi senza IVA'); return; }
+      if (t.closest('#ov-custom')) { dashEdit(); return; }
       const ovm = t.closest('[data-ovm]'); if (ovm) { ovP = ovP === ovm.dataset.ovm ? '' : ovm.dataset.ovm; ovAnim = true; renderOverview(); return; }
       if (t.closest('#ov-prev') || t.closest('#ov-next')) { const o = [...$('#ov-per').options].map(x => x.value), i = o.indexOf(ovP) + (t.closest('#ov-prev') ? 1 : -1); if (i >= 0 && i < o.length) { ovP = o[i]; ovAnim = true; renderOverview(); } return; }
       const ovg = t.closest('[data-ovgo]'); if (ovg) { const g = ovg.dataset.ovgo; if (g === 'gls') { gMonth = ovP || 'tutto'; gKeep = true; } if (g === 'gasolio') gasP = ovP; if (g === 'fatture') faP = ovP; if (g === 'movzero') { Object.assign(f, { q: '', cat: '', per: 'zero', centro: '' }); mLimit = 150; location.hash = 'movimenti'; } else if (g === 'gasprice') { location.hash = 'gasolio'; setTimeout(formGasPrice, 300); } else location.hash = g; return; }

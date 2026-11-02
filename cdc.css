@@ -3685,3 +3685,22 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
   .pvl-s { grid-column: 1; grid-row: 2; }
   .pvl-cats { grid-template-columns: 1fr !important; }
 }
+
+/* v155: dashboard a blocchi */
+.dsh { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.dsh-b { min-width: 0; display: grid; }
+.dsh-b > .card, .dsh-b > .db-side { align-self: stretch; }
+.dsh-b.dsh-top { align-self: start; }
+@media (min-width: 900px) { .dsh { gap: 16px; } }
+@media (min-width: 1020px) { .dsh { grid-template-columns: repeat(12, minmax(0, 1fr)); } .dsh-b { grid-column: span var(--sp, 12); } }
+.dsh-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: inherit; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s, color .15s; }
+.dsh-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.dsh-btn:hover { border-color: var(--accent); color: var(--accent); }
+.dsh-list { display: grid; }
+.dsh-r { display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); }
+.dsh-r:first-child { border-top: 0; }
+.dsh-r .sw { flex: 1; min-width: 0; border-top: 0 !important; padding: 10px 0 !important; }
+.dsh-mv { display: flex; gap: 2px; flex: none; }
+.dsh-mv .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dsh-adm { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.dsh-adm .sw { border-top: 0; padding: 0; }
