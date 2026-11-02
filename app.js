@@ -8053,7 +8053,7 @@
   let pkSrc = 'all';
   function pickOpen(o = {}) {
     const cli = o.cli || '';
-    let src = o.src || pkSrc, q = '', sel = null, added = 0, loading = false;
+    let src = o.src || pkSrc, q = '', sel = null, added = 0; const kicked = {};
     const ov = document.createElement('div'); ov.className = 'pk';
     ov.innerHTML = `<div class="pk-box" role="dialog" aria-modal="true" aria-label="${esc(o.title || 'Aggiungi prodotti')}">
       <div class="pk-h"><b>${esc(o.title || 'Aggiungi prodotti')}</b>${cli ? `<span class="pk-cli">prezzi per ${esc(cli)}${cliRic(cli) != null ? ' · ricarico +' + esc(fmtNum(cliRic(cli), 1).replace(/,0$/, '')) + '%' : ''}</span>` : ''}<span class="pk-sp"></span><button type="button" class="md-x" data-pk="x" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
@@ -8084,12 +8084,14 @@
         for (const s of ['srv', 'mag']) { if (!sups().includes(s) && s !== 'srv') continue; const cat = s === 'srv' ? (pvCats.srv = pvSrvCat()) : await pvLoad(s); if (cat) cat.items.slice(0, 40).forEach(it => L.push([s, it])); }
         return { L, hint: 'Scrivi per cercare anche nei cataloghi di tutti i fornitori' };
       }
-      if (need.some(s => !pvCats[s] && s !== 'srv')) { loading = true; drawList({ L: [], hint: 'Carico i cataloghi…' }); }
-      await Promise.all(need.map(s => s === 'srv' ? (pvCats.srv = pvSrvCat()) : pvLoad(s).catch(() => null)));
-      loading = false;
+      // v134: i risultati compaiono subito con quello che è già caricato; ogni catalogo che arriva aggiorna la lista (prima si aspettavano tutti, ~12 MB)
+      need.forEach(s => { if (s === 'srv') pvCats.srv = pvSrvCat(); else if (s === 'mag') pvCats.mag = pvMagCat(); });
+      const waiting = S.filter(s => s !== 'srv' && s !== 'mag' && !pvCats[s]);
+      waiting.forEach(s => { if (kicked[s]) return; kicked[s] = 1; pvLoad(s).catch(() => null).then(() => { clearTimeout(kicked._t); kicked._t = setTimeout(() => { if (!sel && ov.isConnected) draw(); }, 150); }); });
       const L = [];
       for (const s of S) { const cat = pvCats[s]; if (!cat) continue; for (const it of cat.items) { if (!it.c || !it.c.length) continue; if (!toks.length || match(it, toks)) { L.push([s, it]); if (L.length >= 80) break; } } if (L.length >= 80) break; }
-      return { L, hint: L.length ? '' : toks.length ? 'Nessun prodotto trovato' : src === 'srv' ? 'Nessun servizio: crealo con «+ Nuovo servizio»' : 'Catalogo vuoto' };
+      const done = S.filter(x => x !== 'srv' && x !== 'mag').length - waiting.length, tot = S.filter(x => x !== 'srv' && x !== 'mag').length;
+      return { L, hint: waiting.length ? (tot > 1 ? `Cerco anche negli altri cataloghi… (${done}/${tot})` : 'Carico il catalogo…') : L.length ? '' : toks.length ? 'Nessun prodotto trovato' : src === 'srv' ? 'Nessun servizio: crealo con «+ Nuovo servizio»' : 'Catalogo vuoto' };
     }
     function drawList(r) {
       list.innerHTML = (r.L.map(([s, it]) => { const cat = pvCats[s], one = it.c.length === 1 && it.sz.length <= 1; return `<div class="pk-r" data-pkit="${esc(s + '|' + it.id)}">${s === 'srv' ? `<span class="pv-img sm pk-si">${DOC_IC}</span>` : pvThumb(cat, it, pvCover(it), 'sm')}<span class="pk-t"><b>${esc(it.n)}</b><small>${esc([s === 'mag' ? 'Magazzino' : s === 'srv' ? 'Servizio' : PV_SUP[s].n, pvCode(it), it.c.length > 1 ? it.c.length + ' versioni' : '', it.sz.length > 1 ? it.sz.length + ' taglie' : ''].filter(Boolean).join(' · '))}</small></span><span class="pk-p">${priceTxt(it, pvCover(it))}</span><button type="button" class="pk-add" data-pkadd="${esc(s + '|' + it.id)}" aria-label="${one ? 'Aggiungi' : 'Scegli versione e quantità'}">${one ? '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'}</button></div>`; }).join('') || '') + (r.hint ? `<div class="pk-hint">${esc(r.hint)}</div>` : '');
