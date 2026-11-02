@@ -746,7 +746,7 @@
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.0') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare dipendenti, timbrature e ferie serve lo script versione cdc-5.0 o successiva: senza aggiornamento i dipendenti inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_DIP) { el.innerHTML = '<div class="card"><div class="empty">Carico i dipendenti…</div></div>'; try { await loadLib('dipendenti.js?v=144'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'dipendenti') return; }
+    if (!window.CDC_DIP) { el.innerHTML = '<div class="card"><div class="empty">Carico i dipendenti…</div></div>'; try { await loadLib('dipendenti.js?v=145'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'dipendenti') return; }
     window.CDC_DIP.render(el, {
       db: () => db, write, api, applyLocal: ops => { applyMany(ops); save(); render(); }, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, setConfig, centri,
       openSheet, closeSheet, loadXlsx, loadPdf, logoPng, loadFonts, orgName: () => ORG.n, sedeWord: () => (settore().sede || ['Sede'])[0],
