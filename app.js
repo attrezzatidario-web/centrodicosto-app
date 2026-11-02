@@ -3870,8 +3870,9 @@
     } });
   }
   // v114: dal preventivo al DDT di vendita o alla fattura (stesse righe, prezzi, sconti e personalizzazioni)
-  function pvToDoc(kind) {
-    const p = pvFromForm(); if (!p) return; pvQuiet(p);
+  function pvToDoc(kind, pid) {
+    const p = pid ? pvGet(pid) : pvFromForm(); if (!p) return; if (!pid) pvQuiet(p);
+    if (pvDest(p) === 'forn') return pvToForn(p, kind);
     if (!p.righe.length && !(p.pers || []).length) return toast('Il preventivo non ha righe');
     const cl = p.cliente || {}, nome = String(cl.nome || '').trim(); if (!nome) return toast('Scrivi prima il nome del cliente');
     let c = GX.cli().find(x => pvCliKey(x.nome) === pvCliKey(nome));
@@ -3889,6 +3890,45 @@
     const isD = kind === 'ddt';
     const base = isD ? { cliente: c.id, causale: 'Vendita', trasporto: 'Mittente', aspetto: 'Scatole', prezzi: '1' } : { tipo: 'TD01', cliente: c.id, pagamento: '' };
     docForm(kind, { ...base, righe: JSON.stringify(R), note: [`Rif. preventivo ${p.num} del ${dIt(p.data)}`, p.note].filter(Boolean).join('\n'), prev: p.id }, true);
+  }
+  // v151: preventivo a un fornitore → DDT arrivato o fattura del fornitore; i prodotti vanno nel «Prodotti arrivati» (controlli le quantità, poi salvi e entrano in magazzino)
+  let acqPre = null;
+  function pvToForn(p, kind) {
+    if (!p.righe.length) return toast('Il preventivo non ha righe');
+    const nome = String(p.cliente && p.cliente.nome || '').trim(); if (!nome) return toast('Scrivi prima il nome del fornitore');
+    const gsc = num(p.sconto), L = [];
+    p.righe.forEach(l => {
+      if (l.sup === 'srv') return;
+      const cat = pvCats[l.sup], it = cat && cat.items.find(x => x.id === l.it), a = l.sup === 'mag' ? artOf(l.it) : null, unit = pvLineUnit(l);
+      const c = unit == null ? '' : r2(unit * (1 - num(l.sc) / 100) * (1 - gsc / 100));
+      (l.sz || Object.keys(l.q || {})).filter(z => num((l.q || {})[z]) > 0).forEach(z => {
+        const q = num(l.q[z]);
+        if (a) return L.push({ d: artLbl(a), q, c });
+        const cod = String(l.c || (it ? pvCode(it) : l.it)), ex = GX.art().find(x => x.codForn && codeKey(x.codForn) === codeKey(cod));
+        if (ex) return L.push({ d: artLbl(ex), q, c });
+        const p0 = docPrice('', l.it, l.c);
+        L.push({ d: [l.n, l.cn && !/^taglia/i.test(l.cn) ? l.cn : '', z && z !== 'Pz' ? 'tg ' + z : ''].filter(Boolean).join(' · '), q, c, cat: { sup: l.sup, cod, um: it && it.um && it.um !== 'PZ' ? it.um : 'PZ', prezzo: p0 == null ? '' : p0 } });
+      });
+    });
+    const t = pvTotals(p), rif = `Rif. preventivo ${p.num} del ${dIt(p.data)}`;
+    const già = (p.acqDocs || []).length > 0; if (già) toast('La merce di questo preventivo è già stata registrata: il nuovo documento non la carica di nuovo in magazzino');
+    acqPre = { lines: già ? [] : L, pv: p.id };
+    if (kind === 'ddt') docFornForm(null, { tipo: 'ddt', fornitore: nome, note: rif, totale: r2(t.imp + t.iva) });
+    else formFat({ fornitore: nome, data: today(), imponibile: t.imp, imposta: t.iva, totale: r2(t.imp + t.iva), note: rif });
+  }
+  // il preventivo ricorda i documenti del fornitore creati da lui
+  function pvLinkAcq(pid, k, id, numero) {
+    const p = pvGet(pid); if (!p) return;
+    p.acqDocs = [...(p.acqDocs || []).filter(x => x.id !== id), { k, id, n: numero || '' }]; pvQuiet(p); const vp = $('#v-preventivi'); if (vp && !vp.hidden && !pvEdit) renderPv();
+  }
+  const pvAChip = p => (p.acqDocs || []).length ? `<span class="chip paid"><i></i>${p.acqDocs.some(x => x.k === 'fa') && p.acqDocs.some(x => x.k === 'df') ? 'DDT e fattura registrati' : p.acqDocs.some(x => x.k === 'fa') ? 'Fattura registrata' : 'Merce ricevuta'}</span>` : '';
+  const pvConvBtns = (p, id = '') => pvDest(p) === 'forn'
+    ? `<button type="button" class="btn sm" data-pvconv="ddt"${id ? ` data-pvid="${esc(id)}"` : ''} title="Registra il DDT arrivato con i prodotti di questo preventivo e caricali in magazzino">${DOC_IC}DDT arrivato</button><button type="button" class="btn sm" data-pvconv="fv"${id ? ` data-pvid="${esc(id)}"` : ''} title="Registra la fattura del fornitore con i prodotti di questo preventivo">${DOC_IC}Fattura fornitore</button>`
+    : modOn('vendite') ? `<button type="button" class="btn sm" data-pvconv="ddt"${id ? ` data-pvid="${esc(id)}"` : ''} title="Crea un DDT di vendita con le righe di questo preventivo">${DOC_IC}Crea DDT</button><button type="button" class="btn sm" data-pvconv="fv"${id ? ` data-pvid="${esc(id)}"` : ''} title="Crea la fattura al cliente con le righe di questo preventivo">${DOC_IC}Crea fattura</button>` : '';
+  function pvConvMenu(id) {
+    const p = pvGet(id); if (!p) return;
+    const forn = pvDest(p) === 'forn', btn = (k, t, d) => `<button type="button" class="btn pv-cm" data-pvconv="${k}" data-pvid="${esc(id)}"><b>${t}</b><small>${d}</small></button>`;
+    openSheet(`Converti il preventivo ${p.num}`, `<p class="pvx-intro">${forn ? 'Quando arriva la merce: controlli i prodotti, correggi quantità e prezzi con quelli del documento, e al salvataggio entrano in magazzino.' : 'Le righe, i prezzi e il cliente del preventivo passano nel documento.'}</p><div class="pv-cmw">${forn ? btn('ddt', 'DDT arrivato', 'Registra il DDT del fornitore e carica la merce in magazzino') + btn('fv', 'Fattura del fornitore', 'Registra la fattura con i prodotti del preventivo') : btn('ddt', 'DDT di vendita', 'Documento di trasporto per il cliente') + btn('fv', 'Fattura al cliente', 'Fattura di vendita con le righe del preventivo')}</div>`, () => true, null, 'Chiudi');
   }
   function pvSaveAcq(it) {
     const all = { ...pvAcqMap() }, base = String($('#pv-acq').value || '').trim(), per = $('#pv-percol') && $('#pv-percol').checked;
@@ -4228,7 +4268,7 @@
     const tot = s => L.filter(p => !s || p.stato === s);
     body.innerHTML = `${L.length ? `<div class="pv-kpis">${[['', 'Preventivi', L.length], ['bozza', 'Bozze', tot('bozza').length], ['inviato', 'Inviati', tot('inviato').length], ['accettato', 'Accettati', tot('accettato').length]].map(([k, l, n]) => `<div class="card pv-k"><span>${l}</span><b>${n}</b><small>${eur0(tot(k).reduce((s, p) => s + pvTotals(p).imp, 0))}</small></div>`).join('')}</div>` : ''}
       <div class="card"><div class="card-h"><h3>Elenco preventivi</h3></div>
-      ${L.length ? `<div class="pv-ql"><div class="pv-qh" aria-hidden="true"><span>Preventivo</span><span>Intestato a</span><span>Stato</span><span>Imponibile</span></div>${L.map(p => { const t = pvTotals(p), st = PV_ST[p.stato] || PV_ST.bozza; return `<button type="button" class="pv-qr" data-pvopen="${esc(p.id)}"><span class="pv-qn"><b>${esc(p.num)}</b><small>${esc(shortDate(p.data))}</small></span><span class="pv-qc"><b>${pvDest(p) === 'forn' ? '<em class="pv-ftag">Fornitore</em>' : ''}${esc(p.cliente && p.cliente.nome || 'Cliente da indicare')}</b><small>${p.solo ? 'Solo stampa' : p.righe.length === 1 ? '1 riga' : p.righe.length + ' righe'} · ${fmtNum(t.pz, 0)} ${t.pz === 1 ? 'pezzo' : 'pezzi'}${p.righe.length ? ' · ' + esc([...new Set(p.righe.map(l => l.n))].slice(0, 3).join(', ')) : ''}</small></span><span class="pv-qs"><span class="chip ${st[1]}">${st[0]}</span>${p.stato === 'accettato' || (p.docs && p.docs.length) || p.fatt ? pvFChip(p) : ''}</span><b class="pv-qt">${eur(t.imp)}</b></button>`; }).join('')}</div>` : `<div class="pv-empty"><div class="pv-ei"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div><h3>Nessun preventivo</h3><p>Crea un preventivo e aggiungi i prodotti dal catalogo Payper scegliendo taglie e colori.</p><button type="button" class="btn primary" id="pv-new3">+ Nuovo preventivo</button></div>`}</div>`;
+      ${L.length ? `<div class="pv-ql"><div class="pv-qh" aria-hidden="true"><span>Preventivo</span><span>Intestato a</span><span>Stato</span><span>Imponibile</span></div>${L.map(p => { const t = pvTotals(p), st = PV_ST[p.stato] || PV_ST.bozza; return `<div class="pv-qr" role="button" tabindex="0" data-pvopen="${esc(p.id)}"><span class="pv-qn"><b>${esc(p.num)}</b><small>${esc(shortDate(p.data))}</small></span><span class="pv-qc"><b>${pvDest(p) === 'forn' ? '<em class="pv-ftag">Fornitore</em>' : ''}${esc(p.cliente && p.cliente.nome || 'Cliente da indicare')}</b><small>${p.solo ? 'Solo stampa' : p.righe.length === 1 ? '1 riga' : p.righe.length + ' righe'} · ${fmtNum(t.pz, 0)} ${t.pz === 1 ? 'pezzo' : 'pezzi'}${p.righe.length ? ' · ' + esc([...new Set(p.righe.map(l => l.n))].slice(0, 3).join(', ')) : ''}</small></span><span class="pv-qs"><span class="chip ${st[1]}">${st[0]}</span>${pvDest(p) === 'forn' ? pvAChip(p) : p.stato === 'accettato' || (p.docs && p.docs.length) || p.fatt ? pvFChip(p) : ''}${p.righe.length && (pvDest(p) === 'forn' || modOn('vendite')) ? `<button type="button" class="btn sm pv-cv" data-pvmenu="${esc(p.id)}">Converti</button>` : ''}</span><b class="pv-qt">${eur(t.imp)}</b></div>`; }).join('')}</div>` : `<div class="pv-empty"><div class="pv-ei"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div><h3>Nessun preventivo</h3><p>Crea un preventivo e aggiungi i prodotti dal catalogo Payper scegliendo taglie e colori.</p><button type="button" class="btn primary" id="pv-new3">+ Nuovo preventivo</button></div>`}</div>`;
   }
   function pvEditor(body) {
     const p = pvGet(pvEdit); if (!p) { pvEdit = ''; return pvQuotes(body); }
@@ -4236,7 +4276,7 @@
     const t = pvTotals(p), st = PV_ST[p.stato] || PV_ST.bozza;
     const cl = p.cliente || {}, LG = p.loghi || {}, hasLg = !!(LG.f || LG.r);
     body.innerHTML = `
-      <div class="pv-back"><button type="button" class="btn sm" id="pv-qback">‹ Preventivi</button><span class="chip ${st[1]}">${st[0]}</span>${pvFChip(p)}<span class="pv-sp"></span>${modOn('vendite') ? `<button type="button" class="btn sm" data-pvconv="ddt" title="Crea un DDT di vendita con le righe di questo preventivo">${DOC_IC}Crea DDT</button><button type="button" class="btn sm" data-pvconv="fv" title="Crea la fattura al cliente con le righe di questo preventivo">${DOC_IC}Crea fattura</button>` : ''}<button type="button" class="btn sm primary" id="pv-close" title="Salva e chiudi: non aggiungi più prodotti a questo preventivo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Chiudi preventivo</button><button type="button" class="btn sm" id="pv-dup">Duplica</button><button type="button" class="btn sm st-btn-d" id="pv-del">Elimina</button></div>
+      <div class="pv-back"><button type="button" class="btn sm" id="pv-qback">‹ Preventivi</button><span class="chip ${st[1]}">${st[0]}</span>${pvDest(p) === 'forn' ? pvAChip(p) : pvFChip(p)}<span class="pv-sp"></span>${pvConvBtns(p)}<button type="button" class="btn sm primary" id="pv-close" title="Salva e chiudi: non aggiungi più prodotti a questo preventivo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Chiudi preventivo</button><button type="button" class="btn sm" id="pv-dup">Duplica</button><button type="button" class="btn sm st-btn-d" id="pv-del">Elimina</button></div>
       ${pvDocs(p).length ? `<div class="pv-docs">${pvDocs(p).map(x => `<button type="button" class="pv-doc" data-pvdoc="${esc(x.k + '|' + x.id)}">${DOC_IC}<span><b>${x.k === 'ddt' ? 'DDT' : 'Fattura'} n. ${esc(dnum(x.d))}</b><small>${esc(dIt(x.d.data))}${x.k === 'ddt' ? (x.d.fattura ? ' · fatturato' : ' · da fatturare') : ' · ' + esc(x.d.stato === 'pagata' ? 'incassata' : 'da incassare')}</small></span></button>`).join('')}</div>` : ''}
       <div class="pv-ed" id="pv-ed" data-id="${esc(p.id)}">
         <div class="card pv-eh">
@@ -5702,6 +5742,7 @@
     const tm = $('#fa-tomov'); if (tm) tm.onclick = () => { closeSheet(); setTimeout(() => openScan({ fornitore: r.fornitore, data: r.data, ndoc: r.numero }, R.filter(x => x.descrizione).map(x => ({ ...x, quantita: num(x.quantita) || 1, prezzo: num(x.prezzo) }))), 250); };
   }
   function formFat(r, file) {
+    const pre = acqPre; acqPre = null;
     if (!faOk()) return toast('Prima aggiorna lo script Google (versione cdc-1.4)');
     const isNew = !r || !faRows().some(x => x.id === r.id);
     r = { id: 'fa' + uid(), fornitore: '', numero: '', data: today(), scadenza: '', imponibile: '', imposta: '', totale: '', centro: '', categoria: '', stato: 'da pagare', pagata: '', ddt: '', righe: '', pdf: '', note: '', ...(r || {}) };
@@ -5733,11 +5774,11 @@
         row.ddt = [...lkExtra, ...LD.map(x => x.numero).filter(Boolean)].join(', ');
         LD.forEach(x => { if (normDoc(x.fattura) !== normDoc(row.numero) || fornKey(x.fornitore) !== fornKey(row.fornitore)) lo.push({ action: 'upsert', sheet: 'DocForn', row: { ...x, fattura: row.numero } }); });
         lk0.filter(x => !lkSel.has(x.id) && normDoc(x.fattura) === normDoc(r.numero)).forEach(x => lo.push({ action: 'upsert', sheet: 'DocForn', row: { ...x, fattura: '' } }));
-        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo, ...lo]);
+        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo, ...lo]); if (pre) pvLinkAcq(pre.pv, 'fa', row.id, row.numero);
         if (nxt) setTimeout(() => { if (nxt === 'new') docFornForm(null, { tipo: 'ddt', fornitore: row.fornitore, fattura: row.numero }); else { const dx = GX.dfo().find(x => x.id === nxt); if (dx) docFornForm(dx); } }, 320);
         faP = ''; toast((isNew ? 'Fattura salvata' : 'Fattura aggiornata') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '')); return true;
       }, isNew ? null : () => { const mv = GX.mov().filter(m => m.doc === r.id); if (!confirm(`Eliminare questa fattura?${mv.length ? ' I prodotti caricati con la fattura escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'Fatture', id: r.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Fattura eliminata'); return true; });
-    const AQ = modOn('magazzino') ? acqBox($('#fa-acq'), acqInit(r.id), 'solo la merce arrivata senza DDT: quella del DDT è già in magazzino') : null;
+    const AQ = modOn('magazzino') ? acqBox($('#fa-acq'), pre ? pre.lines : acqInit(r.id), pre ? 'controlla quantità e prezzi con la fattura: entrano in magazzino quando salvi (se la merce è già entrata con il DDT, togli le righe)' : 'solo la merce arrivata senza DDT: quella del DDT è già in magazzino') : null;
     // DDT collegati: spunta quelli del fornitore, registrane uno nuovo o aprilo
     const lk0 = r.fornitore ? ddtOfFa(r) : [], lkSel = new Set(lk0.map(x => x.id)), lkBox = $('#fa-lnk'), fIn = $('#sheet-form [name=fornitore]');
     const lkExtra = ddtNums(r).filter(x => !lk0.some(d => normDoc(d.numero) === normDoc(x)));
@@ -9312,6 +9353,7 @@
   }
   const dfoOk = () => isLocal() || !db.v || db.v >= 'cdc-4.9';
   function docFornForm(d0, preset = {}) {
+    const pre = acqPre; acqPre = null;
     const n = !d0; const d = d0 ? { ...d0 } : { id: uid(), tipo: 'ddt', fornitore: '', numero: '', data: today(), totale: '', file: '', nomeFile: '', mime: '', fattura: '', note: '', creato: new Date().toISOString(), ...preset };
     let file = null;
     const forn = [...new Set([...FOR().map(x => x.nome), ...faRows().map(x => x.fornitore), ...GX.dfo().map(x => x.fornitore)].map(x => String(x || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'it'));
@@ -9339,11 +9381,11 @@
       const lo = [], nn = normDoc(o.numero), f0 = d0 ? faOfDdt(d0) : null;
       if (o.tipo === 'ddt' && lkF && o.numero && !ddtNums(lkF).map(normDoc).includes(nn)) lo.push({ action: 'upsert', sheet: 'Fatture', row: { ...lkF, ddt: [...ddtNums(lkF), o.numero].join(', ') } });
       if (f0 && (!lkF || f0.id !== lkF.id)) { const old0 = normDoc(d0.numero); lo.push({ action: 'upsert', sheet: 'Fatture', row: { ...f0, ddt: ddtNums(f0).filter(x => normDoc(x) !== old0).join(', ') } }); }
-      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo, ...lo]); toast((n ? 'DDT registrato' : 'Documento aggiornato') + (lkF && o.tipo === 'ddt' ? ' · collegato alla fattura' : '') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : ''));
+      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo, ...lo]); if (pre) pvLinkAcq(pre.pv, 'df', o.id, o.numero); toast((n ? 'DDT registrato' : 'Documento aggiornato') + (lkF && o.tipo === 'ddt' ? ' · collegato alla fattura' : '') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : ''));
       if (nxt) { const nx = nxt, fid = lkF && lkF.id; setTimeout(() => { if (nx === 'new') formFat({ fornitore: o.fornitore, ddt: o.numero, data: today() }); else { const fx = faRows().find(x => x.id === fid); if (fx) formFat(fx); } }, 320); }
       return true;
     }, n ? null : () => { const mv = GX.mov().filter(m => m.doc === d.id); if (!confirm(`Togliere questo documento dall'archivio? Il file resta nel tuo Google Drive.${mv.length ? ' I prodotti caricati con questo documento escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'DocForn', id: d.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Documento tolto dall\'archivio'); return true; }, n ? 'Archivia' : 'Salva');
-    const AQ = modOn('magazzino') ? acqBox($('#df-acq'), acqInit(d.id)) : null;
+    const AQ = modOn('magazzino') ? acqBox($('#df-acq'), pre ? pre.lines : acqInit(d.id), pre ? 'controlla quantità e prezzi con il documento arrivato: entrano in magazzino quando salvi' : '') : null;
     $('#sheet-form').classList.add('wide');
     // fattura collegata: scegli tra quelle del fornitore, registrala adesso o aprila
     const lkBox = $('#df-lnk'), fIn = $('#sheet-form [name=fornitore]');
@@ -9470,6 +9512,7 @@
   /* ================= Eventi ================= */
   function bind() {
     document.addEventListener('click', gxClick);
+    document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList && e.target.classList.contains('pv-qr')) { e.preventDefault(); e.target.click(); } });
     $('#sheet-body').addEventListener('click', e => { const sf = e.target.closest('[data-scanfill]'); if (sf) { e.preventDefault(); scanFill($(`#sheet-form [name="${sf.dataset.scanfill}"]`)); return; } });
     $('#sheet-body').addEventListener('click', e => { const c = e.target.closest('[data-copy]'); if (c) { const v = c.dataset.copy; (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast('Copiato'), () => toast(v)); } });
     window.addEventListener('hashchange', go);
@@ -9559,7 +9602,8 @@
       if (t.closest('#pv-back')) { pvItem = ''; if (pvFromAll) { pvAll = true; pvFromAll = false; } renderPv(); return; }
       if (t.closest('#pv-add')) { pvAddToQuote(); return; }
       const pf = t.closest('[data-pvfatt]'); if (pf) { e.preventDefault(); e.stopPropagation(); const p = pf.closest('#pv-ed, .pv-back') && pvEdit ? pvFromForm() : pvGet(pf.dataset.pvfatt); if (!p) return; p.fatt = pvFatt(p) ? 'no' : 'si'; pvSave(p); toast(p.fatt === 'si' ? `Preventivo ${p.num} segnato fatturato` : `Preventivo ${p.num} da fatturare`); return; }
-      const pcv = t.closest('[data-pvconv]'); if (pcv) { pvToDoc(pcv.dataset.pvconv); return; }
+      const pcm = t.closest('[data-pvmenu]'); if (pcm) { e.preventDefault(); e.stopPropagation(); pvConvMenu(pcm.dataset.pvmenu); return; }
+      const pcv = t.closest('[data-pvconv]'); if (pcv) { const k = pcv.dataset.pvconv, id = pcv.dataset.pvid; if (id && !$('#sheet').hidden) { closeSheet(); setTimeout(() => pvToDoc(k, id), 300); } else pvToDoc(k, id); return; }
       const lkp = t.closest('[data-lkpv]'); if (lkp) { pvOpen(lkp.dataset.lkpv); return; }
       const lka = t.closest('[data-lk]'); if (lka) {
         const k = lka.dataset.lk, id = lka.dataset.id, c = k.endsWith('-cli') ? cliOf(id) : null, fo = k.endsWith('-forn') ? FOR().find(x => x.id === id) : null;
