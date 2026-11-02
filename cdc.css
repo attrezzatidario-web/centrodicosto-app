@@ -3600,3 +3600,13 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 .mg-acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .gx-tbl tr.mg-on { background: var(--accent-soft); }
 .mg-ck { width: 18px; height: 18px; margin: 0 10px 0 0; vertical-align: middle; accent-color: var(--accent); cursor: pointer; }
+
+/* v139: prodotti arrivati con DDT e fatture dei fornitori */
+.acq { display: grid; gap: 10px; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.acq-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.acq-r { display: grid; grid-template-columns: minmax(0, 1fr) 76px 92px 32px; gap: 6px; align-items: center; margin-bottom: 8px; }
+.acq-r input { min-width: 0; }
+.acq-s { grid-column: 1 / -1; margin-top: -2px; font-size: 12px; color: var(--muted); }
+.acq-s em { font-style: normal; color: var(--accent); }
+.acq-a { display: flex; gap: 8px; flex-wrap: wrap; }
+.acq-a svg { width: 15px; height: 15px; }

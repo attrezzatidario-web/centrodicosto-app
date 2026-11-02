@@ -5664,7 +5664,8 @@
       <div class="f-row"><label class="f"><span>Centro di costo</span><select name="centro"><option value="">—</option>${opt(centri(), r.centro)}</select></label><label class="f"><span>Stato</span><select name="stato">${opt(['da pagare', 'pagata'], faPaid(r) ? 'pagata' : 'da pagare')}</select></label></div>
       <label class="f"><span>DDT / ordini collegati</span><input name="ddt" value="${esc(r.ddt)}" placeholder="numeri separati da virgola"></label>
       <label class="f"><span>Note</span><input name="note" value="${esc(r.note)}"></label>
-      <div class="ad-box" id="fa-doc"></div>`,
+      <div class="ad-box" id="fa-doc"></div>
+      ${modOn('magazzino') ? `<div class="acq">${magMulti() ? `<div class="f-row">${magSel(acqMag(r.id), 'mag', 'Magazzino dove entra la merce')}</div>` : magSel('')}<div id="fa-acq"></div>${R.length ? `<button type="button" class="link" data-faacq>Usa le ${R.length} righe lette dalla fattura</button>` : ''}</div>` : ''}`,
       async fd => {
         const row = { ...r, ...Object.fromEntries(fd), imponibile: num(fd.get('imponibile')), imposta: num(fd.get('imposta')), totale: num(fd.get('totale')) || r2(num(fd.get('imponibile')) + num(fd.get('imposta'))), fornitore: String(fd.get('fornitore')).trim(), numero: String(fd.get('numero')).trim() };
         if (row.stato === 'pagata' && !row.pagata) row.pagata = today();
@@ -5672,9 +5673,15 @@
         if (isNew) row.creato = new Date().toISOString();
         if (isNew && faRows().some(x => fornKey(x.fornitore) === fornKey(row.fornitore) && normDoc(x.numero) === normDoc(row.numero)) && !confirm('Esiste già una fattura con questo fornitore e numero. Salvarla comunque?')) return;
         if (file && !isLocal()) { try { busy('Salvo il documento nel tuo Drive…'); row.pdf = await api('uploadDoc', { name: `Fattura ${row.fornitore} ${row.numero} ${row.data}.${file.ext}`.replace(/[\\/]/g, '-'), mime: file.mime, data: file.data }); } catch (e) { busy(); return toast('Documento non salvato: ' + e.message); } busy(); }
-        write([{ action: 'upsert', sheet: 'Fatture', row }]);
-        faP = ''; toast(isNew ? 'Fattura salvata' : 'Fattura aggiornata'); return true;
-      }, isNew ? null : () => { if (!confirm('Eliminare questa fattura?')) return; write([{ action: 'delete', sheet: 'Fatture', id: r.id }]); toast('Fattura eliminata'); return true; });
+        const AL = AQ ? AQ.get() : [], hadM = GX.mov().some(m => m.doc === row.id);
+        const mag = AL.length ? magNeed(fd) : ''; if (mag === null) return;
+        const mo = AL.length || hadM ? acqOps(AL, { doc: row.id, data: row.data, fornitore: row.fornitore, mag, causale: 'Fattura fornitore' + (row.numero ? ' n. ' + row.numero : '') }) : [];
+        delete row.mag;
+        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo]);
+        faP = ''; toast((isNew ? 'Fattura salvata' : 'Fattura aggiornata') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '')); return true;
+      }, isNew ? null : () => { const mv = GX.mov().filter(m => m.doc === r.id); if (!confirm(`Eliminare questa fattura?${mv.length ? ' I prodotti caricati con la fattura escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'Fatture', id: r.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Fattura eliminata'); return true; });
+    const AQ = modOn('magazzino') ? acqBox($('#fa-acq'), acqInit(r.id), 'solo la merce arrivata senza DDT: quella del DDT è già in magazzino') : null;
+    const fab = $('[data-faacq]'); if (fab && AQ) fab.onclick = e => { e.preventDefault(); AQ.set(R.filter(x => x.descrizione).map(x => { const a = artFind(x.codice) || artFind(x.descrizione); return { d: a ? artLbl(a) : String(x.descrizione).trim(), q: num(x.quantita) || 1, c: num(x.prezzo) || '' }; })); fab.remove(); };
     // v111: il documento della fattura (PDF o foto) si allega anche a mano e resta nell'archivio
     adBox($('#fa-doc'), () => file, f => { file = f; }, r.pdf, `Fattura ${r.numero || ''}`);
   }
@@ -8206,7 +8213,84 @@
     scanOpen({ title: 'Cerca in magazzino', hint: 'Inquadra il codice a barre dell\'articolo', onCode: c => { code = c; found = artByCode(c); return found ? { ok: true, msg: found.descrizione } : { ok: true, msg: 'Articolo nuovo: ' + c }; },
       onClose: n => { if (!n) return; setTimeout(() => { if (found) artForm(found); else if (confirm(`Nessun articolo con il codice ${code}. Crearne uno nuovo?`)) artForm({ barcode: code }); }, 280); } });
   }
-  const giacMap = () => { const M = new Map(); GX.mov().forEach(m => M.set(m.articolo, r2((M.get(m.articolo) || 0) + num(m.quantita)))); return M; };
+  const giacMap = mag => { const M = new Map(); GX.mov().forEach(m => { if (mag && magOf(m) !== mag) return; M.set(m.articolo, r2((M.get(m.articolo) || 0) + num(m.quantita))); }); return M; };
+  /* ---------- v139: più magazzini e prodotti nei documenti dei fornitori ---------- */
+  // elenco in Config «magazzini»; i movimenti senza magazzino appartengono al primo
+  const MAGS = () => { const c = cfg('magazzini'); return Array.isArray(c) ? c.map(x => String(x || '').trim()).filter(Boolean) : []; };
+  const magMulti = () => MAGS().length > 1;
+  const magOf = m => String(m.mag || '') || MAGS()[0] || '';
+  const magLast = () => { const v = LS.get('cdc_lastmag', ''); return MAGS().includes(v) ? v : ''; };
+  const magSel = (cur, name = 'mag', lbl = 'Magazzino') => magMulti() ? `<label class="f"><span>${lbl}</span><select name="${name}"><option value="">Scegli il magazzino…</option>${MAGS().map(x => `<option${x === cur ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : `<input type="hidden" name="${name}" value="${esc(MAGS()[0] || '')}">`;
+  const magNeed = (fd, name = 'mag') => { const v = String(fd.get(name) || ''); if (magMulti() && !v) { toast('Scegli il magazzino'); return null; } if (v) LS.set('cdc_lastmag', v); return v; };
+  const artLbl = a => (a.codice ? a.codice + ' — ' : '') + a.descrizione;
+  function artFind(s) {
+    s = String(s || '').trim(); if (!s) return null;
+    const A = GX.art(), k = s.toUpperCase();
+    return A.find(a => artLbl(a) === s) || A.find(a => [a.codice, a.codForn, a.barcode].some(c => c && String(c).trim().toUpperCase() === k)) || A.find(a => String(a.descrizione).trim().toUpperCase() === k) || null;
+  }
+  // righe dei prodotti arrivati con un documento del fornitore (DDT o fattura): prodotto esistente o nuovo, quantità, costo
+  function acqBox(box, init, hint) {
+    if (!box) return null;
+    const L = (init || []).map(x => ({ ...x }));
+    const st = l => { const d = String(l.d || '').trim(); if (!d) return ''; const a = artFind(d); return a ? `in magazzino · giacenza ${fmtNum(giacMap().get(a.id) || 0, 0)} ${esc(a.um || '')}` : '<em>prodotto nuovo: viene aggiunto al magazzino</em>'; };
+    const draw = () => {
+      box.innerHTML = `<div class="acq-h"><b>Prodotti arrivati</b><span class="muted small">${hint || 'entrano in magazzino quando salvi'}</span></div>
+        ${L.map((l, i) => `<div class="acq-r" data-i="${i}"><input data-k="d" list="acq-arts" value="${esc(l.d || '')}" placeholder="Cerca o scrivi un prodotto nuovo"><input data-k="q" type="number" step="any" inputmode="decimal" value="${esc(l.q ?? '')}" placeholder="Q.tà"><input data-k="c" type="number" step="any" inputmode="decimal" value="${esc(l.c ?? '')}" placeholder="${(() => { const a = artFind(l.d); return a && num(a.costo) ? esc(fmtIn(a.costo)) : 'Costo €'; })()}"><button type="button" class="dx-x" data-acq="del" aria-label="Togli">✕</button><small class="acq-s">${st(l)}</small></div>`).join('')}
+        <div class="acq-a"><button type="button" class="btn sm" data-acq="add">+ Prodotto</button><button type="button" class="btn sm ghost" data-acq="scan">${SCAN_IC}Scansiona</button></div>
+        <datalist id="acq-arts">${GX.art().map(a => `<option value="${esc(artLbl(a))}">`).join('')}</datalist>`;
+    };
+    box.oninput = e => { const r = e.target.closest('.acq-r'), k = e.target.dataset.k; if (!r || !k) return; const l = L[+r.dataset.i]; l[k] = e.target.value; if (k === 'd') { $('.acq-s', r).innerHTML = st(l); const a = artFind(l.d); $('[data-k=c]', r).placeholder = a && num(a.costo) ? fmtIn(a.costo) : 'Costo €'; } };
+    box.onclick = e => {
+      const b = e.target.closest('[data-acq]'); if (!b) return; e.preventDefault();
+      const k = b.dataset.acq;
+      if (k === 'add') { L.push({ d: '', q: 1, c: '' }); draw(); const ins = $$('.acq-r [data-k=d]', box); ins[ins.length - 1].focus(); return; }
+      if (k === 'del') { L.splice(+b.closest('.acq-r').dataset.i, 1); draw(); return; }
+      if (k === 'scan') scanOpen({ title: 'Prodotto arrivato', onCode: c => { const a = artByCode(c), ex = a && L.find(l => artFind(l.d) === a); if (ex) ex.q = num(ex.q) + 1; else L.push({ d: a ? artLbl(a) : c, q: 1, c: '' }); draw(); return { ok: true, msg: a ? a.descrizione : `Codice ${c}: prodotto nuovo, scrivi la descrizione` }; } });
+    };
+    draw();
+    return { get: () => L.filter(l => String(l.d || '').trim() && num(l.q)), set: A => { L.splice(0, L.length, ...A); draw(); } };
+  }
+  // operazioni per caricare i prodotti del documento: crea gli articoli nuovi, aggiorna il costo, rifà i carichi del documento
+  function acqOps(L, o) {
+    const ops = GX.mov().filter(m => m.doc === o.doc).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }));
+    const now = new Date().toISOString(), made = new Map();
+    L.forEach(l => {
+      const d = String(l.d || '').trim(), q = Math.abs(num(l.q)); if (!d || !q) return;
+      const c = String(l.c ?? '').trim() === '' ? '' : num(l.c);
+      let a = artFind(d) || made.get(d.toUpperCase());
+      if (!a) {
+        const bc = /^\d{8,14}$/.test(d);
+        a = { id: uid(), codice: artNext(made.size), descrizione: bc ? 'Prodotto ' + d : d, um: 'PZ', categoria: '', fornitore: o.fornitore || '', costo: c, prezzo: '', iva: 22, scorta: '', barcode: bc ? d : '', note: '', creato: today(), codForn: '' };
+        made.set(d.toUpperCase(), a); ops.push({ action: 'upsert', sheet: 'Articoli', row: a });
+      } else if (c !== '' && num(a.costo) !== c && !made.has(d.toUpperCase())) ops.push({ action: 'upsert', sheet: 'Articoli', row: { ...a, costo: c } });
+      ops.push({ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: o.data, articolo: a.id, tipo: 'carico', quantita: q, costo: c !== '' ? c : num(a.costo), causale: o.causale || 'Acquisto da fornitore', doc: o.doc, note: o.fornitore || '', creato: now, mag: o.mag || '' } });
+    });
+    ops.nNew = made.size;
+    return ops;
+  }
+  const acqInit = doc => GX.mov().filter(m => m.doc === doc && m.tipo === 'carico').map(m => { const a = artOf(m.articolo); return { d: a ? artLbl(a) : '', q: num(m.quantita), c: m.costo === '' || m.costo == null ? '' : num(m.costo) }; }).filter(l => l.d);
+  const acqMag = doc => { const m = GX.mov().find(x => x.doc === doc); return m ? magOf(m) : magLast(); };
+  // elenco dei magazzini (Impostazioni del magazzino)
+  function magsForm() {
+    const M = MAGS(), list = [...(M.length ? M : ['Magazzino principale']), '', ''];
+    openSheet('Magazzini', `${!isLocal() && db.v && db.v < 'cdc-5.6' ? '<div class="gx-note warn"><span>Aggiorna lo script Google alla versione <b>cdc-5.6</b>: senza, la merce finisce tutta nel magazzino principale.</span></div>' : ''}<p class="muted small" style="margin:0 0 12px">Con due o più magazzini, a ogni carico, scarico, DDT o fattura scegli dove entra o da dove esce la merce. Il primo è quello principale.</p>
+      ${list.map((x, i) => `<label class="f"><span>${i ? 'Magazzino ' + (i + 1) : 'Magazzino principale'}</span><input name="m${i}" value="${esc(x)}" placeholder="${i ? 'Es. Deposito via Roma' : 'Es. Sede'}"${i ? '' : ' data-focus'}></label>`).join('')}`, fd => {
+      const N = list.map((_, i) => String(fd.get('m' + i) || '').trim());
+      if (N.filter(Boolean).length !== new Set(N.filter(Boolean).map(x => x.toUpperCase())).size) { toast('Due magazzini hanno lo stesso nome'); return; }
+      const ops = [], G = MAGS().length ? null : null;
+      // nome cambiato: i movimenti passano al nome nuovo; magazzino tolto: solo se è vuoto
+      for (let i = 0; i < M.length; i++) {
+        const old = M[i], nw = N[i];
+        if (nw === old) continue;
+        if (!nw) { const g = [...giacMap(old).values()].some(v => Math.abs(v) > 1e-9); if (g) { toast(`«${old}» ha ancora merce: trasferiscila prima di toglierlo`); return; } }
+        GX.mov().filter(m => m.mag === old).forEach(m => ops.push({ action: 'upsert', sheet: 'MagMov', row: { ...m, mag: nw || '' } }));
+      }
+      const L = N.filter(Boolean);
+      ops.push({ action: 'upsert', sheet: 'Config', row: { chiave: 'magazzini', valore: JSON.stringify(L) } });
+      write(ops); toast(L.length > 1 ? `${L.length} magazzini salvati` : 'Magazzino salvato'); return true;
+    }, null, 'Salva');
+  }
+
   const lnTot = l => r2(num(l.q) * num(l.p) * (1 - num(l.sc) / 100));
   function docTot(righe) {
     const by = {};
@@ -8335,7 +8419,7 @@
   }
 
   /* ---------- MAGAZZINO ---------- */
-  let mgTab = 'art', mgQ = '', mgLow = false;
+  let mgTab = 'art', mgQ = '', mgLow = false, mgMag = '';
   // v136: selezione multipla nel magazzino (elimina o modifica più articoli insieme)
   const mgSel = new Set(); let mgMode = false, mgIds = [];
   const mgN = () => [...mgSel].filter(id => artOf(id)).length;
@@ -8374,13 +8458,14 @@
     const el = $('#mg-body'); if (!el) return;
     sub('Articoli, giacenze, carichi e scarichi');
     if (GX.art().some(a => !String(a.codice || '').trim())) setTimeout(artFixCodes, 0);
-    const A = GX.art().slice().sort((a, b) => String(a.descrizione).localeCompare(String(b.descrizione), 'it')), G = giacMap(), q = nh(mgQ);
+    if (mgMag && !MAGS().includes(mgMag)) mgMag = '';
+    const A = GX.art().slice().sort((a, b) => String(a.descrizione).localeCompare(String(b.descrizione), 'it')), G = giacMap(mgMag), q = nh(mgQ);
     const low = a => num(a.scorta) > 0 && (G.get(a.id) || 0) <= num(a.scorta);
     const val = A.reduce((s, a) => s + Math.max(0, G.get(a.id) || 0) * num(a.costo), 0);
     const m0 = today().slice(0, 7), MM = GX.mov().filter(m => String(m.data).slice(0, 7) === m0), nLow = A.filter(low).length;
     const tabs = `<div class="gx-seg" role="tablist"><button type="button" data-mgtab="art" class="${mgTab === 'art' ? 'on' : ''}">Articoli</button><button type="button" data-mgtab="mov" class="${mgTab === 'mov' ? 'on' : ''}">Movimenti</button></div>`;
     let h = gxWarn() + `<div class="gx-bar">${tabs}<label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mg-q" placeholder="Cerca codice, codice a barre o descrizione…" value="${esc(mgQ)}"><button type="button" class="scan-ib" data-gx="mag-scan" title="Scansiona un codice a barre" aria-label="Scansiona un codice a barre">${SCAN_IC}</button></label>
-      <div class="gx-act">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" class="btn sm${mgMode ? ' primary' : ''}" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona'}</button>` : ''}<button type="button" class="btn sm" data-gx="mag-imp"><span class="lb-d">Importa Excel</span><span class="lb-m">Importa</span></button><button type="button" class="btn sm" data-gx="mag-xls"><span class="lb-d">Esporta</span><span class="lb-m">Esporta</span></button><button type="button" class="btn sm" data-gx="mov-new">Carico / scarico</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
+      <div class="gx-act">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" class="btn sm${mgMode ? ' primary' : ''}" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona'}</button>` : ''}<button type="button" class="btn sm" data-gx="mag-imp"><span class="lb-d">Importa Excel</span><span class="lb-m">Importa</span></button><button type="button" class="btn sm" data-gx="mag-xls"><span class="lb-d">Esporta</span><span class="lb-m">Esporta</span></button>${magMulti() ? `<select id="mg-mag" class="btn sm" aria-label="Magazzino"><option value="">Tutti i magazzini</option>${MAGS().map(x => `<option${x === mgMag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}${secPerm('magazzino') === 'w' ? '<button type="button" class="btn sm" data-gx="mags">Magazzini</button>' : ''}<button type="button" class="btn sm" data-gx="mov-new">${magMulti() ? 'Movimento' : 'Carico / scarico'}</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
       ${gxKpi([['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`], ['Valore del magazzino', eur0(val), 'giacenze al costo'], ['Sotto scorta', fmtNum(nLow, 0), nLow ? 'da riordinare' : 'tutto a posto', nLow ? 'warn' : ''], ['Movimenti del mese', fmtNum(MM.length, 0), `${MM.filter(m => num(m.quantita) > 0).length} carichi · ${MM.filter(m => num(m.quantita) < 0).length} scarichi`]])}`;
     if (!A.length) h += gxEmpty(GIC.mag, 'Magazzino vuoto', 'Aggiungi gli articoli che tieni in magazzino, oppure importali da Excel. Le giacenze si aggiornano da sole con carichi, DDT e fatture.', '<button type="button" class="btn primary" data-gx="art-new">+ Aggiungi il primo articolo</button>');
     else if (mgTab === 'art') {
@@ -8399,6 +8484,7 @@
       </tbody></table>${gxMore(M, 'mov')}</div>`;
     }
     el.innerHTML = h;
+    const mgm = $('#mg-mag'); if (mgm) mgm.onchange = () => { mgMag = mgm.value; renderMag(); };
     const qi = $('#mg-q'); if (qi) qi.oninput = () => { mgQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { const p = qi.selectionStart; renderMag(); const x = $('#mg-q'); x.focus(); try { x.setSelectionRange(p, p); } catch {} }, 160); };
   }
   function artForm(a) {
@@ -8433,8 +8519,9 @@
     const A = GX.art().slice().sort((a, b) => String(a.descrizione).localeCompare(String(b.descrizione), 'it')), G = giacMap();
     if (!A.length) return toast('Aggiungi prima un articolo');
     let tipo = 'carico', mvFile = null;
-    const CAUS = { carico: ['Acquisto da fornitore', 'Reso da cliente', 'Produzione', 'Altro'], scarico: ['Uso interno', 'Merce danneggiata', 'Omaggio', 'Reso a fornitore', 'Altro'], rettifica: ['Inventario'] };
-    openSheet('Carico / scarico', `<div class="gx-seg wide" data-mvseg><button type="button" data-mv="carico" class="on">Carico</button><button type="button" data-mv="scarico">Scarico</button><button type="button" data-mv="rettifica">Inventario</button></div>
+    const CAUS = { carico: ['Acquisto da fornitore', 'Reso da cliente', 'Produzione', 'Altro'], scarico: ['Uso interno', 'Merce danneggiata', 'Omaggio', 'Reso a fornitore', 'Altro'], rettifica: ['Inventario'], trasf: ['Trasferimento'] };
+    openSheet('Carico / scarico', `<div class="gx-seg wide" data-mvseg><button type="button" data-mv="carico" class="on">Carico</button><button type="button" data-mv="scarico">Scarico</button><button type="button" data-mv="rettifica">Inventario</button>${magMulti() ? '<button type="button" data-mv="trasf">Trasferimento</button>' : ''}</div>
+      ${magMulti() ? `<div class="f-row"><span data-mvm>${magSel(magLast(), 'mag', 'Magazzino')}</span><span data-mvt hidden>${magSel('', 'mag2', 'Verso il magazzino')}</span></div>` : magSel('')}
       <label class="f"><span>Articolo <button type="button" class="link scan-lk" data-mvscan>${SCAN_IC}scansiona</button></span><select name="articolo" data-focus>${A.map(a => `<option value="${esc(a.id)}"${a.id === artId ? ' selected' : ''}>${esc(a.descrizione)}${a.codice ? ' · ' + esc(a.codice) : ''} — ${fmtNum(G.get(a.id) || 0, 0)} ${esc(a.um || '')}</option>`).join('')}</select></label>
       <div class="f-row f3"><label class="f"><span data-mvq>Quantità caricata</span><input name="q" type="number" step="any" inputmode="decimal" required></label><label class="f" data-mvc><span>Costo unitario €</span><input name="costo" type="number" step="any" inputmode="decimal" placeholder="IVA esclusa"></label><label class="f"><span>Data</span><input name="data" type="date" value="${today()}"></label></div>
       <div class="f-row"><label class="f"><span>Causale</span><select name="causale">${CAUS.carico.map(c => `<option>${c}</option>`).join('')}</select></label><label class="f"><span>Note</span><input name="note" placeholder="es. merce per il cantiere"></label></div>
@@ -8442,13 +8529,20 @@
       <p class="muted small" data-mvh>La quantità si aggiunge alla giacenza.</p>`, async fd => {
       const id = String(fd.get('articolo')), a = artOf(id), q = num(fd.get('q'));
       if (!a) return; if (!String(fd.get('q') || '').trim()) { toast('Scrivi la quantità'); return; }
-      let qty = tipo === 'carico' ? Math.abs(q) : tipo === 'scarico' ? -Math.abs(q) : r2(q - (giacMap().get(id) || 0));
+      const mag = magNeed(fd); if (mag === null) return;
+      if (tipo === 'trasf') {
+        const mag2 = String(fd.get('mag2') || ''); if (!mag2 || mag2 === mag) { toast('Scegli un magazzino di arrivo diverso'); return; }
+        const qq = Math.abs(q), dt = String(fd.get('data') || today()), now = new Date().toISOString(), tid = uid(); if (!qq) { toast('Scrivi la quantità'); return; }
+        write([{ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: dt, articolo: id, tipo: 'scarico', quantita: -qq, costo: num(a.costo), causale: 'Trasferimento', doc: tid, note: 'verso ' + mag2, creato: now, mag } }, { action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: dt, articolo: id, tipo: 'carico', quantita: qq, costo: num(a.costo), causale: 'Trasferimento', doc: tid, note: 'da ' + mag, creato: now, mag: mag2 } }]);
+        toast(`Spostati ${fmtNum(qq, qq % 1 ? 2 : 0)} ${a.um || 'PZ'} in ${mag2}`); return true;
+      }
+      let qty = tipo === 'carico' ? Math.abs(q) : tipo === 'scarico' ? -Math.abs(q) : r2(q - (giacMap(mag || undefined).get(id) || 0));
       if (tipo === 'rettifica' && !qty) { toast('La giacenza è già questa'); return true; }
       const dataM = String(fd.get('data') || today()), ddtn = tipo === 'carico' ? String(fd.get('ddtn') || '').trim() : '', ddtf = String(fd.get('ddtf') || '').trim() || a.fornitore || '';
       const ops = [], dfr = tipo === 'carico' && (ddtn || mvFile) ? { id: uid(), tipo: 'ddt', fornitore: ddtf, numero: ddtn, data: dataM, totale: '', file: '', nomeFile: '', mime: '', fattura: '', note: `Carico ${a.descrizione}`, creato: new Date().toISOString() } : null;
       if (dfr && mvFile && !isLocal()) { try { busy('Salvo il DDT nel tuo Drive…'); dfr.file = await api('uploadDoc', { name: `DDT ${ddtf} ${ddtn} ${dataM}.${mvFile.ext}`.replace(/[\\/]/g, '-').replace(/\s+/g, ' '), mime: mvFile.mime, data: mvFile.data }); dfr.nomeFile = mvFile.name; dfr.mime = mvFile.mime; } catch (e) { busy(); toast('DDT non salvato: ' + e.message); return; } busy(); }
       if (dfr) ops.push({ action: 'upsert', sheet: 'DocForn', row: dfr });
-      ops.push({ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: dataM, articolo: id, tipo, quantita: qty, costo: tipo === 'carico' ? num(fd.get('costo')) || num(a.costo) : num(a.costo), causale: String(fd.get('causale') || ''), doc: dfr ? dfr.id : '', note: [ddtn ? 'DDT n. ' + ddtn : '', String(fd.get('note') || '').trim()].filter(Boolean).join(' · '), creato: new Date().toISOString() } });
+      ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dataM, articolo: id, tipo, quantita: qty, costo: tipo === 'carico' ? num(fd.get('costo')) || num(a.costo) : num(a.costo), causale: String(fd.get('causale') || ''), doc: dfr ? dfr.id : '', note: [ddtn ? 'DDT n. ' + ddtn : '', String(fd.get('note') || '').trim()].filter(Boolean).join(' · '), creato: new Date().toISOString() } });
       write(ops);
       toast(tipo === 'rettifica' ? 'Giacenza aggiornata' : tipo === 'carico' ? 'Carico registrato' : 'Scarico registrato'); return true;
     }, null, 'Registra');
@@ -8458,7 +8552,8 @@
     adBox($('#mv-doc'), () => mvFile, f => { mvFile = f; }, '', 'DDT');
     $('[data-mvscan]').onclick = e => { e.preventDefault(); scanOpen({ title: 'Scegli l\'articolo', onCode: c => { const a = artByCode(c); if (!a) return { ok: false, msg: `Codice ${c} non trovato` }; sel.value = a.id; fillCost(); return { ok: true, msg: a.descrizione }; }, onClose: () => { const q = $('#sheet-body [name=q]'); if (q) q.focus(); } }); };
     $('[data-mvseg]').onclick = e => { const b = e.target.closest('[data-mv]'); if (!b) return; tipo = b.dataset.mv; $$('[data-mv]').forEach(x => x.classList.toggle('on', x === b));
-      $('[data-mvq]').textContent = tipo === 'carico' ? 'Quantità caricata' : tipo === 'scarico' ? 'Quantità scaricata' : 'Giacenza contata';
+      $('[data-mvq]').textContent = tipo === 'carico' ? 'Quantità caricata' : tipo === 'scarico' ? 'Quantità scaricata' : tipo === 'trasf' ? 'Quantità da spostare' : 'Giacenza contata';
+      const mvt = $('[data-mvt]'); if (mvt) { mvt.hidden = tipo !== 'trasf'; $('[data-mvm] .f > span').textContent = tipo === 'trasf' ? 'Dal magazzino' : 'Magazzino'; }
       $('[data-mvc]').hidden = tipo !== 'carico'; $('[data-mvddt]').hidden = tipo !== 'carico'; $('[data-mvh]').textContent = tipo === 'carico' ? 'La quantità si aggiunge alla giacenza.' : tipo === 'scarico' ? 'La quantità si toglie dalla giacenza.' : 'Scrivi quanti pezzi hai contato: la differenza viene registrata come inventario.';
       $('#sheet-body [name=causale]').innerHTML = CAUS[tipo].map(c => `<option>${c}</option>`).join(''); };
   }
@@ -8557,6 +8652,7 @@
         <label class="f"><span>Luogo di destinazione</span><input name="destinazione" value="${esc(d.destinazione || '')}" placeholder="Se diverso dalla sede del cliente"></label>
         <label class="gx-chk"><input type="checkbox" name="prezzi"${d.prezzi ? ' checked' : ''}> Mostra i prezzi nel PDF del DDT</label>`
         : `<div class="f-row"><label class="f"><span>Pagamento</span><select name="pagamento"><option value="">Come da cliente</option>${PAG.map(p => `<option${p === d.pagamento ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></label><div class="f"><span>Tipo</span><div class="gx-ro">${d.tipo === 'TD24' ? 'Fattura differita (TD24) dai DDT' : 'Fattura immediata (TD01)'}</div></div></div>`}
+      ${modOn('magazzino') && magMulti() ? `<div class="f-row">${magSel(acqMag(d.id), 'mag', isD && d.causale === 'Reso' ? 'Magazzino' : 'Magazzino da cui esce la merce')}</div>` : ''}
       <div class="dx-ric" id="dx-ric"></div>
       <div class="dx"><div class="dx-h"><span>Articolo / descrizione</span><span>UM</span><span>Q.tà</span><span>Prezzo €</span><span>Sc.%</span><span>IVA</span><span>Totale</span><span></span></div><div id="dx-rows"></div>
         ${lock || lockF ? '' : `<div class="dx-adds"><button type="button" class="btn sm primary" data-dx="pick"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Prodotto</button><button type="button" class="btn sm" data-dx="srv"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Servizio</button><button type="button" class="btn sm" data-dx="add">+ Riga libera</button><button type="button" class="btn sm" data-dx="scan">${SCAN_IC}Scansiona</button></div>`}<div class="dx-tot" id="dx-tot"></div></div>
@@ -8580,11 +8676,12 @@
           const c = cliOf(cli) || {}; o.pagamento = String(fd.get('pagamento') || '') || c.pagamento || PAG[0];
           const T = docTot(rows); Object.assign(o, { tipo: 'TD01', righe: JSON.stringify([...hdr, ...rows]), ddt: o.ddt || '[]', imponibile: T.imp, imposta: T.iva, totale: T.tot, scadenza: scadDi(o.data, o.pagamento), stato: o.stato || 'emessa' });
         }
+        const mag = modOn('magazzino') && rows.some(l => l.art && artOf(l.art)) ? magNeed(fd) : ''; if (mag === null) return;
         const prevId = o.prev; delete o.prev;
         const ops = [{ action: 'upsert', sheet: isD ? 'DDT' : 'Vendite', row: o }, ...GX.mov().filter(m => m.doc === o.id).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))];
         const pp = prevId && pvGet(prevId);
         if (pp) { pp.docs = [...(pp.docs || []).filter(x => x.id !== o.id), { k: isD ? 'ddt' : 'fv', id: o.id }]; if (pp.stato === 'bozza' || pp.stato === 'inviato') pp.stato = 'accettato'; if (!isD && pp.fatt === 'no') delete pp.fatt; pp.agg = new Date().toISOString(); ops.push({ action: 'upsert', sheet: 'Config', row: { chiave: 'pv:' + pp.id, valore: JSON.stringify(pp) } }); }
-        if (modOn('magazzino') && (isD ? o.causale !== 'Conto visione' : true)) rows.filter(l => l.art && artOf(l.art) && num(l.q)).forEach(l => ops.push({ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: o.data, articolo: l.art, tipo: o.causale === 'Reso' ? 'carico' : 'scarico', quantita: o.causale === 'Reso' ? Math.abs(num(l.q)) : -Math.abs(num(l.q)), costo: num(artOf(l.art).costo), causale: `${isD ? 'DDT' : 'Fattura'} ${o.numero}/${o.anno}`, doc: o.id, note: '', creato: new Date().toISOString() } }));
+        if (modOn('magazzino') && (isD ? o.causale !== 'Conto visione' : true)) rows.filter(l => l.art && artOf(l.art) && num(l.q)).forEach(l => ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: o.data, articolo: l.art, tipo: o.causale === 'Reso' ? 'carico' : 'scarico', quantita: o.causale === 'Reso' ? Math.abs(num(l.q)) : -Math.abs(num(l.q)), costo: num(artOf(l.art).costo), causale: `${isD ? 'DDT' : 'Fattura'} ${o.numero}/${o.anno}`, doc: o.id, note: '', creato: new Date().toISOString() } }));
         write(ops); toast(`${isD ? 'DDT' : 'Fattura'} n. ${o.numero}/${o.anno} salvat${isD ? 'o' : 'a'}`); return true;
       }, n ? null : () => {
         if (lock) { toast('Il DDT è in una fattura: elimina prima la fattura'); return; }
@@ -8866,6 +8963,7 @@
       if (k === 'cli-open') { const c = cliOf(id); if (c) cliForm(c); return; }
       if (k === 'art-new') return artForm();
       if (k === 'mov-new') return movForm();
+      if (k === 'mags') return magsForm();
       if (k === 'mag-scan') return magScan();
       if (k === 'srv-new') return srvForm(null);
       if (k === 'srv-edit') { const s = SRV().find(x => x.id === id); if (s) srvForm(s); return; }
@@ -9088,8 +9186,11 @@
       <div class="f-row"><label class="f"><span>Fornitore</span><input name="fornitore" list="df-forn" required value="${esc(d.fornitore)}" data-focus placeholder="Es. Edilmateriali Rossi"><datalist id="df-forn">${forn.map(x => `<option value="${esc(x)}">`).join('')}</datalist></label><label class="f"><span>Numero documento</span><input name="numero" value="${esc(d.numero)}" placeholder="Es. 1452"></label></div>
       <div class="f-row"><label class="f"><span>Data</span><input name="data" type="date" required value="${esc(validD(d.data) ? d.data : today())}"></label><label class="f"><span>Totale € (facoltativo)</span><input name="totale" inputmode="decimal" value="${esc(d.totale === '' || d.totale == null ? '' : fmtIn(d.totale))}" placeholder="IVA inclusa"></label></div>
       <label class="f" data-dffa><span>Fattura che lo comprende (facoltativo)</span><input name="fattura" value="${esc(d.fattura || '')}" placeholder="numero della fattura, quando arriva"></label>
-      <label class="f"><span>Note</span><input name="note" value="${esc(d.note || '')}" placeholder="es. merce per il cantiere di via Roma"></label>`, async fd => {
+      <label class="f"><span>Note</span><input name="note" value="${esc(d.note || '')}" placeholder="es. merce per il cantiere di via Roma"></label>
+      ${modOn('magazzino') ? `<div class="acq" data-dfacq>${magMulti() ? `<div class="f-row">${magSel(acqMag(d.id), 'mag', 'Magazzino dove entra la merce')}</div>` : magSel('')}<div id="df-acq"></div></div>` : ''}`, async fd => {
       if (d.tipo === 'fattura') return;
+      const AL = AQ && d.tipo === 'ddt' ? AQ.get() : [], hadM = GX.mov().some(m => m.doc === d.id);
+      const mag = AL.length ? magNeed(fd) : ''; if (mag === null) return;
       const o = { ...d, fornitore: String(fd.get('fornitore') || '').trim(), numero: String(fd.get('numero') || '').trim(), data: String(fd.get('data') || today()), fattura: String(fd.get('fattura') || '').trim(), note: String(fd.get('note') || '').trim() };
       const tt = String(fd.get('totale') || '').trim(); o.totale = tt === '' ? '' : num(tt);
       if (!o.fornitore) { toast('Scrivi il fornitore'); return; }
@@ -9099,12 +9200,14 @@
         catch (e) { busy(); toast('Documento non salvato: ' + e.message); return; }
         busy();
       }
-      write([{ action: 'upsert', sheet: 'DocForn', row: o }]); toast(n ? 'Documento archiviato' : 'Documento aggiornato'); return true;
-    }, n ? null : () => { if (!confirm('Togliere questo documento dall\'archivio? Il file resta nel tuo Google Drive.')) return; write([{ action: 'delete', sheet: 'DocForn', id: d.id }]); toast('Documento tolto dall\'archivio'); return true; }, n ? 'Archivia' : 'Salva');
+      const mo = AL.length || hadM ? acqOps(AL, { doc: o.id, data: o.data, fornitore: o.fornitore, mag, causale: 'DDT fornitore' + (o.numero ? ' n. ' + o.numero : '') }) : [];
+      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo]); toast((n ? 'Documento archiviato' : 'Documento aggiornato') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '')); return true;
+    }, n ? null : () => { const mv = GX.mov().filter(m => m.doc === d.id); if (!confirm(`Togliere questo documento dall'archivio? Il file resta nel tuo Google Drive.${mv.length ? ' I prodotti caricati con questo documento escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'DocForn', id: d.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Documento tolto dall\'archivio'); return true; }, n ? 'Archivia' : 'Salva');
+    const AQ = modOn('magazzino') ? acqBox($('#df-acq'), acqInit(d.id)) : null;
     $('#sheet-form').classList.add('wide');
     adBox($('#df-doc'), () => file, f => { file = f; }, d.file, `${d.numero || 'documento'}`);
     const seg = $('.df-seg'), fa = $('[data-dffa]');
-    const upd = () => { fa.hidden = d.tipo !== 'ddt'; };
+    const upd = () => { fa.hidden = d.tipo !== 'ddt'; const ab = $('[data-dfacq]'); if (ab) ab.hidden = d.tipo !== 'ddt'; };
     seg.onclick = e => {
       const b = e.target.closest('[data-dft]'); if (!b) return;
       if (b.dataset.dft === 'fattura') {
