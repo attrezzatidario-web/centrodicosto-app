@@ -9841,11 +9841,10 @@
     };
     sp.addEventListener('click', () => { skip = true; });
 
-    // v131: l'animazione completa (circa 3 secondi) solo alla prima apertura della giornata; le altre volte il logo compare e va subito al suo posto
-    let seen = false; try { seen = localStorage.getItem('cdc_splash_d') === today(); localStorage.setItem('cdc_splash_d', today()); } catch {}
-    if (reduced() || seen) {
+    // v149: l'animazione completa (circa 3 secondi) a ogni apertura, come voluto da Dario; solo con «riduci movimento» va subito al suo posto
+    if (reduced()) {
       bars.forEach(b => set(b, { opacity: 0 })); set(ic, { opacity: 1 }); [sq, ring, hand, slice].forEach(e => set(e, { opacity: 1, strokeDashoffset: 0, transform: 'none' })); sq.setAttribute('rx', 116);
-      letters.forEach(l => set(l, { opacity: 1 })); set(tag, { opacity: 1, letterSpacing: '.24em' }); return setTimeout(finish, seen && !reduced() ? 120 : 600);
+      letters.forEach(l => set(l, { opacity: 1 })); set(tag, { opacity: 1, letterSpacing: '.24em' }); return setTimeout(finish, 600);
     }
 
     // 1 · sfondo: puntinato e alone

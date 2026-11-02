@@ -21,7 +21,7 @@ let bad = 0; const chk = (what, ms, max) => { const ok = ms <= max; if (!ok) bad
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   let first = true;
   await p.route('https://script.google.com/**', rt => { const a = JSON.parse(rt.request().postData()); const body = a.action !== 'all' ? JSON.stringify({ ok: true, result: {} }) : first ? (first = false, ALL) : NOCHG(); rt.fulfill({ contentType: 'application/json', body }); });
-  await p.addInitScript(u => { localStorage.setItem('cdc_tok', JSON.stringify('T')); localStorage.setItem('cdc_me', JSON.stringify(u)); localStorage.setItem('cdc_splash_d', new Date().toISOString().slice(0, 10)); }, user);
+  await p.addInitScript(u => { localStorage.setItem('cdc_tok', JSON.stringify('T')); localStorage.setItem('cdc_me', JSON.stringify(u)); }, user);
   await p.goto('http://localhost:8160/#home');
   await p.waitForFunction(() => /Sincronizzato/.test((document.querySelector('#sync-side') || {}).textContent || ''), null, { timeout: 120000 });
   await p.waitForTimeout(5000); // la Dashboard «ferma» si salva 3,5 s dopo
