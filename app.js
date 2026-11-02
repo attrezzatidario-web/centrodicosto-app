@@ -5421,7 +5421,7 @@
       const ty = y + rows.length * 6.5 + 1;
       fill(C.navy); doc.roundedRect(tx - 4, ty - 5, tw + 4, 11, 2, 2, 'F'); color(C.white); font('bold', 11); doc.text('Totale', tx, ty + 2); doc.text(eur(t.tot), W - M - 2, ty + 2, { align: 'right' });
       // note
-      const notes = [SOLO ? `Lavorazione sui capi forniti dal cliente${p.capi ? ': ' + p.capi : ''}${num(p.spz) ? ` (${fmtNum(num(p.spz), 0)} pezzi)` : ''}.` : '', p.note, `Prezzi in euro IVA esclusa. Preventivo valido ${num(p.valid) || 30} giorni (fino al ${scad}).`].filter(Boolean);
+      const notes = [SOLO ? `Lavorazione sui capi forniti dal cliente${p.capi ? ': ' + p.capi : ''}${num(p.spz) ? ` (${fmtNum(num(p.spz), 0)} pezzi)` : ''}.` : '', p.note, `Prezzi in euro IVA esclusa. Preventivo valido ${num(p.valid) || 30} giorni (fino al ${scad}).`, SOLO ? 'Nessuna responsabilità da parte nostra per qualsiasi danno, difetto o evento che riguardi i capi forniti dal cliente.' : ''].filter(Boolean);
       color(C.navy); font('bold', 9); doc.text('Note', M, y + 1);
       color(C.ink2); font('normal', 8.3); let ny = y + 7; notes.forEach(n => { const ls = doc.splitTextToSize(n, CW - tw - 14); doc.text(ls, M, ny); ny += ls.length * 4 + 2; });
       // v124: sola stampa → il logo da applicare, così il cliente vede cosa viene stampato
