@@ -3642,5 +3642,40 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 /* v151: converti il preventivo */
 .pv-cv { margin-left: auto; }
 .pv-cmw { display: grid; gap: 10px; }
-.pv-cm { display: grid; gap: 2px; text-align: left; padding: 14px 16px; height: auto; justify-content: stretch; white-space: normal; }
-.pv-cm small { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+.pv-cvb { display: grid; gap: 2px; text-align: left; padding: 14px 16px; height: auto; justify-content: stretch; white-space: normal; }
+.pv-cvb small { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+
+/* v152: Magazzino e Servizi nei preventivi (senza foto) */
+.pvl-ic { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--accent); }
+.pvl-ic svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pvl-cats { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important; gap: 10px; }
+.pv-cat.pvl-cat { grid-template-rows: none; grid-template-columns: 40px minmax(0, 1fr); align-items: center; gap: 12px; padding: 14px 40px 14px 14px; border-radius: 14px; }
+.pv-cat.pvl-cat:hover { transform: translateY(-2px); }
+.pvl-cat .pv-cat-t { padding: 0; }
+.pvl-cat .pv-cat-go { bottom: auto; top: 50%; margin-top: -9px; }
+.pvl-ci { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--accent); font-weight: 800; font-size: 16px; }
+.pvl-list { display: grid; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow: hidden; }
+.pvl-r { display: grid; grid-template-columns: minmax(0, 1fr) 190px 130px; gap: 16px; align-items: center; padding: 13px 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; transition: background .15s; }
+.pvl-r:last-child { border-bottom: 0; }
+.pvl-r:hover { background: var(--bg); }
+.cc-anim .pvl-r { animation: rise .4s var(--d) var(--out) both; }
+.pvl-n { display: grid; gap: 2px; min-width: 0; }
+.pvl-n b { font-size: 14.5px; font-weight: 650; letter-spacing: -.01em; }
+.pvl-n small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pvl-p { display: grid; gap: 1px; justify-items: end; text-align: right; }
+.pvl-p strong { font-size: 15.5px; font-variant-numeric: tabular-nums; }
+.pvl-p small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pvl-u { font-size: 12.5px; color: var(--muted); }
+.pvl-st { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.pvl-st i { width: 8px; height: 8px; border-radius: 50%; background: #22a06b; flex: none; }
+.pvl-st.low i { background: #e6a23c; }
+.pvl-st.out { color: var(--muted); } .pvl-st.out i { background: #d64545; }
+.pvl-stw { margin: 0 0 10px; }
+.pvl-hd .pv-hi { padding-right: 0; }
+@media (min-width: 1000px) { .pv-hd.pvl-hd { grid-template-columns: minmax(0, 1fr) 280px; } }
+@media (max-width: 700px) {
+  .pvl-r { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 13px 14px; }
+  .pvl-n { grid-column: 1; grid-row: 1; } .pvl-p { grid-column: 2; grid-row: 1 / span 2; align-self: start; }
+  .pvl-s { grid-column: 1; grid-row: 2; }
+  .pvl-cats { grid-template-columns: 1fr !important; }
+}

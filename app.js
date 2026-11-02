@@ -3340,7 +3340,7 @@
     const items = A.map(a => {
       const cl = String(a.categoria || '').trim() || 'Articoli'; if (!groups.has(gk(cl))) groups.set(gk(cl), { k: gk(cl), t: cl, s: '' });
       const sp = [['Codice interno', a.codice], ['Codice fornitore', a.codForn], ['Codice a barre', a.barcode], ['Fornitore', a.fornitore], ['Unità', a.um], ['Giacenza', fmtNum(G.get(a.id) || 0, 0) + ' ' + (a.um || '')]].filter(x => String(x[1] || '').trim());
-      const it = { id: a.id, n: a.descrizione, cl, g: gk(cl), sc: [a.codForn ? 'cod. fornitore ' + a.codForn : '', a.fornitore].filter(Boolean).join(' · '), sz: ['Pz'], c: [[a.codice || a.id, '', num(a.prezzo) || null, [0], '']], uv: 1, peso: null, dim: [null, null, null], mod: '', sp, url: '', um: a.um || 'PZ', d: a.note || '', code: a.codice || '', mag: 1 };
+      const it = { id: a.id, n: a.descrizione, cl, g: gk(cl), sc: [a.codForn ? 'cod. fornitore ' + a.codForn : '', a.fornitore].filter(Boolean).join(' · '), sz: ['Pz'], c: [[a.codice || a.id, '', num(a.prezzo) || null, [0], '']], uv: 1, peso: null, dim: [null, null, null], mod: '', sp, url: '', um: a.um || 'PZ', d: a.note || '', code: a.codice || '', mag: 1, giac: G.get(a.id) || 0, scorta: num(a.scorta) };
       it.k = amNorm(`${it.n} ${a.codice || ''} ${a.codForn || ''} ${a.barcode || ''} ${cl} ${a.fornitore || ''}`);
       pvListSup[it.id] = 'mag'; delete pvListPub[it.id];
       if (num(a.costo)) pvListRaw[it.id] = num(a.costo); else delete pvListRaw[it.id];
@@ -3372,7 +3372,7 @@
   const pvScParse = v => { const L = String(v == null ? '' : v).replace(/%/g, '').split(/[+;/\s]+/).map(x => x.trim()).filter(Boolean).map(num); return L.length && L.every(x => x > 0 && x < 100) ? L : null; };
   const pvScTxt = L => L.map(x => fmtNum(x, 2).replace(/,?0+$/, '')).join(' + ') + '%';
   const pvScList = sup => { if (PV_NOSC.includes(sup)) return null; const m = cfg('pvSconti'); return pvScParse(m && typeof m === 'object' ? m[pvScKey(sup)] : null); };
-  const pvScNote = sup => { const L = pvScList(sup); return L ? `listino − ${pvScTxt(L)} (sconto rivenditore)` : 'prezzo del sito del fornitore'; };
+  const pvScNote = sup => { if (sup === 'mag') return 'costo dall\'anagrafica del magazzino'; if (sup === 'srv') return 'costo del servizio'; const L = pvScList(sup); return L ? `listino − ${pvScTxt(L)} (sconto rivenditore)` : 'prezzo del sito del fornitore'; };
   const pvScFact = L => L.reduce((f, x) => f * (1 - x / 100), 1);
   const pvSconto = sup => { const L = pvScList(sup); return L ? r2((1 - pvScFact(L)) * 100) : null; };
   const pvAcqSc = (it, col) => { const sup = pvListSup[it], L = sup && (pvScList(sup) || (pvCats[sup] && pvCats[sup].acqList ? [] : null)); if (!L) return null; const lp = col != null && pvListRaw[it + '|' + col] != null ? pvListRaw[it + '|' + col] : pvListRaw[it]; return lp != null ? r2(lp * pvScFact(L)) : null; };
@@ -3706,8 +3706,8 @@
       <div class="pv-fl">
         ${!pvGroup ? '<div class="pv-chips" id="pv-gchips"></div>' : cls.length > 1 ? `<div class="pv-chips"><button type="button" data-pvcl="" class="${pvCl ? '' : 'on'}">Tutti</button>${cls.map(c => `<button type="button" data-pvcl="${esc(c)}" class="${pvCl === c ? 'on' : ''}">${esc(c.charAt(0) + c.slice(1).toLowerCase())}</button>`).join('')}</div>` : ''}
         <span class="pv-sp"></span>
-        ${pvCli ? '' : `<div class="tr-seg">${[['', 'Tutti'], ['acq', `Con prezzo (${nAcq})`], ['no', 'Senza prezzo']].map(([k, l]) => `<button type="button" data-pvonly="${k}" class="${pvOnly === k ? 'on' : ''}">${l}</button>`).join('')}</div>`}
-        <select id="pv-sort" aria-label="Ordina"><option value="">Ordina: rilevanza</option><option value="n"${pvSort === 'n' ? ' selected' : ''}>Nome A–Z</option><option value="p"${pvSort === 'p' ? ' selected' : ''}>Prezzo crescente</option><option value="pd"${pvSort === 'pd' ? ' selected' : ''}>Prezzo decrescente</option><option value="c"${pvSort === 'c' ? ' selected' : ''}>Più colori</option></select>
+        ${pvCli || cat.srvc ? '' : `<div class="tr-seg">${[['', 'Tutti'], ['acq', `Con ${pvLite(cat) ? 'costo' : 'prezzo'} (${nAcq})`], ['no', `Senza ${pvLite(cat) ? 'costo' : 'prezzo'}`]].map(([k, l]) => `<button type="button" data-pvonly="${k}" class="${pvOnly === k ? 'on' : ''}">${l}</button>`).join('')}</div>`}
+        <select id="pv-sort" aria-label="Ordina"><option value="">${pvLite(cat) ? 'Nome A–Z' : 'Ordina: rilevanza'}</option>${pvLite(cat) ? '' : `<option value="n"${pvSort === 'n' ? ' selected' : ''}>Nome A–Z</option>`}<option value="p"${pvSort === 'p' ? ' selected' : ''}>Prezzo crescente</option><option value="pd"${pvSort === 'pd' ? ' selected' : ''}>Prezzo decrescente</option>${pvLite(cat) ? '' : `<option value="c"${pvSort === 'c' ? ' selected' : ''}>Più colori</option>`}</select>
       </div>
       <div id="pv-res"></div>`;
     pvCatRes(cat);
@@ -3718,6 +3718,7 @@
     const other = cat.items.filter(it => it.g === 'altro'); if (other.length) G.push({ k: 'altro', t: 'Altro', s: 'altri articoli', items: other });
     const nCol = cat.items.reduce((s2, it) => s2 + it.c.length, 0);
     const card = (g, i) => { const rep = g.items.slice().sort((a, b) => (pvImg(cat, pvCover(b)) ? 1 : 0) - (pvImg(cat, pvCover(a)) ? 1 : 0) || b.c.length - a.c.length)[0], ps = g.items.map(pvMinPub).filter(v => v != null);
+      if (pvLite(cat)) return `<button type="button" class="pv-cat pvl-cat" data-pvgroup="${g.k}" style="--d:${80 + i * 30}ms"><span class="pvl-ci">${esc(String(g.t).trim().charAt(0).toUpperCase())}</span><span class="pv-cat-t"><b>${esc(g.t)}</b><small>${g.items.length} ${g.items.length === 1 ? 'prodotto' : 'prodotti'}${ps.length ? ` · da ${eur(Math.min(...ps))}` : ''}</small></span><svg class="pv-cat-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`;
       return `<button type="button" class="pv-cat" data-pvgroup="${g.k}" style="--d:${120 + i * 40}ms">
         <span class="pv-cat-img">${pvImg(cat, pvCover(rep)) ? pvImgTag(pvImg(cat, pvCover(rep)), 't') : ''}</span>
         <span class="pv-cat-t"><b>${esc(g.t)}</b><small>${g.items.length} ${g.items.length === 1 ? 'prodotto' : 'prodotti'}${ps.length ? ` · da ${eur(Math.min(...ps))}` : ''}</small></span>
@@ -3726,16 +3727,30 @@
     body.innerHTML = `${pvBanner()}
       <section class="pv-hero">
         <div class="pv-hero-l">
-          <img class="pv-hero-logo" src="logo-${pvSup}.svg" alt="${esc(cat.nome)}">
-          <div><span class="pv-code">Catalogo ${esc(cat.v || '')}</span><h2>${esc(cat.nome)}</h2>
-          <p>${fmtNum(cat.items.length, 0)} prodotti · ${cat.tool ? (cat.f === 'milwaukee' ? 'dati dal sito ufficiale · prezzi del volantino dove ci sono' : ['ffg', 'benman', 'hugo'].includes(cat.f) ? 'dati e prezzi di listino dal sito ufficiale FF Group' : cat.f === 'sola' ? 'dati dal sito ufficiale · listino senza IVA (sul sito è IVA inclusa)' : cat.f === 'maxilia' ? 'prezzi Maxilia a pezzo per quantità (stampa del logo inclusa, IVA esclusa) = prezzo d\'acquisto' : cat.f === 'propac' ? 'prezzi Propac IVA esclusa (prima fascia) = prezzo d\'acquisto · sconti quantità nelle versioni' : cat.mag ? 'i tuoi articoli di magazzino · prezzo di vendita e costo dall\'anagrafica' : cat.srvc ? 'le tue righe preimpostate · si gestiscono in Impostazioni › Servizi' : cat.noList ? 'dati e foto dal sito ufficiale · il sito non ha prezzi: scrivi o importa i prezzi d\'acquisto' : 'prezzi al pubblico dal listino') : fmtNum(nCol, 0) + ' colori' + (cat.acqList ? ' · prezzi ' + cat.nome + ' = prezzo d\'acquisto' : '')} · ${G.length} categorie${pvCli ? '' : ` · ${fmtNum(nAcq, 0)} con prezzo d'acquisto`}</p></div>
+          ${pvLite(cat) ? `<span class="pvl-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${PVL_IC[cat.f]}</svg></span>` : `<img class="pv-hero-logo" src="logo-${pvSup}.svg" alt="${esc(cat.nome)}">`}
+          <div><span class="pv-code">${pvLite(cat) ? (cat.mag ? 'Il tuo magazzino' : 'Le tue lavorazioni') : 'Catalogo ' + esc(cat.v || '')}</span><h2>${esc(cat.nome)}</h2>
+          <p>${pvLite(cat) ? (cat.mag ? `${fmtNum(cat.items.length, 0)} articoli · ${G.length} ${G.length === 1 ? 'categoria' : 'categorie'}${pvCli ? '' : ` · ${fmtNum(nAcq, 0)} con costo`}` : `${fmtNum(cat.items.length, 0)} ${cat.items.length === 1 ? 'servizio' : 'servizi'} · si gestiscono in Impostazioni › Servizi`) : ''}${pvLite(cat) ? '' : `${fmtNum(cat.items.length, 0)} prodotti · ${cat.tool ? (cat.f === 'milwaukee' ? 'dati dal sito ufficiale · prezzi del volantino dove ci sono' : ['ffg', 'benman', 'hugo'].includes(cat.f) ? 'dati e prezzi di listino dal sito ufficiale FF Group' : cat.f === 'sola' ? 'dati dal sito ufficiale · listino senza IVA (sul sito è IVA inclusa)' : cat.f === 'maxilia' ? 'prezzi Maxilia a pezzo per quantità (stampa del logo inclusa, IVA esclusa) = prezzo d\'acquisto' : cat.f === 'propac' ? 'prezzi Propac IVA esclusa (prima fascia) = prezzo d\'acquisto · sconti quantità nelle versioni' : cat.mag ? 'i tuoi articoli di magazzino · prezzo di vendita e costo dall\'anagrafica' : cat.srvc ? 'le tue righe preimpostate · si gestiscono in Impostazioni › Servizi' : cat.noList ? 'dati e foto dal sito ufficiale · il sito non ha prezzi: scrivi o importa i prezzi d\'acquisto' : 'prezzi al pubblico dal listino') : fmtNum(nCol, 0) + ' colori' + (cat.acqList ? ' · prezzi ' + cat.nome + ' = prezzo d\'acquisto' : '')} · ${G.length} categorie${pvCli ? '' : ` · ${fmtNum(nAcq, 0)} con prezzo d'acquisto`}`}</p></div>
         </div>
         <div class="pv-sb pv-hero-s"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="pv-q" type="search" placeholder="${cat.tool ? (cat.f === 'milwaukee' ? 'Cerca: nome, codice o modello (es. M18 FPD3, Packout, guanti…)' : cat.f === 'ffg' ? 'Cerca: nome, codice o modello (es. CDD 12V, livella, smerigliatrice…)' : cat.f === 'benman' ? 'Cerca: nome o codice (es. punta SDS, rullo, chiave combinata…)' : cat.f === 'hugo' ? 'Cerca: nome o codice (es. lucchetto, cilindro, GTS…)' : cat.f === 'sola' ? 'Cerca: nome o modello (es. RED 3, livella, flessometro…)' : cat.f === 'maxilia' ? 'Cerca: nome o codice (es. borraccia, penna, shopper…)' : cat.f === 'usag' ? 'Cerca: nome, codice o tipo (es. chiave combinata, 285, giravite…)' : cat.f === 'lavor' ? 'Cerca: nome o codice (es. idropulitrice, Predator, aspiratore, 36051-00067…)' : cat.f === 'propac' ? 'Cerca: nome o codice (es. scatola, nastro adesivo, pluriball, BOY202020…)' : cat.f === 'kerakoll' ? 'Cerca: nome o tipo (es. H40, Fugabella, Aquastop, Keralevel, rasante…)' : cat.f === 'telwin' ? 'Cerca: nome o codice (es. saldatrice MIG, Doctor Charge, maschera, 807610…)' : cat.f === 'bihui' ? 'Cerca: nome o codice (es. disco diamantato, ventosa, tagliapiastrelle, DCDT125…)' : cat.mag ? 'Cerca: descrizione, codice interno, codice fornitore o codice a barre' : cat.srvc ? 'Cerca un servizio' : cat.f === 'stanley' ? 'Cerca: nome, codice o tipo (es. flessometro, livella, cassetta…)' : 'Cerca un attrezzo: nome, codice o tipo (es. trapano, DCD796, smerigliatrice…)') : cat.f === 'portwest' ? 'Cerca: nome o codice (es. S775, softshell, gilet HV…)' : cat.f === 'activegear' ? 'Cerca: nome o codice (es. FLEX F3140, A-One, cuffie…)' : cat.f === 'promit' ? 'Cerca: nome o codice (es. shopper, borraccia, penna, PM322…)' : 'Cerca un prodotto: nome, codice o tipo (es. Sunset, polo, gilet…)'}" value="" autocomplete="off"></div>
       </section>
-      <div class="pv-sh"><h3>Categorie</h3></div>
-      <div class="pv-cats">${G.map(card).join('')}</div>`;
+      ${cat.srvc ? '<div id="pv-res"></div>' : `<div class="pv-sh"><h3>Categorie</h3></div>
+      <div class="pv-cats${pvLite(cat) ? ' pvl-cats' : ''}">${G.map(card).join('')}</div>`}`;
+    if (cat.srvc) pvCatRes(cat);
   }
-  const pvCardHtml = (cat, it, i) => { const pub = pvMinPub(it), c0 = pvCover(it), acq = pvAcq(it.id, c0[0]) ?? it.c.map(c => pvAcq(it.id, c[0])).filter(v => v != null).sort((x, y) => x - y)[0] ?? null, multi = it.c.some(c => pvPub(it.id, c[0]) !== pub);
+  // v152: Magazzino e Servizi nei preventivi — niente foto: elenco pulito con giacenza, prezzo e costo
+  const pvLite = cat => !!(cat && (cat.mag || cat.srvc));
+  const PVL_IC = { mag: '<path d="M3 21V8l9-5 9 5v13"/><path d="M7 21v-8h10v8M7 17h10"/>', srv: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>' };
+  const pvStock = it => { if (!it.mag) return ''; const g = num(it.giac), sc = num(it.scorta), u = esc(it.um || ''); return g <= 0 ? '<span class="pvl-st out"><i></i>Esaurito</span>' : sc && g <= sc ? `<span class="pvl-st low"><i></i>${fmtNum(g, 0)} ${u} · in esaurimento</span>` : `<span class="pvl-st ok"><i></i>${fmtNum(g, 0)} ${u} in magazzino</span>`; };
+  const pvLiteCard = (cat, it, i) => {
+    const pub = pvMinPub(it), c0 = pvCover(it), acq = pvAcq(it.id, c0[0]);
+    const meta = it.mag ? [pvCode(it), it.cl !== 'Articoli' ? it.cl : '', it.fornitore || (it.sc || '')].filter(Boolean) : [it.code || '', it.d || ''].filter(Boolean);
+    return `<button type="button" class="pvl-r" data-pvitem="${esc(it.id)}" style="--d:${Math.min(i, 16) * 25}ms">
+      <span class="pvl-n"><b>${esc(it.n)}</b><small>${esc(meta.join(' · '))}</small></span>
+      <span class="pvl-s">${it.mag ? pvStock(it) : `<span class="pvl-u">${esc({ h: 'a ora', pz: 'a pezzo', gg: 'al giorno', km: 'al km' }[String(it.um || '').toLowerCase()] || (it.um ? 'per ' + String(it.um).toLowerCase() : ''))}</span>`}</span>
+      <span class="pvl-p">${pub != null ? `<strong>${eur(pub)}</strong>${pvCli || acq == null ? '' : `<small>costo ${eur(acq)}</small>`}` : '<span class="chip soon">prezzo da inserire</span>'}</span>
+    </button>`;
+  };
+  const pvCardHtml = (cat, it, i) => { if (pvLite(cat)) return pvLiteCard(cat, it, i); const pub = pvMinPub(it), c0 = pvCover(it), acq = pvAcq(it.id, c0[0]) ?? it.c.map(c => pvAcq(it.id, c[0])).filter(v => v != null).sort((x, y) => x - y)[0] ?? null, multi = it.c.some(c => pvPub(it.id, c[0]) !== pub);
     return `<button type="button" class="card pv-card" data-pvitem="${esc(it.id)}" style="--d:${Math.min(i, 16) * 30}ms">
       ${pvThumb(cat, it, c0)}
       <span class="pv-cm"><b>${it.x ? '<i class="pv-new">nuovo</i>' : ''}${esc(it.n)}</b><small>${esc(pvCode(it))} · ${esc(it.cl.toLowerCase())}${it.sc && it.sc !== it.cl ? ' · ' + esc(it.sc.toLowerCase()) : ''}</small>
@@ -3753,7 +3768,7 @@
     const gc = $('#pv-gchips'); if (gc) { const by = new Map(); cat.items.filter(it => q.every(w => it.k.includes(w))).forEach(it => by.set(it.g, (by.get(it.g) || 0) + 1)); gc.innerHTML = [...by].sort((a, b) => b[1] - a[1]).map(([g, n]) => `<button type="button" data-pvgroup="${g}" data-keepq="1">${esc(pvGroupT(g))} <em>${n}</em></button>`).join(''); }
     const cnt = $('#pv-cnt'); if (cnt) cnt.textContent = `${fmtNum(L.length, 0)} ${L.length === 1 ? 'prodotto' : 'prodotti'}${pvQ ? ` per «${pvQ}»` : ''}`;
     const sh = L.slice(0, pvLimit);
-    box.innerHTML = sh.length ? `<div class="pv-grid">${sh.map((it, i) => pvCardHtml(cat, it, i)).join('')}</div>${L.length > pvLimit ? `<div class="more-row"><button class="btn sm" id="pv-more">Mostra altri (${fmtNum(L.length - pvLimit, 0)})</button></div>` : ''}` : '<div class="card"><div class="empty">Nessun prodotto trovato</div></div>';
+    box.innerHTML = sh.length ? `<div class="${pvLite(cat) ? 'pvl-list' : 'pv-grid'}">${sh.map((it, i) => pvCardHtml(cat, it, i)).join('')}</div>${L.length > pvLimit ? `<div class="more-row"><button class="btn sm" id="pv-more">Mostra altri (${fmtNum(L.length - pvLimit, 0)})</button></div>` : ''}` : '<div class="card"><div class="empty">Nessun prodotto trovato</div></div>';
   }
   let pvGridQ = {};
   const pvPerCol = new Set();
@@ -3799,18 +3814,19 @@
   function pvDetailTool(body, cat, it, base, q, quotes) {
     const k = it.c[0][0] + '|Pz', pub = pvPub(it.id, it.c[0][0]) ?? pvMinPub(it), lordo = it.pl && it.pl[0], acqSc = pvAcqSc(it.id, it.c[0][0]), acq = base === '' ? acqSc : num(base);
     body.innerHTML = `${pvBanner()}
-      <div class="pv-back"><button type="button" class="btn sm" id="pv-back">‹ ${pvFromAll ? 'Tutti i fornitori' : pvQ || pvGroup ? esc(pvGroup ? pvGroupT(pvGroup) : 'Risultati') : 'Catalogo'}</button><span class="muted small">${esc(cat.nome)} · ${esc(pvGroupT(it.g))}</span></div>
-      <div class="card pv-hd">
-        <div class="pv-hm">${pvThumb(cat, it, it.c[0], 'big')}</div>
+      <div class="pv-back"><button type="button" class="btn sm" id="pv-back">‹ ${pvFromAll ? 'Tutti i fornitori' : pvQ || pvGroup ? esc(pvGroup ? pvGroupT(pvGroup) : 'Risultati') : 'Catalogo'}</button><span class="muted small">${esc(cat.nome)}${cat.srvc ? '' : ' · ' + esc(pvGroupT(it.g))}</span></div>
+      <div class="card pv-hd${pvLite(cat) ? ' pvl-hd' : ''}">
+        ${pvLite(cat) ? '' : `<div class="pv-hm">${pvThumb(cat, it, it.c[0], 'big')}</div>`}
         <div class="pv-hi">
           <span class="pv-code">${esc(pvCode(it))}</span>
           <h2>${esc(it.n)}</h2>
+          ${pvLite(cat) && it.mag ? `<div class="pvl-stw">${pvStock(it)}</div>` : ''}
           <p>${esc(it.d)}</p>
-          <div class="pv-spec">${pvSpecTool(it).map(([a, b]) => `<div><span>${a}</span><b>${esc(String(b))}</b></div>`).join('')}</div>
+          <div class="pv-spec">${(pvLite(cat) ? [['Categoria', it.mag ? it.cl : ''], ...it.sp.filter(x => !/^Giacenza$/.test(x[0]))].filter(x => x[1]) : pvSpecTool(it)).map(([a, b]) => `<div><span>${a}</span><b>${esc(String(b))}</b></div>`).join('')}</div>
         </div>
         <div class="pv-prices">${pvCli ? `<div class="pv-pf"><span>Prezzo</span><b class="pv-big">${pub != null ? eur(pub) : '—'}</b><small>a pezzo · IVA esclusa</small></div>` : `
           <label class="pv-pf"><span>Prezzo d'acquisto €</span><input id="pv-acq" inputmode="decimal" value="${esc(fmtIn(base))}" placeholder="${acqSc != null ? esc(fmtIn(acqSc)) : 'da inserire'}">${acqSc != null && base === '' ? `<small class="pv-scn">${esc(pvScNote(pvSup))}</small>` : ''}</label>
-          <div class="pv-pf"><span>Prezzo al pubblico</span><b>${pub != null ? eur(pub) : '—'}</b><small>${cat.f === 'milwaukee' ? 'prezzo consigliato volantino' : ['ffg', 'benman', 'hugo', 'sola'].includes(cat.f) ? 'prezzo di listino ' + esc(cat.nome) : cat.acqList ? 'acquisto ' + esc(cat.nome) + ' × ricarico' : cat.f === 'usag' && it.c[0][5] != null && Math.abs(it.c[0][5] - it.c[0][2]) < .01 ? 'listino USAG 2026' : 'prezzo utilizzatore ' + esc(cat.nome)}${acq && pub ? ` · margine ${fmtNum((pub - acq) / pub * 100, 0)}%` : ''}</small></div>
+          <div class="pv-pf"><span>${pvLite(cat) ? 'Prezzo di vendita' : 'Prezzo al pubblico'}</span><b>${pub != null ? eur(pub) : '—'}</b><small>${pvLite(cat) ? 'dall\'anagrafica' : cat.f === 'milwaukee' ? 'prezzo consigliato volantino' : ['ffg', 'benman', 'hugo', 'sola'].includes(cat.f) ? 'prezzo di listino ' + esc(cat.nome) : cat.acqList ? 'acquisto ' + esc(cat.nome) + ' × ricarico' : cat.f === 'usag' && it.c[0][5] != null && Math.abs(it.c[0][5] - it.c[0][2]) < .01 ? 'listino USAG 2026' : 'prezzo utilizzatore ' + esc(cat.nome)}${acq && pub ? ` · margine ${fmtNum((pub - acq) / pub * 100, 0)}%` : ''}</small></div>
           ${lordo && !(pub != null && Math.abs(pub - lordo) < .01) ? `<div class="pv-pf"><span>Listino lordo</span><b>${eur(lordo)}</b><small>${pub ? `sconto utilizzatore ${fmtNum((1 - pub / lordo) * 100, 0)}%` : 'prezzo di listino'}</small></div>` : ''}`}
         </div>
       </div>
@@ -3927,7 +3943,7 @@
     : modOn('vendite') ? `<button type="button" class="btn sm" data-pvconv="ddt"${id ? ` data-pvid="${esc(id)}"` : ''} title="Crea un DDT di vendita con le righe di questo preventivo">${DOC_IC}Crea DDT</button><button type="button" class="btn sm" data-pvconv="fv"${id ? ` data-pvid="${esc(id)}"` : ''} title="Crea la fattura al cliente con le righe di questo preventivo">${DOC_IC}Crea fattura</button>` : '';
   function pvConvMenu(id) {
     const p = pvGet(id); if (!p) return;
-    const forn = pvDest(p) === 'forn', btn = (k, t, d) => `<button type="button" class="btn pv-cm" data-pvconv="${k}" data-pvid="${esc(id)}"><b>${t}</b><small>${d}</small></button>`;
+    const forn = pvDest(p) === 'forn', btn = (k, t, d) => `<button type="button" class="btn pv-cvb" data-pvconv="${k}" data-pvid="${esc(id)}"><b>${t}</b><small>${d}</small></button>`;
     openSheet(`Converti il preventivo ${p.num}`, `<p class="pvx-intro">${forn ? 'Quando arriva la merce: controlli i prodotti, correggi quantità e prezzi con quelli del documento, e al salvataggio entrano in magazzino.' : 'Le righe, i prezzi e il cliente del preventivo passano nel documento.'}</p><div class="pv-cmw">${forn ? btn('ddt', 'DDT arrivato', 'Registra il DDT del fornitore e carica la merce in magazzino') + btn('fv', 'Fattura del fornitore', 'Registra la fattura con i prodotti del preventivo') : btn('ddt', 'DDT di vendita', 'Documento di trasporto per il cliente') + btn('fv', 'Fattura al cliente', 'Fattura di vendita con le righe del preventivo')}</div>`, () => true, null, 'Chiudi');
   }
   function pvSaveAcq(it) {
@@ -4200,6 +4216,7 @@
   }
   function pvExtraBar(cat) {
     const it = cat.items.find(x => x.id === pvItem); if (!it) return;
+    if (pvLite(cat)) return;
     const hd = $('#pv-body .pv-hd'); if (!hd || $('#pv-body .pvx-bar')) return;
     const SCH = `<button type="button" class="btn sm pvx-sch" data-pvsch="${esc(pvSup)}|${esc(it.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9.5 14.5 12 17l2.5-2.5"/></svg>Scheda tecnica PDF</button>`;
     const ED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
