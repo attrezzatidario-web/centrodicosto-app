@@ -3594,3 +3594,9 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 
 /* v132: Dashboard «ferma» mostrata all'apertura mentre si leggono i dati */
 #v-snap, #v-snap * { animation: none !important; transition: none !important; }
+
+/* v136: selezione multipla nel magazzino */
+.mg-bar { flex-wrap: wrap; }
+.mg-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.gx-tbl tr.mg-on { background: var(--accent-soft); }
+.mg-ck { width: 18px; height: 18px; margin: 0 10px 0 0; vertical-align: middle; accent-color: var(--accent); cursor: pointer; }
