@@ -8177,24 +8177,24 @@
   let pkSrc = 'all';
   function pickOpen(o = {}) {
     const cli = o.cli || '';
-    let src = o.src || pkSrc, q = '', sel = null, added = 0; const kicked = {};
+    let src = o.src || (o.noSrv && pkSrc === 'srv' ? 'all' : pkSrc), q = o.q || '', sel = null, added = 0; const kicked = {};
     const ov = document.createElement('div'); ov.className = 'pk';
     ov.innerHTML = `<div class="pk-box" role="dialog" aria-modal="true" aria-label="${esc(o.title || 'Aggiungi prodotti')}">
       <div class="pk-h"><b>${esc(o.title || 'Aggiungi prodotti')}</b>${cli ? `<span class="pk-cli">prezzi per ${esc(cli)}${cliRic(cli) != null ? ' · ricarico +' + esc(fmtNum(cliRic(cli), 1).replace(/,0$/, '')) + '%' : ''}</span>` : ''}<span class="pk-sp"></span><button type="button" class="md-x" data-pk="x" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div class="pk-s"><label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Cerca nome, codice o tipo…" autocomplete="off"><button type="button" class="scan-ib" data-pk="scan" title="Scansiona" aria-label="Scansiona">${SCAN_IC}</button></label></div>
       <div class="pk-src"></div>
       <div class="pk-list"></div>
-      <div class="pk-f"><span class="pk-msg" aria-live="polite"></span><button type="button" class="btn sm" data-pk="newsrv">+ Nuovo servizio</button><button type="button" class="btn primary" data-pk="x">Fatto <em class="pk-n">0</em></button></div></div>`;
+      <div class="pk-f"><span class="pk-msg" aria-live="polite"></span>${o.noSrv ? (o.onNew ? '<button type="button" class="btn sm" data-pk="newprod">+ Nuovo prodotto</button>' : '') : '<button type="button" class="btn sm" data-pk="newsrv">+ Nuovo servizio</button>'}<button type="button" class="btn primary" data-pk="x">Fatto <em class="pk-n">0</em></button></div></div>`;
     document.body.appendChild(ov); requestAnimationFrame(() => ov.classList.add('in'));
     const inp = $('.pk-s input', ov), list = $('.pk-list', ov), srcEl = $('.pk-src', ov), msg = $('.pk-msg', ov);
     const close = () => { ov.classList.remove('in'); document.removeEventListener('keydown', key, true); setTimeout(() => ov.remove(), 220); if (o.onClose) o.onClose(added); };
     const key = e => { if (e.key === 'Escape') { e.stopPropagation(); if (sel) { sel = null; draw(); } else close(); } };
     document.addEventListener('keydown', key, true);
-    const sups = () => pvGSups();
+    const sups = () => o.noSrv ? pvGSups().filter(x => x !== 'srv') : pvGSups();
     const say = t => { msg.textContent = t; msg.classList.remove('pop'); void msg.offsetWidth; msg.classList.add('pop'); };
     const priceTxt = (it, c) => { const p = docPrice(cli, it.id, c[0]), a = pvAcq(it.id, c[0]); return `${p != null ? `<b>${eur(p)}</b>` : '<b class="muted">prezzo da scrivere</b>'}${!pvCli && a != null ? `<small>acquisto ${eur(a)}</small>` : ''}`; };
     const drawSrc = () => {
-      const S = [['all', 'Tutto'], ...(SRV().length ? [['srv', 'Servizi']] : [['srv', 'Servizi']]), ...(pvMagOk() ? [['mag', 'Magazzino']] : []), ...sups().filter(s => s !== 'mag' && s !== 'srv').map(s => [s, PV_SUP[s].n])];
+      const S = [['all', 'Tutto'], ...(o.noSrv ? [] : [['srv', 'Servizi']]), ...(pvMagOk() ? [['mag', 'Magazzino']] : []), ...sups().filter(s => s !== 'mag' && s !== 'srv').map(s => [s, PV_SUP[s].n])];
       srcEl.innerHTML = S.map(([k, t]) => `<button type="button" class="pk-c${k === src ? ' on' : ''}" data-pksrc="${k}">${['all', 'srv', 'mag'].includes(k) ? esc(t) : `<img src="logo-${k}.svg" alt="${esc(t)}" title="${esc(t)}">`}</button>`).join('');
     };
     const match = (it, toks) => toks.every(t => it.k.includes(t));
@@ -8205,8 +8205,8 @@
       if (src === 'all' && !toks.length) {
         // senza ricerca: servizi e magazzino; i cataloghi si cercano scrivendo
         const L = [];
-        for (const s of ['srv', 'mag']) { if (!sups().includes(s) && s !== 'srv') continue; const cat = s === 'srv' ? (pvCats.srv = pvSrvCat()) : await pvLoad(s); if (cat) cat.items.slice(0, 40).forEach(it => L.push([s, it])); }
-        return { L, hint: 'Scrivi per cercare anche nei cataloghi di tutti i fornitori' };
+        for (const s of ['srv', 'mag']) { if (!sups().includes(s) && (s !== 'srv' || o.noSrv)) continue; const cat = s === 'srv' ? (pvCats.srv = pvSrvCat()) : await pvLoad(s); if (cat) cat.items.slice(0, 40).forEach(it => L.push([s, it])); }
+        return { L, hint: o.noSrv ? 'Prima il tuo magazzino: scrivi per cercare anche nei cataloghi dei fornitori' : 'Scrivi per cercare anche nei cataloghi di tutti i fornitori' };
       }
       // v134: i risultati compaiono subito con quello che è già caricato; ogni catalogo che arriva aggiorna la lista (prima si aspettavano tutti, ~12 MB)
       need.forEach(s => { if (s === 'srv') pvCats.srv = pvSrvCat(); else if (s === 'mag') pvCats.mag = pvMagCat(); });
@@ -8246,6 +8246,7 @@
         if (k === 'back') { sel = null; return draw(); }
         if (k === 'scan') return scanOpen({ title: o.title || 'Aggiungi', multi: true, onCode: async code => { const r = await pvScanFind(code); if (!r) return { ok: false, msg: `Codice ${code} non trovato` }; give([{ sup: r.sup, it: r.it, c: r.c, size: r.it.sz[0], q: 1 }]); return { ok: true, msg: r.it.n }; } });
         if (k === 'newsrv') { const s = await srvForm(null); if (s) { src = 'srv'; sel = null; setTimeout(draw, 60); } return; }
+        if (k === 'newprod') { const t0 = inp.value.trim(); close(); o.onNew(t0); return; }
         if (k === 'addsel') {
           const arr = []; $$('[data-pkq]', list).forEach(i => { const v = num(i.value); if (v > 0) { const [cc, z] = i.dataset.pkq.split('|'); arr.push({ sup: sel.s, it: sel.it, c: sel.it.c.find(x => x[0] === cc), size: z, q: v }); } });
           if (!arr.length) return say('Scrivi almeno una quantità');
@@ -8262,6 +8263,7 @@
     });
     list.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.pk-q')) { e.preventDefault(); $('[data-pk="addsel"]', list).click(); } });
     inp.addEventListener('input', () => { q = inp.value; sel = null; clearTimeout(inp._t); inp._t = setTimeout(draw, 180); });
+    if (o.q) inp.value = o.q;
     if (matchMedia('(min-width: 640px)').matches) setTimeout(() => inp.focus(), 80);
     draw();
   }
@@ -8304,20 +8306,34 @@
   function acqBox(box, init, hint) {
     if (!box) return null;
     const L = (init || []).map(x => ({ ...x }));
-    const st = l => { const d = String(l.d || '').trim(); if (!d) return ''; const a = artFind(d); return a ? `in magazzino · giacenza ${fmtNum(giacMap().get(a.id) || 0, 0)} ${esc(a.um || '')}` : '<em>prodotto nuovo: viene aggiunto al magazzino</em>'; };
+    const st = l => { const d = String(l.d || '').trim(); if (!d) return ''; if (l.cat) return `<em>dal catalogo ${esc((PV_SUP[l.cat.sup] || {}).n || '')} · cod. ${esc(l.cat.cod)} · entra in magazzino come prodotto nuovo</em>`; const a = artFind(d); return a ? `in magazzino · giacenza ${fmtNum(giacMap().get(a.id) || 0, 0)} ${esc(a.um || '')}` : `<em>non è in magazzino</em> · <button type="button" class="link" data-acq="find">cerca nei fornitori</button> · altrimenti viene creato nuovo`; };
+    // dalla finestra prodotti: articolo del magazzino oppure prodotto del catalogo di un fornitore
+    const fromPick = (arr, at) => { const N = arr.map(x => {
+        if (x.sup === 'mag') { const a = artOf(x.it.id); return a ? { d: artLbl(a), q: x.q || 1, c: '' } : null; }
+        const cod = String(x.c[0] || pvCode(x.it)), ex = GX.art().find(a => a.codForn && codeKey(a.codForn) === codeKey(cod));
+        if (ex) return { d: artLbl(ex), q: x.q || 1, c: '' };
+        const d = [x.it.n, x.c[1] && !/^taglia/i.test(x.c[1]) ? x.c[1] : '', x.size && x.size !== 'Pz' ? 'tg ' + x.size : ''].filter(Boolean).join(' · '), a0 = pvAcq(x.it.id, x.c[0]), p0 = docPrice('', x.it.id, x.c[0]);
+        return { d, q: x.q || 1, c: a0 == null ? '' : a0, cat: { sup: x.sup, cod, um: x.it.um && x.it.um !== 'PZ' ? x.it.um : 'PZ', prezzo: p0 == null ? '' : p0 } };
+      }).filter(Boolean);
+      if (at != null) L.splice(at, 1, ...N); else { N.forEach(n => { const ex = L.find(l => l.d === n.d); if (ex) ex.q = num(ex.q) + num(n.q); else L.push(n); }); }
+      draw(); };
+    const pick = (q0, at) => pickOpen({ title: 'Prodotti arrivati', noSrv: true, q: q0 || '', onAdd: arr => fromPick(arr, at), onNew: t0 => { if (at == null) L.push({ d: t0, q: 1, c: '' }); draw(); const ins = $$('.acq-r [data-k=d]', box), el = ins[at != null ? at : ins.length - 1]; if (el) el.focus(); } });
     const draw = () => {
       box.innerHTML = `<div class="acq-h"><b>Prodotti arrivati</b><span class="muted small">${hint || 'entrano in magazzino quando salvi'}</span></div>
         ${L.map((l, i) => `<div class="acq-r" data-i="${i}"><input data-k="d" list="acq-arts" value="${esc(l.d || '')}" placeholder="Cerca o scrivi un prodotto nuovo"><input data-k="q" type="number" step="any" inputmode="decimal" value="${esc(l.q ?? '')}" placeholder="Q.tà"><input data-k="c" type="number" step="any" inputmode="decimal" value="${esc(l.c ?? '')}" placeholder="${(() => { const a = artFind(l.d); return a && num(a.costo) ? esc(fmtIn(a.costo)) : 'Costo €'; })()}"><button type="button" class="dx-x" data-acq="del" aria-label="Togli">✕</button><small class="acq-s">${st(l)}</small></div>`).join('')}
-        <div class="acq-a"><button type="button" class="btn sm" data-acq="add">+ Prodotto</button><button type="button" class="btn sm ghost" data-acq="scan">${SCAN_IC}Scansiona</button></div>
+        <div class="acq-a"><button type="button" class="btn sm primary" data-acq="pick">+ Prodotto</button><button type="button" class="btn sm" data-acq="add">+ Nuovo prodotto</button><button type="button" class="btn sm ghost" data-acq="scan">${SCAN_IC}Scansiona</button></div>
         <datalist id="acq-arts">${GX.art().map(a => `<option value="${esc(artLbl(a))}">`).join('')}</datalist>`;
     };
-    box.oninput = e => { const r = e.target.closest('.acq-r'), k = e.target.dataset.k; if (!r || !k) return; const l = L[+r.dataset.i]; l[k] = e.target.value; if (k === 'd') { $('.acq-s', r).innerHTML = st(l); const a = artFind(l.d); $('[data-k=c]', r).placeholder = a && num(a.costo) ? fmtIn(a.costo) : 'Costo €'; } };
+    box.oninput = e => { const r = e.target.closest('.acq-r'), k = e.target.dataset.k; if (!r || !k) return; const l = L[+r.dataset.i]; l[k] = e.target.value; if (k === 'd') { delete l.cat; $('.acq-s', r).innerHTML = st(l); const a = artFind(l.d); $('[data-k=c]', r).placeholder = a && num(a.costo) ? fmtIn(a.costo) : 'Costo €'; } };
     box.onclick = e => {
       const b = e.target.closest('[data-acq]'); if (!b) return; e.preventDefault();
       const k = b.dataset.acq;
+      if (k === 'pick') return pick('');
+      if (k === 'find') { const i = +b.closest('.acq-r').dataset.i; return pick(L[i].d, i); }
       if (k === 'add') { L.push({ d: '', q: 1, c: '' }); draw(); const ins = $$('.acq-r [data-k=d]', box); ins[ins.length - 1].focus(); return; }
       if (k === 'del') { L.splice(+b.closest('.acq-r').dataset.i, 1); draw(); return; }
-      if (k === 'scan') scanOpen({ title: 'Prodotto arrivato', onCode: c => { const a = artByCode(c), ex = a && L.find(l => artFind(l.d) === a); if (ex) ex.q = num(ex.q) + 1; else L.push({ d: a ? artLbl(a) : c, q: 1, c: '' }); draw(); return { ok: true, msg: a ? a.descrizione : `Codice ${c}: prodotto nuovo, scrivi la descrizione` }; } });
+      if (k === 'scan') scanOpen({ title: 'Prodotto arrivato', multi: true, onCode: c => { const a = artByCode(c), ex = a && L.find(l => artFind(l.d) === a); if (a) { if (ex) ex.q = num(ex.q) + 1; else L.push({ d: artLbl(a), q: 1, c: '' }); draw(); return { ok: true, msg: a.descrizione }; }
+        return pvScanFind(c).then(r => { if (r) { fromPick([{ sup: r.sup, it: r.it, c: r.c, size: r.it.sz[0], q: 1 }]); return { ok: true, msg: `${r.it.n} (catalogo ${(PV_SUP[r.sup] || {}).n || ''})` }; } L.push({ d: c, q: 1, c: '' }); draw(); return { ok: true, msg: `Codice ${c}: prodotto nuovo, scrivi la descrizione` }; }); } });
     };
     draw();
     return { get: () => L.filter(l => String(l.d || '').trim() && num(l.q)), set: A => { L.splice(0, L.length, ...A); draw(); } };
@@ -8329,8 +8345,11 @@
     L.forEach(l => {
       const d = String(l.d || '').trim(), q = Math.abs(num(l.q)); if (!d || !q) return;
       const c = String(l.c ?? '').trim() === '' ? '' : num(l.c);
-      let a = artFind(d) || made.get(d.toUpperCase());
-      if (!a) {
+      let a = l.cat ? (GX.art().find(x => x.codForn && codeKey(x.codForn) === codeKey(l.cat.cod)) || made.get(d.toUpperCase())) : (artFind(d) || made.get(d.toUpperCase()));
+      if (!a && l.cat) {
+        a = { id: uid(), codice: artNext(made.size), descrizione: d, um: l.cat.um || 'PZ', categoria: '', fornitore: (PV_SUP[l.cat.sup] || {}).n || o.fornitore || '', costo: c, prezzo: l.cat.prezzo, iva: 22, scorta: '', barcode: '', note: '', creato: today(), codForn: l.cat.cod };
+        made.set(d.toUpperCase(), a); ops.push({ action: 'upsert', sheet: 'Articoli', row: a });
+      } else if (!a) {
         const bc = /^\d{8,14}$/.test(d);
         a = { id: uid(), codice: artNext(made.size), descrizione: bc ? 'Prodotto ' + d : d, um: 'PZ', categoria: '', fornitore: o.fornitore || '', costo: c, prezzo: '', iva: 22, scorta: '', barcode: bc ? d : '', note: '', creato: today(), codForn: '' };
         made.set(d.toUpperCase(), a); ops.push({ action: 'upsert', sheet: 'Articoli', row: a });
