@@ -171,6 +171,7 @@
       ['propac', 'Propac', 'Imballaggi.', ['1.122 prodotti, 4.331 articoli'], ['sez.preventivi']],
       ['kerakoll', 'Kerakoll', 'Prodotti per l\'edilizia.', ['317 prodotti'], ['sez.preventivi']],
       ['telwin', 'Telwin', 'Saldatrici, carica batterie e accessori.', ['591 prodotti'], ['sez.preventivi']],
+      ['bihui', 'Bihui', 'Attrezzatura per piastrellisti: taglio, foratura, posa grandi lastre.', ['331 prodotti'], ['sez.preventivi']],
       ['mag', 'Magazzino', 'Gli articoli del magazzino dell\'azienda.', ['Prezzo di vendita e costo'], ['sez.magazzino', 'sez.preventivi']],
       ['srv', 'Servizi', 'Le righe di servizio preimpostate.', ['Codici SRV-001…'], ['sez.impostazioni', 'sez.preventivi']]
     ] },
