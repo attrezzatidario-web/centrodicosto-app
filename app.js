@@ -8456,6 +8456,7 @@
   }
 
   // editor di DDT e fatture immediate, con le righe
+  let dxAbort = null;
   function docForm(kind, d0, copy) {
     const isD = kind === 'ddt', y = String(new Date().getFullYear()), n = !d0 || copy;
     const d = n ? { ...(copy ? d0 : {}), id: uid(), numero: String(nextNum(isD ? GX.ddt() : GX.fv(), y)), anno: y, data: today(), fattura: '', stato: '', pagata: '', creato: today() } : { ...d0 };
@@ -8541,6 +8542,8 @@
       if (a) { Object.assign(l, { art: a.id, sup: 'mag', it: a.id, vc: a.codice || a.id, acq: num(a.costo) || '', c: a.codice || '', d: a.descrizione, um: a.um || 'PZ', p: (pvCats.mag || (pvCats.mag = pvMagCat())) && docPrice(cliName(), a.id, a.codice || a.id) || num(a.prezzo) || l.p, iva: a.iva === '' || a.iva == null ? 22 : num(a.iva) }); delete l.man; const ri = r.dataset.i; setTimeout(() => { draw(); const nx = $(`.dx-r[data-i="${ri}"] [data-k="q"]`); if (nx) nx.select(); }, 0); }
       else l.d = v;
     });
+    // v135: un solo ascoltatore alla volta (prima se ne aggiungeva uno a ogni apertura e «Prodotto» apriva più finestre una sopra l'altra)
+    if (dxAbort) dxAbort.abort(); dxAbort = new AbortController();
     $('#sheet-body').addEventListener('click', function dx(e) {
       const b = e.target.closest('[data-dx]'); if (!b || !$('#dx-rows')) return;
       if (b.dataset.dx === 'add') { R.push({ art: '', c: '', d: '', um: 'PZ', q: 1, p: '', sc: '', iva: R.length ? R[R.length - 1].iva : 22 }); draw(); const ls = $$('.dx-r [data-k="d"]'); ls[ls.length - 1].focus(); }
@@ -8557,7 +8560,7 @@
         } });
       }
       if (b.dataset.dx === 'del') { R.splice(+b.closest('.dx-r').dataset.i, 1); if (!R.length) R.push({ art: '', c: '', d: '', um: 'PZ', q: 1, p: '', sc: '', iva: 22 }); draw(); }
-    });
+    }, { signal: dxAbort.signal });
     ricDraw(); draw();
     // foto e prezzi d'acquisto delle righe che vengono dai cataloghi
     if (R.some(l => l.sup)) docLoadCats(R).then(() => { if ($('#dx-rows') === box) draw(); });
