@@ -25,7 +25,7 @@
   // a chi si rivolge, per il titolo
   const PL = { veicoli: 'officine e allestitori', bar: 'bar e caffetterie', pizzeria: 'pizzerie', ristorante: 'ristoranti', lavanderia: 'lavanderie', edile: 'ingrossi edili', impresa: 'imprese edili', negozio: 'negozi', estetica: 'parrucchieri ed estetisti', hotel: 'hotel e B&B', altro: 'ogni azienda' };
   const VEI_CAT = ['Trasporti e servizi', 'Abbigliamento da lavoro', 'DPI e sicurezza', 'Imballaggio', 'Pulizia e igiene', 'Ufficio e informatica', 'Accessori per utensili', 'Elettroutensili e batterie', 'Minuteria e fissaggio', 'Chimici e sigillanti', 'Elettrico e illuminazione', 'Utensili e attrezzature'];
-  const LOGOS = ['payper', 'milwaukee', 'cofra', 'portwest', 'usag', 'dewalt', 'stanley', 'lavor', 'kerakoll', 'telwin', 'bihui', 'fischer', 'electraline', 'vibac', 'krino', 'qbrick', 'bullvit', 'gierre', 'akifix', 'cmt', 'ambrovit', 'mustad', 'dueci', 'propac', 'promit', 'maxilia', 'sola', 'ffg', 'benman', 'activegear', 'jrc', 'hugo'];
+  const LOGOS = ['payper', 'milwaukee', 'cofra', 'portwest', 'usag', 'dewalt', 'stanley', 'lavor', 'kerakoll', 'telwin', 'bihui', 'fischer', 'electraline', 'vibac', 'krino', 'qbrick', 'bullvit', 'gierre', 'akifix', 'cmt', 'ambrovit', 'mustad', 'dueci', 'prodyver', 'propac', 'promit', 'maxilia', 'sola', 'ffg', 'benman', 'activegear', 'jrc', 'hugo'];
 
   // illustrazioni animate delle funzioni (SVG + classi CSS)
   const ILL = {
