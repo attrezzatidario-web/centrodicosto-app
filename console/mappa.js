@@ -173,6 +173,7 @@
       ['kerakoll', 'Kerakoll', 'Prodotti per l\'edilizia.', ['317 prodotti'], ['sez.preventivi']],
       ['telwin', 'Telwin', 'Saldatrici, carica batterie e accessori.', ['591 prodotti'], ['sez.preventivi']],
       ['bihui', 'Bihui', 'Attrezzatura per piastrellisti: taglio, foratura, posa grandi lastre.', ['331 prodotti'], ['sez.preventivi']],
+      ['fischer', 'fischer', 'Fissaggi: tasselli, ancoranti chimici e metallici, viti, sigillanti.', ['734 prodotti, 5.420 codici'], ['sez.preventivi']],
       ['mag', 'Magazzino', 'Gli articoli del magazzino dell\'azienda.', ['Prezzo di vendita e costo'], ['sez.magazzino', 'sez.preventivi']],
       ['srv', 'Servizi', 'Le righe di servizio preimpostate.', ['Codici SRV-001…'], ['sez.impostazioni', 'sez.preventivi']]
     ] },
