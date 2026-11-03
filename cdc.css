@@ -2653,7 +2653,7 @@ body.is-demo #sync, body.is-demo #sync-side { color: #a16207; }
 .ad-seg { display: inline-grid; grid-auto-flow: column; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 3px; gap: 3px; }
 .ad-seg button { border: 0; background: none; height: 36px; padding: 0 16px; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
 .ad-seg button.on { background: var(--accent); color: var(--accent-ink); }
-body[data-view="utenti"] .iva-tg { visibility: hidden; }
+body[data-view="utenti"] .iva-tg, body[data-view="dipendenti"] .iva-tg, body[data-view="analisi"] .iva-tg { visibility: hidden; }
 @media (max-width: 1099px) { .ad-u { grid-template-columns: 42px minmax(0, 1fr); } }
 @media (min-width: 900px) { #app main > .demo-bar { margin: 0 0 16px; } }
 
@@ -3704,3 +3704,22 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 .dsh-mv .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .dsh-adm { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .dsh-adm .sw { border-top: 0; padding: 0; }
+
+/* v156: interruttore Netto / +IVA — movimento */
+.iva-tg { --ring: color-mix(in srgb, var(--ink) 40%, transparent); }
+.iva-tg.on { --ring: color-mix(in srgb, var(--accent) 50%, transparent); }
+.iva-tg i { transition: transform .5s var(--spring), background .35s ease, box-shadow .35s ease; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.iva-tg.on i { box-shadow: 0 3px 10px -2px color-mix(in srgb, var(--accent) 55%, transparent); }
+.iva-tg i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; }
+.iva-tg span { transition: color .3s ease, opacity .3s ease; }
+.iva-tg:not(.on) span:nth-child(2), .iva-tg.on span:first-child { opacity: .75; }
+.iva-tg.pop i { animation: ivaStretch .6s cubic-bezier(.3, .7, .2, 1); }
+.iva-tg.pop i::after { animation: ivaRing .65s ease-out; }
+.iva-tg.pop span { animation: ivaLbl .5s cubic-bezier(.3, .7, .2, 1) both; }
+@keyframes ivaStretch { 0%, 100% { scale: 1 1; } 38% { scale: 1.08 .9; } 70% { scale: .99 1.02; } }
+@keyframes ivaRing { 0% { box-shadow: 0 0 0 0 var(--ring); opacity: 1; } 100% { box-shadow: 0 0 0 11px transparent; opacity: 0; } }
+@keyframes ivaLbl { 0% { transform: translateY(0); } 35% { transform: translateY(-2px); } 100% { transform: translateY(0); } }
+/* gli importi della pagina si riassestano con un leggero scorrimento */
+body.iva-anim .view:not([hidden]) :is(.gh-big, .gh-k b, .db-av b, .gx-kpi b, .pv-k b, .pv-qt, .db-mv b, .pl-k b, .in-b, td.r, .db-sr strong, .db-mr b) { animation: ivaNum .55s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ivaNum { 0% { opacity: .25; transform: translateY(7px); filter: blur(2px); } 100% { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .iva-tg.pop i, .iva-tg.pop i::after, .iva-tg.pop span, body.iva-anim .view :is(.gh-big, .gh-k b, td.r) { animation: none !important; } }
