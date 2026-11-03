@@ -341,6 +341,7 @@
   function modState(w) {
     const s = secOf(w), o = {}, saved = (wsInfo[w.codice] || {}).moduli || {};
     SET.moduli.forEach(m => { if (m.only && m.only !== s.id) return; o[m.k] = m.k in saved ? !!saved[m.k] : m.k in (s.mod || {}) ? !!s.mod[m.k] : true; });
+    if (o.interni && !o.magazzino) o.interni = false; // i documenti interni servono il magazzino
     return o;
   }
   let modT = null;
@@ -349,6 +350,8 @@
     const info = wsInfo[w.codice] || (wsInfo[w.codice] = {}), cur = modState(w);
     cur[inp.dataset.mod] = inp.checked;
     if (inp.dataset.mod === 'vendite' && inp.checked && !cur.clienti) { cur.clienti = true; const c = $('[data-mod="clienti"]'); if (c) c.checked = true; toast('Accesa anche «Clienti»: serve per DDT e fatture'); }
+    if (inp.dataset.mod === 'interni' && inp.checked && !cur.magazzino) { cur.magazzino = true; const g = $('[data-mod="magazzino"]'); if (g) g.checked = true; toast('Accesa anche «Magazzino»: serve per i documenti interni'); }
+    if (inp.dataset.mod === 'magazzino' && !inp.checked && cur.interni) { cur.interni = false; const g = $('[data-mod="interni"]'); if (g) g.checked = false; }
     info.moduli = cur;
     clearTimeout(modT); modT = setTimeout(async () => { syncState('busy'); try { const r = await post('adminWsSet', { codice: w.codice, set: { moduli: cur } }); if (r && r.users) D = r; syncState('ok'); toast('Sezioni aggiornate', 'ok'); } catch (e) { syncState('err'); if (!(e instanceof AuthError)) toast(e.message, 'bad'); } }, 600);
   }

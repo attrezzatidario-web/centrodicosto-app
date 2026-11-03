@@ -259,7 +259,7 @@
   /* ================= v95: settore di attività, moduli e nomi ================= */
   const SET = window.CDC_SETTORI || { list: [], moduli: [], sempre: [], piani: {}, get: () => null };
   const SET_DEF = { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', sede: ['Piazzale', 'Piazzali'], acq: 'Attrezzatura', mod: {}, cat: null };
-  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'incassi', 'clienti', 'fornitori', 'magazzino', 'vendite', 'dipendenti'];
+  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti'];
   /* v127: permessi per sezione — un dipendente vede solo le sezioni che il titolare gli ha dato ('r' vede, 'w' modifica) */
   const isDip = () => !!(me && !DEMO && me.ruolo === 'dipendente');
   const isOwnerU = () => !!(DEMO || !me || me.admin || me.ruolo === 'utente');
@@ -282,6 +282,7 @@
   function modOn(k) {
     if (!MOD_K.includes(k)) return true;
     if (!modAvail(k)) return false;
+    if (k === 'interni' && !modOn('magazzino')) return false; // i documenti interni vivono sul magazzino
     const c = cfg('moduli');
     if (c && typeof c === 'object' && k in c && !c[k]) return false;
     if (me && !me.admin && me.sezioni && me.sezioni[k] === false) return false; // v102: sezione nascosta a questo utente dalla Console
@@ -666,7 +667,7 @@
   const rowsSoc = () => soc ? db.movimenti.filter(r => (r.societa || 'Soluzione Veicolare') === soc) : db.movimenti;
 
   /* ================= Router ================= */
-  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti' };
+  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti' };
   let prevView = '', gKeep = false;
   function go() {
     prevView = view;
@@ -695,8 +696,8 @@
     $$('.sub-tabs a').forEach(x => x.classList.toggle('on', x.dataset.st === view));
     $('#title').textContent = ['attrezzatura', 'movimenti', 'articoli'].includes(view) ? (settore().acq || 'Acquisti') : TITLES[view];
     { const at = $('#add-top span'), acqV = ['attrezzatura', 'movimenti', 'articoli'].includes(view); if (at) at.textContent = acqV ? 'Registra DDT o fattura' : view === 'gasolio' ? 'Nuovo rifornimento' : view === 'fatture' ? 'Nuova fattura' : 'Nuovo movimento'; }
-    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'lyreco' || view === 'amazon';
-    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
+    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'lyreco' || view === 'amazon';
+    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
     if (view !== 'movimenti') { sel.clear(); selMode = false; $('#selbar').hidden = true; document.body.classList.remove('has-sel'); }
     render();
     window.scrollTo(0, 0);
@@ -726,7 +727,7 @@
   function render() {
     applySettore();
     ivaUI();
-    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip }[view];
+    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip }[view];
     fn && fn();
   }
   const sub = t => { $('#subtitle').textContent = t || ''; };
@@ -744,7 +745,7 @@
   }
 
   /* v127: Dipendenti e presenze (dipendenti.js, caricato quando serve) */
-  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'lyreco', 'amazon', 'preventivi', 'torental', 'analisi', 'dipendenti', 'impostazioni'];
+  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'analisi', 'dipendenti', 'impostazioni'];
   const secTitle = k => k === 'piazzali' ? (settore().sede || [, 'Sedi'])[1] : k === 'attrezzatura' ? (settore().acq || 'Acquisti') : k === 'impostazioni' ? 'Impostazioni dell\'azienda' : TITLES[k];
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
@@ -1341,6 +1342,7 @@
     if (!DEMO) return toast(me && me.admin ? 'Le sezioni si cambiano dalla Console' : 'Le sezioni le imposta l\'amministratore');
     const c = { ...(cfg('moduli') || {}) }; c[k] = !modOn(k);
     if (k === 'vendite' && c[k]) c.clienti = true; // i documenti ai clienti hanno bisogno dell'anagrafica
+    if (k === 'interni' && c[k]) c.magazzino = true; // i documenti interni muovono il magazzino
     setConfig('moduli', c);
     const m = SET.moduli.find(x => x.k === k); toast(`${m ? m.t(settore()) : k} ${c[k] ? 'accesa' : 'spenta'}`);
   }
@@ -2969,6 +2971,7 @@
     { k: 'pz', t: 'Forniture per piazzale', d: 'Acquisti divisi per centro o piazzale', w: 7 },
     { k: 'fatture', t: 'Fatture fornitori', d: 'Da pagare e scadute', w: 5 },
     { k: 'extra', t: 'Preventivi / listino', d: 'Riepilogo dei preventivi o del listino', w: 5 },
+    { k: 'interni', t: 'Documenti interni', d: 'Consumi interni per centro di costo e merce in viaggio', w: 5, av: () => modOn('interni') },
     { k: 'verifica', t: 'Cose da verificare', d: 'Controlli e anomalie nei dati', w: 7, top: 1 },
     { k: 'feed', t: 'Ultimi movimenti', d: 'Le ultime registrazioni di tutte le aree', w: 5, top: 1 },
     { k: 'ai', t: 'Analisi con IA', d: 'Domande e riepilogo automatico', w: 12 },
@@ -3135,6 +3138,7 @@
             <div class="db-ml">${TK.kits.slice(0, 3).map(k => `<div class="db-mli"><span><b>${esc(k.n)}</b><small>${k.cod ? 'cod. ' + esc(k.cod) : 'senza codice'}</small></span><strong>${eur(k.p)}</strong></div>`).join('')}</div>
             <div class="db-an">listino di vendita, non è una spesa · ${TK.s} articoli singoli · transferta ${eur0(TK.tr)}/giorno</div>` : '<div class="db-an">Importa il listino dalla sezione Torental</div>'}
           </a>` : ovPvMini()}`,
+      interni: () => xiDash(),
       verifica: () => `<div class="card ov-ck" id="ov-ck"><div class="card-h"><h3>Cose da verificare</h3><span class="muted small">${CK.length ? `${CK.length} punti · ${ckW} importanti` : 'tutto coincide'}</span></div>
         <div class="ov-ckf">${[['', 'Tutte', CK.length], ...['att', 'gls', 'gas', 'ly', 'am', 'fat'].filter(areaOn).map(k => [k, ovShort[k], CK.filter(x => x.a === k).length])].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="ov-cf${k === '' ? ' on' : ''}" data-ckf="${k}">${k ? `<i class="a-${k}"></i>` : ''}${l}<b>${n}</b></button>`).join('')}</div>
         ${CK.length ? `<div class="ov-cl">${CK.map((x, i) => `<button type="button" class="ov-ci ${x.t}" data-ovgo="${x.go}" data-cka="${x.a}" style="--d:${150 + Math.min(i, 12) * 45}ms"${i >= 4 ? ' data-more="1"' : ''}><span class="ov-cl-l"></span><span class="ov-cm"><span class="ov-ct"><em class="ov-tag t-${x.a}">${ovShort[x.a]}</em><b>${x.h}</b></span><small>${x.d}</small></span><b class="ov-cv">${x.v}</b><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div>${CK.length > 4 ? `<button type="button" class="db-more" id="ov-ckmore">Mostra tutti i ${CK.length} punti</button>` : ''}` : '<div class="empty">Tutto coincide: nessuna anomalia trovata</div>'}</div>`,
@@ -8691,7 +8695,7 @@
     const tabs = `<div class="gx-seg" role="tablist"><button type="button" data-mgtab="art" class="${mgTab === 'art' ? 'on' : ''}">Articoli</button><button type="button" data-mgtab="mov" class="${mgTab === 'mov' ? 'on' : ''}">Movimenti</button></div>`;
     let h = gxWarn() + `<div class="gx-bar">${tabs}<label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mg-q" placeholder="Cerca codice, codice a barre o descrizione…" value="${esc(mgQ)}"><button type="button" class="scan-ib" data-gx="mag-scan" title="Scansiona un codice a barre" aria-label="Scansiona un codice a barre">${SCAN_IC}</button></label>
       <div class="gx-act">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" class="btn sm${mgMode ? ' primary' : ''}" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona'}</button>` : ''}<button type="button" class="btn sm" data-gx="mag-imp"><span class="lb-d">Importa Excel</span><span class="lb-m">Importa</span></button><button type="button" class="btn sm" data-gx="mag-xls"><span class="lb-d">Esporta</span><span class="lb-m">Esporta</span></button>${magMulti() ? `<select id="mg-mag" class="btn sm" aria-label="Magazzino"><option value="">Tutti i magazzini</option>${MAGS().map(x => `<option${x === mgMag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}${secPerm('magazzino') === 'w' ? '<button type="button" class="btn sm" data-gx="mags">Magazzini</button>' : ''}<button type="button" class="btn sm" data-gx="mov-new">${magMulti() ? 'Movimento' : 'Carico / scarico'}</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
-      ${gxKpi([['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`], ['Valore del magazzino', eur0(val), `giacenze al costo · ${ivaLbl()}`], ['Sotto scorta', fmtNum(nLow, 0), nLow ? 'da riordinare' : 'tutto a posto', nLow ? 'warn' : ''], ['Movimenti del mese', fmtNum(MM.length, 0), `${MM.filter(m => num(m.quantita) > 0).length} carichi · ${MM.filter(m => num(m.quantita) < 0).length} scarichi`]])}`;
+      ${xiMagNote()}${gxKpi([['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`], ['Valore del magazzino', eur0(val), `giacenze al costo · ${ivaLbl()}`], ['Sotto scorta', fmtNum(nLow, 0), nLow ? 'da riordinare' : 'tutto a posto', nLow ? 'warn' : ''], ['Movimenti del mese', fmtNum(MM.length, 0), `${MM.filter(m => num(m.quantita) > 0).length} carichi · ${MM.filter(m => num(m.quantita) < 0).length} scarichi`]])}`;
     if (!A.length) h += gxEmpty(GIC.mag, 'Magazzino vuoto', 'Aggiungi gli articoli che tieni in magazzino, oppure importali da Excel. Le giacenze si aggiornano da sole con carichi, DDT e fatture.', '<button type="button" class="btn primary" data-gx="art-new">+ Aggiungi il primo articolo</button>');
     else if (mgTab === 'art') {
       const F = A.filter(a => (!q || nh([a.codice, a.codForn, a.descrizione, a.categoria, a.fornitore, a.barcode].join(' ')).includes(q)) && (!mgLow || low(a)));
@@ -9321,6 +9325,222 @@
     const L = plModel(), sel = ovP ? L.filter(x => x.m === ovP) : L.slice(-12), S = k => sel.reduce((s, x) => s + x[k], 0);
     const V = [S('ric'), S('cost'), S('ric') - S('cost')];
     $$('[data-plk]', body).forEach(el => { el._v = 0; countTo(el, V[+el.dataset.plk], eur0); });
+  }
+
+  /* =========================================================
+     DOCUMENTI INTERNI — scarichi non fiscali e trasferimenti (v157)
+     Salvati in Config «xi:<id>» (nessuna modifica allo script Google). I movimenti vanno in MagMov con doc = id del documento.
+     Tipi: «int» scarico interno (motivo + centro di costo) · «trf» trasferimento tra magazzini (in viaggio → ricevuto) o ad altra azienda.
+     ========================================================= */
+  const XI_T = { int: ['Scarico interno', 'INT'], trf: ['Trasferimento', 'TR'] };
+  const XI_ST = { reg: ['Registrato', 'paid'], transito: ['In viaggio', 'soon'], ricevuto: ['Ricevuto', 'paid'], consegnato: ['Consegnato', 'paid'], annullato: ['Annullato', ''] };
+  const XI_MOT = ['Uso interno', 'Consumo sul centro di costo', 'Rottura o perdita', 'Campionatura', 'Omaggio', 'Reso al fornitore', 'Altro'];
+  const XI_CAU = ['Conto deposito', 'Comodato d\'uso', 'Conto lavorazione', 'Cessione ad azienda del gruppo'];
+  const xiN = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const xiList = () => Object.keys(db.config || {}).filter(k => k.startsWith('xi:')).map(k => cfg(k)).filter(d => d && d.id && XI_T[d.tipo]).sort((a, b) => String(b.data).localeCompare(String(a.data)) || (parseInt(b.num, 10) || 0) - (parseInt(a.num, 10) || 0));
+  const xiGet = id => { const d = cfg('xi:' + id); return d ? JSON.parse(JSON.stringify(d)) : null; };
+  const xiNum = d => `${XI_T[d.tipo][1]}-${String(d.num).padStart(3, '0')}/${d.anno}`;
+  const xiNext = (tipo, anno) => xiList().filter(d => d.tipo === tipo && String(d.anno) === String(anno)).reduce((m, d) => Math.max(m, parseInt(d.num, 10) || 0), 0) + 1;
+  const xiRows = d => (Array.isArray(d.righe) ? d.righe : []);
+  const xiPz = d => xiRows(d).reduce((s, l) => s + num(l.q), 0);
+  const xiVal = d => r2(xiRows(d).reduce((s, l) => s + num(l.q) * num(l.costo) * (ivaOn ? 1 + (artOf(l.art) ? ivaRate(artOf(l.art)) : .22) : 1), 0));
+  const xiDest = d => d.tipo === 'int' ? '' : d.destTipo === 'az' ? d.dest : d.mag2;
+  const xiWrite = () => secPerm('interni') === 'w';
+  const xiSave = d => ({ action: 'upsert', sheet: 'Config', row: { chiave: 'xi:' + d.id, valore: JSON.stringify(d) } });
+  const xiMov = (d, l, mag, q, extra) => ({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: extra.data, articolo: l.art, tipo: q < 0 ? 'scarico' : 'carico', quantita: q, costo: num(l.costo), causale: `${XI_T[d.tipo][0]} ${xiNum(d)}`, doc: d.id, note: extra.note || '', creato: new Date().toISOString() } });
+  let xiF = '', xiQ = '', xiP = '';
+  // avviso nel Magazzino e blocco della Dashboard
+  const xiTransito = () => modOn('interni') ? xiList().filter(d => d.stato === 'transito') : [];
+  const xiMagNote = () => { const tr = xiTransito(); return tr.length ? `<div class="card gx-note"><span><b>${tr.length} ${tr.length === 1 ? 'trasferimento' : 'trasferimenti'} in viaggio</b> · ${fmtNum(tr.reduce((s, d) => s + xiPz(d), 0), 0)} pezzi non ancora ricevuti: non sono nelle giacenze dei magazzini di arrivo.</span><a class="btn sm" href="#interni">Apri</a></div>` : ''; };
+  function xiDash() {
+    const A = xiList().filter(d => d.stato !== 'annullato'), tr = A.filter(d => d.stato === 'transito'), C = A.filter(d => d.tipo === 'int' && (!ovP || String(d.data).slice(0, 7) === ovP));
+    const v = C.reduce((s, d) => s + xiVal(d), 0), top = [...groupBy(C, d => d.centro || 'Senza centro')].map(([k, x]) => [k, x.reduce((s, d) => s + xiVal(d), 0), x.length]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    return `<a class="card db-mini a-xi" href="#interni">
+      <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M7 3h9l4 4v14H7z"/><path d="M15 3v5h5M3 14h7M7 11l3 3-3 3"/></svg></span><span class="db-at">Documenti interni</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+      ${A.length ? `<div class="db-mv"><b>${eur0(v)}</b><span>consumi interni · ${C.length} ${C.length === 1 ? 'documento' : 'documenti'}</span>${tr.length ? `<span class="ov-d up">${tr.length} in viaggio</span>` : ''}</div>
+      ${top.length ? `<div class="db-ml">${top.map(([k, x, n]) => `<div class="db-mli"><span><b>${esc(k)}</b><small>${n} ${n === 1 ? 'scarico' : 'scarichi'}</small></span><strong>${eur(x)}</strong></div>`).join('')}</div>` : ''}
+      <div class="db-an">scarichi non fiscali al costo · la merce è già negli acquisti, non è una spesa in più</div>` : '<div class="db-an">Scarichi non fiscali e trasferimenti tra magazzini, collegati ai centri di costo</div>'}
+    </a>`;
+  }
+  function renderInt() {
+    const el = $('#xi-body'); if (!el) return;
+    sub('Scarichi non fiscali e trasferimenti di magazzino');
+    const A = xiList(), w = xiWrite(), months = [...new Set(A.map(d => String(d.data).slice(0, 7)).filter(k => /^\d{4}-\d\d$/.test(k)))].sort();
+    if (xiP && !months.includes(xiP)) xiP = '';
+    const inP = d => !xiP || String(d.data).slice(0, 7) === xiP, q = xiN(xiQ), live = d => d.stato !== 'annullato';
+    const P = A.filter(inP), tr = A.filter(d => d.stato === 'transito'), cons = P.filter(d => live(d) && d.tipo === 'int'), consV = cons.reduce((s, d) => s + xiVal(d), 0);
+    const base = xiF === 'transito' ? tr : P.filter(d => !xiF || d.tipo === xiF);
+    const L = base.filter(d => !q || xiN([xiNum(d), d.motivo, d.centro, d.mag, xiDest(d), d.note, ...xiRows(d).map(l => l.d + ' ' + l.c)].join(' ')).includes(q));
+    const opts = ['', ...months.slice().reverse()], ix = opts.indexOf(xiP);
+    const per = `<div class="gl-month gx-per"><button type="button" class="icon-btn" data-xip="-1" ${ix >= opts.length - 1 ? 'disabled' : ''} aria-label="Periodo precedente">‹</button><select id="xi-per" aria-label="Periodo">${opts.map(k => `<option value="${k}"${k === xiP ? ' selected' : ''}>${k ? esc(mLabel(k)) : 'Tutto il periodo'}</option>`).join('')}</select><button type="button" class="icon-btn" data-xip="1" ${ix <= 0 ? 'disabled' : ''} aria-label="Periodo successivo">›</button></div>`;
+    const chip = (k, l, n) => `<button type="button" class="chip-f${xiF === k ? ' on' : ''}" data-xif="${k}">${l}${n != null ? ` <em>${n}</em>` : ''}</button>`;
+    const cc = [...groupBy(cons, d => d.centro || 'Senza centro')].map(([k, x]) => [k, x.reduce((s, d) => s + xiVal(d), 0)]).sort((a, b) => b[1] - a[1]).slice(0, 6), cm = Math.max(1, ...cc.map(x => x[1]));
+    el.innerHTML = gxWarn() + `<div class="gx-bar"><label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="xi-q" placeholder="Cerca numero, articolo, centro…" value="${esc(xiQ)}"></label>${per}
+        ${w ? `<div class="gx-act"><button type="button" class="btn sm" data-xinew="trf">+ Trasferimento</button><button type="button" class="btn sm primary" data-xinew="int">+ Scarico interno</button></div>` : ''}</div>
+      ${gxKpi([['Documenti', fmtNum(P.filter(live).length, 0), xiP ? mLabel(xiP) : 'tutto il periodo'], ['In viaggio', fmtNum(tr.length, 0), tr.length ? `${fmtNum(tr.reduce((s, d) => s + xiPz(d), 0), 0)} pezzi da ricevere` : 'tutto ricevuto', tr.length ? 'warn' : ''], ['Consumi interni', eur0(consV), `al costo · ${ivaLbl()}`], ['Trasferimenti', fmtNum(P.filter(d => live(d) && d.tipo === 'trf').length, 0), 'tra magazzini e aziende']])}
+      <div class="gx-chips">${chip('', 'Tutti', P.length)}${chip('int', 'Scarichi interni', P.filter(d => d.tipo === 'int').length)}${chip('trf', 'Trasferimenti', P.filter(d => d.tipo === 'trf').length)}${chip('transito', 'In viaggio', tr.length)}</div>
+      ${cc.length ? `<div class="card xi-cc"><div class="card-h"><h3>Consumi per centro di costo</h3><span class="muted small">scarichi interni · al costo · ${ivaLbl()}</span></div>${cc.map(([k, v]) => `<div class="xi-cr"><span>${esc(k)}</span><i><b style="width:${(v / cm * 100).toFixed(1)}%"></b></i><strong>${eur0(v)}</strong></div>`).join('')}</div>` : ''}
+      ${!A.length ? gxEmpty(GIC.doc, 'Nessun documento interno', 'Registra uno scarico non fiscale per togliere la merce dal magazzino, oppure un trasferimento tra magazzini o verso un\'altra azienda. Ogni documento ha il suo numero e i movimenti di magazzino si aggiornano da soli.', w ? '<button type="button" class="btn primary" data-xinew="int">+ Nuovo scarico interno</button>' : '')
+      : `<div class="card gx-list"><table class="gx-tbl xi-tbl"><thead><tr><th>Documento</th><th>Tipo</th><th>Movimento</th><th>Prodotti</th><th class="r">Valore</th><th>Stato</th></tr></thead><tbody>
+      ${gxCut(L, 'xi').map(d => { const st = XI_ST[d.stato] || XI_ST.reg, R = xiRows(d), mv = d.tipo === 'int' ? `<b>${esc(d.motivo || '')}</b><small>${esc([d.mag, d.centro && 'centro: ' + d.centro].filter(Boolean).join(' · '))}</small>` : `<b>${esc(d.mag || 'Magazzino')} → ${esc(xiDest(d))}</b><small>${d.destTipo === 'az' ? esc(d.motivo) : 'tra magazzini'}</small>`;
+        return `<tr data-xi="${esc(d.id)}"${d.stato === 'annullato' ? ' class="xi-void"' : ''}><td data-l="Documento"><b>${esc(xiNum(d))}</b><small>${esc(dIt(d.data))}</small></td><td data-l="Tipo"><span class="chip">${esc(XI_T[d.tipo][0])}</span></td><td data-l="Movimento">${mv}</td><td data-l="Prodotti">${R.length} ${R.length === 1 ? 'riga' : 'righe'} · ${fmtNum(xiPz(d), 0)} pz<small>${esc(R.slice(0, 2).map(l => l.d).join(', '))}${R.length > 2 ? '…' : ''}</small></td><td class="r" data-l="Valore">${eur(xiVal(d))}</td><td data-l="Stato"><span class="chip ${st[1]}">${st[0]}</span></td></tr>`; }).join('') || `<tr><td colspan="6" class="gx-none">Nessun documento trovato</td></tr>`}
+      </tbody></table>${gxMore(L, 'xi')}</div>`}`;
+    el.onclick = e => {
+      const t = e.target, nw = t.closest('[data-xinew]'); if (nw) return xiForm(nw.dataset.xinew);
+      const f = t.closest('[data-xif]'); if (f) { xiF = f.dataset.xif; return renderInt(); }
+      const pv = t.closest('[data-xip]'); if (pv) { const i = opts.indexOf(xiP) + Number(pv.dataset.xip); xiP = opts[Math.max(0, Math.min(opts.length - 1, i))]; return renderInt(); }
+      const r = t.closest('[data-xi]'); if (r) return xiOpen(r.dataset.xi);
+    };
+    const pe = $('#xi-per'); if (pe) pe.onchange = () => { xiP = pe.value; renderInt(); };
+    const qi = $('#xi-q'); if (qi) qi.oninput = () => { xiQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { const ps = qi.selectionStart; renderInt(); const x = $('#xi-q'); x.focus(); try { x.setSelectionRange(ps, ps); } catch {} }, 160); };
+  }
+  function xiForm(tipo, d0) {
+    if (!xiWrite()) return toast('Non hai il permesso di modificare questa sezione');
+    const isI = tipo === 'int', multi = magMulti(), A = GX.art(), cent = centri(), S = { dt: multi && !(d0 && d0.destTipo === 'az') ? 'mag' : 'az' };
+    const blank = () => ({ art: '', c: '', d: '', um: 'PZ', q: 1, costo: 0 });
+    const R = d0 ? xiRows(d0).map(l => ({ art: l.art, c: l.c, d: l.d, um: l.um, q: l.q, costo: l.costo })) : [blank()];
+    if (!R.length) R.push(blank());
+    const lab = a => (a.codice ? a.codice + ' — ' : '') + a.descrizione, yr = () => String((($('#sheet-form [name=data]') || {}).value || today())).slice(0, 4);
+    const numPrev = () => `${XI_T[tipo][1]}-${String(xiNext(tipo, yr())).padStart(3, '0')}/${yr()}`;
+    const curMag = () => { const m = $('#sheet-form [name=mag]'); return m ? m.value : ''; };
+    const selL = (n, lb, L, v) => `<label class="f"><span>${lb}</span><select name="${n}">${L.map(x => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`;
+    openSheet(isI ? 'Nuovo scarico interno' : 'Nuovo trasferimento', `<div id="xi-f">
+      <div class="gx-note"><span>${isI ? '<b>Documento non fiscale</b> · toglie la merce dal magazzino e la attribuisce a un centro di costo. Non accompagna la merce su strada.' : '<b>Trasferimento di merce</b> · tra i tuoi magazzini la merce resta «in viaggio» finché non confermi la ricezione.'}</span></div>
+      <div class="f-row xi-top"><label class="f"><span>Numero</span><input id="xi-num" value="${esc(numPrev())}" readonly></label><label class="f"><span>Data</span><input name="data" type="date" value="${today()}" required></label>${magSel(d0 && d0.mag || magLast(), 'mag', isI ? 'Magazzino da cui esce' : 'Dal magazzino')}</div>
+      ${isI ? `<div class="f-row">${selL('motivo', 'Motivo', XI_MOT, d0 && d0.motivo)}${cent.length ? `<label class="f"><span>Centro di costo</span><select name="centro"><option value="">Nessun centro</option>${cent.map(c => `<option${d0 && d0.centro === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>` : ''}</div>`
+      : `<div class="xi-dt" role="group" aria-label="Destinazione">${multi ? `<button type="button" data-xdt="mag" class="${S.dt === 'mag' ? 'on' : ''}">Altro magazzino</button>` : ''}<button type="button" data-xdt="az" class="${S.dt === 'az' ? 'on' : ''}">Altra azienda</button></div>
+        ${multi ? `<div data-xdm${S.dt === 'mag' ? '' : ' hidden'}>${magSel(d0 && d0.mag2 || '', 'mag2', 'Al magazzino')}</div>` : '<p class="muted small" data-xdh style="margin:0 0 10px">Per trasferire tra magazzini aggiungine un secondo da Magazzino → Magazzini.</p>'}
+        <div data-xda${S.dt === 'az' ? '' : ' hidden'}><div class="f-row"><label class="f"><span>Azienda destinataria</span><input name="dest" value="${esc(d0 && d0.dest || '')}" placeholder="Nome dell'azienda"></label>${selL('motivo', 'Causale', XI_CAU, d0 && d0.motivo)}</div>
+          <div class="gx-note warn"><span><b>Attenzione</b> · questo è un documento interno. Per far viaggiare la merce su strada serve un DDT fiscale${modOn('vendite') ? ' (sezione DDT e fatture)' : ''}. Per la causale giusta confrontati con il commercialista.</span></div></div>`}
+      <div class="xi-rows" id="xi-rows"></div>
+      <div class="dx-adds"><button type="button" class="btn sm primary" data-xi2="add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Articolo</button><button type="button" class="btn sm" data-xi2="scan">${SCAN_IC}Scansiona</button></div>
+      <div class="xi-tot" id="xi-tot"></div>
+      <datalist id="xi-arts">${A.slice(0, 4000).map(a => `<option value="${esc(lab(a))}">`).join('')}</datalist>
+      <label class="f"><span>Note</span><textarea name="note" rows="2">${esc(d0 && d0.note || '')}</textarea></label></div>`,
+      fd => {
+        const rows = R.filter(l => l.art && num(l.q) > 0).map(l => ({ art: l.art, c: l.c, d: l.d, um: l.um, q: num(l.q), costo: num(artOf(l.art) ? artOf(l.art).costo : l.costo) }));
+        if (R.some(l => !l.art && String(l.d || '').trim())) return toast('Scegli gli articoli dall\'elenco del magazzino: «' + R.find(l => !l.art && String(l.d || '').trim()).d + '» non è un articolo');
+        if (!rows.length) return toast('Aggiungi almeno un articolo con la quantità');
+        const mag = magNeed(fd); if (mag === null) return;
+        const o = { id: uid(), tipo, data: String(fd.get('data') || today()), mag, mag2: '', destTipo: '', dest: '', motivo: '', centro: '', righe: rows, note: String(fd.get('note') || '').trim(), creato: new Date().toISOString() };
+        o.anno = o.data.slice(0, 4); o.num = String(xiNext(tipo, o.anno));
+        if (isI) { o.motivo = String(fd.get('motivo') || XI_MOT[0]); o.centro = String(fd.get('centro') || ''); o.stato = 'reg'; }
+        else if (S.dt === 'mag') { o.destTipo = 'mag'; o.mag2 = String(fd.get('mag2') || ''); if (!o.mag2 || o.mag2 === mag) return toast('Scegli un magazzino di arrivo diverso da quello di partenza'); o.motivo = 'Trasferimento tra magazzini'; o.stato = 'transito'; }
+        else { o.destTipo = 'az'; o.dest = String(fd.get('dest') || '').trim(); if (!o.dest) return toast('Scrivi il nome dell\'azienda destinataria'); o.motivo = String(fd.get('motivo') || XI_CAU[0]); o.stato = 'consegnato'; }
+        const G = giacMap(mag), short = rows.filter(l => l.q > (G.get(l.art) || 0));
+        if (short.length && !confirm(`Giacenza insufficiente per: ${short.slice(0, 4).map(l => l.d).join(', ')}${short.length > 4 ? '…' : ''}.\nRegistrare lo stesso?`)) return;
+        const note = isI ? [o.motivo, o.centro && 'centro ' + o.centro].filter(Boolean).join(' · ') : o.destTipo === 'mag' ? 'verso ' + o.mag2 : 'verso ' + o.dest + ' · ' + o.motivo;
+        write([xiSave(o), ...rows.map(l => xiMov(o, l, mag, -l.q, { data: o.data, note }))]);
+        toast(`${xiNum(o)} registrato`); return true;
+      }, null, 'Registra');
+    const tot = () => { const pz = R.reduce((s, l) => s + (l.art ? num(l.q) : 0), 0), v = R.reduce((s, l) => s + (l.art ? num(l.q) * num(l.costo) * (ivaOn ? 1 + (artOf(l.art) ? ivaRate(artOf(l.art)) : .22) : 1) : 0), 0); $('#xi-tot').innerHTML = `<span>${fmtNum(pz, 0)} pezzi</span><span>valore al costo <b>${eur(v)}</b> <small>${ivaLbl()}</small></span>`; };
+    const stock = (r, l) => { const g = l.art ? (giacMap(curMag()).get(l.art) || 0) : null, bad = g != null && num(l.q) > g, s2 = $('.xi-g', r); s2.className = 'xi-g' + (bad ? ' bad' : ''); s2.textContent = g == null ? '—' : fmtNum(g, 0) + (bad ? ' · insufficiente' : ''); };
+    const draw = () => {
+      const G = giacMap(curMag());
+      $('#xi-rows').innerHTML = `<div class="xi-h"><span>Articolo</span><span>UM</span><span>Q.tà</span><span>In magazzino</span><span></span></div>` + R.map((l, i) => { const g = l.art ? (G.get(l.art) || 0) : null, bad = g != null && num(l.q) > g;
+        return `<div class="xi-r" data-i="${i}"><input data-k="d" list="xi-arts" value="${esc(l.c && l.art ? l.c + ' — ' + l.d : l.d || '')}" placeholder="Cerca per nome o codice…" autocomplete="off"><span class="xi-um">${esc(l.um || 'PZ')}</span><input data-k="q" type="number" step="any" min="0" inputmode="decimal" value="${esc(l.q ?? '')}"><span class="xi-g${bad ? ' bad' : ''}">${g == null ? '—' : fmtNum(g, 0) + (bad ? ' · insufficiente' : '')}</span><button type="button" class="dx-x" data-xi2="del" aria-label="Togli riga">✕</button></div>`; }).join('');
+      tot();
+    };
+    const fill = (l, a) => Object.assign(l, { art: a.id, c: a.codice || '', d: a.descrizione, um: a.um || 'PZ', costo: num(a.costo), q: num(l.q) || 1 });
+    const addArt = a => { const b = R.findIndex(l => !l.art && !String(l.d || '').trim()), ex = R.find(l => l.art === a.id); if (ex) ex.q = num(ex.q) + 1; else if (b >= 0) fill(R[b], a); else { const n = blank(); fill(n, a); R.push(n); } draw(); };
+    const box = $('#xi-rows'), f = $('#xi-f');
+    box.addEventListener('input', e => { const r = e.target.closest('.xi-r'); if (!r || e.target.dataset.k !== 'q') return; const l = R[+r.dataset.i]; l.q = e.target.value; stock(r, l); tot(); });
+    box.addEventListener('change', e => { const r = e.target.closest('.xi-r'); if (!r || e.target.dataset.k !== 'd') return; const l = R[+r.dataset.i], v = e.target.value.trim(), a = A.find(x => lab(x) === v) || (/^\S+$/.test(v) ? artByCode(v) : null);
+      if (a) { fill(l, a); const ri = r.dataset.i; setTimeout(() => { draw(); const nx = $(`.xi-r[data-i="${ri}"] [data-k="q"]`); if (nx) nx.select(); }, 0); } else { l.art = ''; l.d = v; tot(); } });
+    f.addEventListener('click', e => {
+      const x = e.target.closest('[data-xi2]'), dt = e.target.closest('[data-xdt]');
+      if (dt) { S.dt = dt.dataset.xdt; $$('[data-xdt]', f).forEach(b => b.classList.toggle('on', b === dt)); const m = $('[data-xdm]', f), a = $('[data-xda]', f); if (m) m.hidden = S.dt !== 'mag'; if (a) a.hidden = S.dt !== 'az'; return; }
+      if (!x) return; const k = x.dataset.xi2;
+      if (k === 'del') { R.splice(+x.closest('.xi-r').dataset.i, 1); if (!R.length) R.push(blank()); draw(); }
+      if (k === 'add') { R.push(blank()); draw(); const ins = $$('.xi-r [data-k="d"]', f); if (ins.length) ins[ins.length - 1].focus(); }
+      if (k === 'scan') scanOpen({ title: 'Aggiungi dal magazzino', hint: 'Inquadra il codice a barre dell\'articolo', multi: true, onCode: c => { const a = artByCode(c); if (!a) return { ok: false, msg: `Codice ${c} non trovato in magazzino` }; addArt(a); return { ok: true, msg: a.descrizione }; } });
+    });
+    const ms = $('#sheet-form [name=mag]'); if (ms && ms.tagName === 'SELECT') ms.onchange = draw;
+    const di = $('#sheet-form [name=data]'); if (di) di.onchange = () => { $('#xi-num').value = numPrev(); };
+    $('#sheet-form').classList.add('xwide');
+    draw();
+  }
+  function xiOpen(id) {
+    const d = xiGet(id); if (!d) return;
+    const w = xiWrite(), R = xiRows(d), st = XI_ST[d.stato] || XI_ST.reg, got = d.stato === 'ricevuto', diff = got && R.some(l => num(l.qr) !== num(l.q));
+    const tile = (l, v) => v ? `<div><span>${l}</span><b>${esc(v)}</b></div>` : '';
+    openSheet(`${XI_T[d.tipo][0]} ${xiNum(d)}`, `<div id="xi-d">
+      <div class="xi-tiles">${tile('Data', dIt(d.data))}${tile('Da', d.mag || 'Magazzino')}${d.tipo === 'trf' ? tile('A', xiDest(d)) : tile('Motivo', d.motivo)}${d.tipo === 'int' ? tile('Centro di costo', d.centro) : tile('Causale', d.destTipo === 'az' ? d.motivo : '')}<div><span>Stato</span><b><span class="chip ${st[1]}">${st[0]}</span></b></div></div>
+      ${d.stato === 'transito' && w ? `<div class="gx-note"><span><b>Merce in viaggio</b> · è uscita da ${esc(d.mag || 'Magazzino')} e non è ancora in ${esc(d.mag2)}. Quando arriva, conferma la ricezione.</span><button type="button" class="btn sm primary" data-xia="ric">Conferma ricezione</button></div>` : ''}
+      ${diff ? '<div class="gx-note warn"><span><b>Differenze alla ricezione</b> · alcune quantità arrivate non coincidono con quelle partite.</span></div>' : ''}
+      ${d.stato === 'annullato' ? '<div class="gx-note warn"><span><b>Documento annullato</b> · le quantità sono tornate nei magazzini. Il numero resta nell\'elenco.</span></div>' : ''}
+      <table class="gx-tbl xi-dtbl"><thead><tr><th>Articolo</th><th>UM</th><th class="r">Q.tà</th>${got ? '<th class="r">Ricevuti</th>' : ''}<th class="r">Valore</th></tr></thead><tbody>${R.map(l => `<tr><td data-l="Articolo"><b>${esc(l.d)}</b>${l.c ? `<small>${esc(l.c)}</small>` : ''}</td><td data-l="UM">${esc(l.um || '')}</td><td class="r" data-l="Q.tà">${fmtNum(num(l.q), num(l.q) % 1 ? 2 : 0)}</td>${got ? `<td class="r${num(l.qr) !== num(l.q) ? ' xi-bad' : ''}" data-l="Ricevuti">${fmtNum(num(l.qr), num(l.qr) % 1 ? 2 : 0)}</td>` : ''}<td class="r" data-l="Valore">${eur(num(l.q) * num(l.costo) * (ivaOn ? 1 + (artOf(l.art) ? ivaRate(artOf(l.art)) : .22) : 1))}</td></tr>`).join('')}</tbody></table>
+      <div class="xi-tot"><span>${fmtNum(xiPz(d), 0)} pezzi</span><span>valore al costo <b>${eur(xiVal(d))}</b> <small>${ivaLbl()}</small></span></div>
+      ${d.note ? `<p class="muted small" style="margin:10px 0 0"><b>Note</b> · ${esc(d.note)}</p>` : ''}
+      <div class="gx-docact"><button type="button" class="btn sm" data-xia="pdf">Scarica PDF</button>${w ? `<button type="button" class="btn sm ghost" data-xia="dup">Duplica</button>${d.stato !== 'annullato' ? '<button type="button" class="btn sm danger-ghost" data-xia="ann">Annulla documento</button>' : ''}` : ''}</div></div>`, () => true, null, 'Chiudi');
+    $('#xi-d').addEventListener('click', e => {
+      const b = e.target.closest('[data-xia]'); if (!b) return; const a = b.dataset.xia;
+      if (a === 'pdf') return xiPdf(d);
+      if (a === 'dup') { closeSheet(); return setTimeout(() => xiForm(d.tipo, d), 280); }
+      if (a === 'ric') { closeSheet(); return setTimeout(() => xiReceive(d), 280); }
+      if (a === 'ann') {
+        const mv = GX.mov().filter(m => m.doc === d.id);
+        if (!confirm(`Annullare ${xiNum(d)}?${mv.length ? '\nLe quantità tornano nei magazzini e il numero resta nell\'elenco come annullato.' : ''}`)) return;
+        write([xiSave({ ...d, stato: 'annullato', statoPrima: d.stato, annullato: new Date().toISOString() }), ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]);
+        closeSheet(); toast(`${xiNum(d)} annullato`);
+      }
+    });
+  }
+  function xiReceive(d) {
+    const R = xiRows(d);
+    openSheet(`Ricezione ${xiNum(d)}`, `<p class="muted small" style="margin:0 0 12px">Controlla le quantità arrivate in <b>${esc(d.mag2)}</b>. Se qualcosa manca, correggi il numero: la differenza resta registrata nel documento.</p>
+      <div class="xi-rows">${R.map((l, i) => `<div class="xi-r xi-rc"><span class="xi-n"><b>${esc(l.d)}</b><small>${esc(l.c || '')} · partiti ${fmtNum(num(l.q), num(l.q) % 1 ? 2 : 0)} ${esc(l.um || '')}</small></span><input type="number" step="any" min="0" inputmode="decimal" data-qr="${i}" value="${esc(l.q)}" aria-label="Quantità arrivata"></div>`).join('')}</div>`,
+      () => {
+        const nd = { ...d, righe: R.map((l, i) => ({ ...l, qr: num(($(`[data-qr="${i}"]`) || {}).value) })), stato: 'ricevuto', ric: today() };
+        if (nd.righe.some(l => l.qr < 0)) return toast('Le quantità non possono essere negative');
+        const diff = nd.righe.some(l => l.qr !== num(l.q));
+        write([xiSave(nd), ...nd.righe.filter(l => l.qr > 0).map(l => xiMov(nd, l, d.mag2, l.qr, { data: today(), note: 'da ' + (d.mag || 'magazzino di partenza') }))]);
+        toast(diff ? 'Ricezione registrata con differenze' : 'Merce ricevuta in ' + d.mag2); return true;
+      }, null, 'Conferma ricezione');
+  }
+  async function xiPdf(d) {
+    try {
+      busy('Preparo il PDF…');
+      const R = xiRows(d), az = { nome: ORG.n, ...(cfg('azienda') || {}) }, got = d.stato === 'ricevuto';
+      const [jsPDF, logo, fonts] = await Promise.all([loadPdf(), logoPng(), loadFonts()]);
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+      let FF = 'helvetica';
+      if (fonts) { fonts.forEach(([w, data]) => { doc.addFileToVFS(`Inter-${w}.ttf`, data); doc.addFont(`Inter-${w}.ttf`, 'Inter', w === 'regular' ? 'normal' : w); }); FF = 'Inter'; }
+      const W = 210, H = 297, M = 14, CW = W - 2 * M;
+      const C = { navy: [23, 54, 109], ink: [31, 36, 48], ink2: [74, 81, 96], muted: [120, 128, 142], line: [227, 231, 238], soft: [245, 247, 251], white: [255, 255, 255], amber: [255, 244, 214], amberT: [138, 92, 0] };
+      const fill = c => doc.setFillColor(...c), stroke = c => doc.setDrawColor(...c), color = c => doc.setTextColor(...c);
+      const font = (st, sz) => { doc.setFont(FF, FF === 'helvetica' && st === 'semibold' ? 'bold' : st); doc.setFontSize(sz); };
+      fill(C.navy); doc.rect(0, 0, W, 30, 'F');
+      if (logo) { fill(C.white); doc.roundedRect(M, 8, 14, 14, 3, 3, 'F'); doc.addImage(logo, 'PNG', M + .7, 8.7, 12.6, 12.6); }
+      color(C.white); font('bold', 12); doc.text(String(az.nome || ''), M + (logo ? 18 : 0), 14.5);
+      font('normal', 8.2); doc.text([az.indirizzo, [az.cap, az.citta, az.prov ? `(${az.prov})` : ''].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || ORG.sede, M + (logo ? 18 : 0), 19.5);
+      font('bold', 13); doc.text(d.tipo === 'int' ? 'DOCUMENTO INTERNO' : 'TRASFERIMENTO DI MERCE', W - M, 14.5, { align: 'right' });
+      font('normal', 9); doc.text(`n. ${xiNum(d)} del ${dIt(d.data)}`, W - M, 20, { align: 'right' });
+      let y = 36;
+      fill(C.amber); doc.roundedRect(M, y, CW, 9, 2, 2, 'F'); color(C.amberT); font('bold', 7.6); doc.text('DOCUMENTO INTERNO NON FISCALE · NON VALE COME DOCUMENTO DI TRASPORTO (DDT)', W / 2, y + 5.6, { align: 'center' });
+      y += 15;
+      const bw = (CW - 6) / 2, box = (x, lab, lines) => { stroke(C.line); fill(C.soft); doc.roundedRect(x, y, bw, 24, 2.5, 2.5, 'FD'); color(C.muted); font('bold', 6.8); doc.text(lab, x + 4, y + 5.5); color(C.ink); font('bold', 10); doc.text(doc.splitTextToSize(String(lines[0] || '—'), bw - 8), x + 4, y + 11); color(C.ink2); font('normal', 8.2); doc.text(doc.splitTextToSize(lines.slice(1).filter(Boolean).join(' · '), bw - 8), x + 4, y + 17); };
+      box(M, d.tipo === 'int' ? 'MAGAZZINO DI USCITA' : 'DA', [d.mag || 'Magazzino', az.nome]);
+      box(M + bw + 6, d.tipo === 'int' ? 'MOTIVO' : 'A', d.tipo === 'int' ? [d.motivo, d.centro ? 'Centro di costo: ' + d.centro : ''] : [xiDest(d), d.destTipo === 'az' ? d.motivo : 'Trasferimento tra magazzini']);
+      y += 30;
+      const head = [['Codice', 'Descrizione', 'UM', 'Q.tà'].concat(got ? ['Ricevuti'] : [])];
+      doc.autoTable({ startY: y, margin: { left: M, right: M, bottom: 22 }, head, theme: 'plain',
+        body: R.map(l => [l.c || '', l.d || '', l.um || '', fmtNum(num(l.q), num(l.q) % 1 ? 2 : 0)].concat(got ? [fmtNum(num(l.qr), num(l.qr) % 1 ? 2 : 0)] : [])),
+        styles: { font: FF, fontSize: 8.6, cellPadding: { top: 2.4, bottom: 2.4, left: 2, right: 2 }, textColor: C.ink, lineColor: C.line, lineWidth: { bottom: .2 } },
+        headStyles: { fillColor: C.navy, textColor: C.white, fontStyle: 'bold', fontSize: 7.6 },
+        columnStyles: { 0: { cellWidth: 28 }, 2: { cellWidth: 14 }, 3: { cellWidth: 18, halign: 'right' }, 4: { cellWidth: 20, halign: 'right' } },
+        didParseCell: h => { if (h.section === 'head' && h.column.index >= 3) h.cell.styles.halign = 'right'; } });
+      y = doc.lastAutoTable.finalY + 6;
+      if (y + 40 > H - 22) { doc.addPage(); y = 20; }
+      color(C.ink2); font('bold', 8.6); doc.text(`${R.length} ${R.length === 1 ? 'riga' : 'righe'} · ${fmtNum(xiPz(d), 0)} pezzi`, W - M, y + 3, { align: 'right' });
+      y += 10;
+      const sw = (CW - 8) / 3;
+      [d.tipo === 'int' ? 'Consegnato da' : 'Spedito da', d.tipo === 'int' ? 'Ritirato da' : 'Ricevuto da', 'Data e ora'].forEach((l, i) => { const x = M + i * (sw + 4); stroke(C.line); doc.roundedRect(x, y, sw, 18, 2, 2, 'S'); color(C.muted); font('normal', 6.8); doc.text(l.toUpperCase(), x + 2.5, y + 3.8); });
+      y += 24;
+      if (d.note) { color(C.muted); font('bold', 7); doc.text('NOTE', M, y + 3); color(C.ink2); font('normal', 8.2); doc.text(doc.splitTextToSize(String(d.note), CW), M, y + 8); }
+      doc.save(`${d.tipo === 'int' ? 'Interno' : 'Trasferimento'}-${xiNum(d).replace(/\//g, '-')}.pdf`);
+      busy(); toast('PDF scaricato');
+    } catch (e) { busy(); toast(e.message || 'PDF non riuscito'); }
   }
 
   /* ---------- INCASSI ---------- */

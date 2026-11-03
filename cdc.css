@@ -955,7 +955,7 @@ body.has-sel .fab { display: none; }
 .fa-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 
 /* dashboard: fatture, controlli, IA */
-#v-home .a-fat { --a: #8b5cf6; }
+#v-home .a-fat { --a: #8b5cf6; } #v-home .a-xi { --a: #0e9aa7; }
 @media (min-width: 640px) { .ov-areas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1180px) { .ov-areas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .ov-fbar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: var(--bg); margin: 14px 0 8px; }
@@ -3723,3 +3723,38 @@ body.view-ro #fab, body.view-ro #add-top { display: none !important; }
 body.iva-anim .view:not([hidden]) :is(.gh-big, .gh-k b, .db-av b, .gx-kpi b, .pv-k b, .pv-qt, .db-mv b, .pl-k b, .in-b, td.r, .db-sr strong, .db-mr b) { animation: ivaNum .55s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes ivaNum { 0% { opacity: .25; transform: translateY(7px); filter: blur(2px); } 100% { opacity: 1; transform: none; filter: none; } }
 @media (prefers-reduced-motion: reduce) { .iva-tg.pop i, .iva-tg.pop i::after, .iva-tg.pop span, body.iva-anim .view :is(.gh-big, .gh-k b, td.r) { animation: none !important; } }
+
+/* v157: documenti interni (scarichi non fiscali e trasferimenti) */
+.xi-tbl small { display: block; }
+.xi-tbl tr.xi-void td { opacity: .5; } .xi-tbl tr.xi-void td:first-child b { text-decoration: line-through; }
+.xi-cc { display: grid; gap: 4px; }
+.xi-cr { display: grid; grid-template-columns: minmax(90px, 190px) minmax(0, 1fr) 96px; gap: 14px; align-items: center; padding: 6px 0; font-size: 13.5px; }
+.xi-cr > span { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xi-cr > i { display: block; height: 8px; border-radius: 4px; background: var(--bg); overflow: hidden; }
+.xi-cr > i b { display: block; height: 100%; border-radius: 4px; background: #0e9aa7; transition: width .6s var(--spring); }
+.xi-cr > strong { text-align: right; font-variant-numeric: tabular-nums; }
+.xi-dt { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); margin: 2px 0 12px; }
+.xi-dt button { height: 32px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s, color .2s; }
+.xi-dt button.on { background: var(--ink); color: var(--bg); }
+.xi-rows { display: grid; gap: 8px; margin: 12px 0 10px; }
+.xi-h, .xi-r { display: grid; grid-template-columns: minmax(0, 1fr) 46px 88px 118px 30px; gap: 10px; align-items: center; }
+.xi-h { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 0 2px; }
+.xi-um { font-size: 12.5px; color: var(--muted); text-align: center; }
+.xi-g { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; } .xi-g.bad { color: var(--danger, #d92d20); font-weight: 600; }
+.xi-rc { grid-template-columns: minmax(0, 1fr) 100px; padding: 8px 0; border-top: 1px solid var(--line); } .xi-rc:first-child { border-top: 0; }
+.xi-n { display: grid; min-width: 0; } .xi-n small { color: var(--muted); font-size: 12px; }
+.xi-tot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 14px; padding: 11px 14px; border-radius: 12px; background: var(--bg); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.xi-tot small { color: var(--muted); }
+.xi-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.xi-tiles > div { display: grid; gap: 3px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px; }
+.xi-tiles span { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.xi-tiles b { font-size: 14px; }
+.xi-dtbl .xi-bad { color: var(--danger, #d92d20); font-weight: 700; }
+@media (max-width: 639px) {
+  .xi-h { display: none; }
+  .xi-r:not(.xi-rc) { grid-template-columns: 44px 96px minmax(0, 1fr) 30px; grid-template-areas: "d d d x" "u q g g"; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+  .xi-r:not(.xi-rc) > input[data-k="d"] { grid-area: d; } .xi-r:not(.xi-rc) > .xi-um { grid-area: u; text-align: left; } .xi-r:not(.xi-rc) > input[data-k="q"] { grid-area: q; } .xi-r:not(.xi-rc) > .xi-g { grid-area: g; } .xi-r:not(.xi-rc) > .dx-x { grid-area: x; }
+  .xi-cr { grid-template-columns: minmax(70px, 110px) minmax(0, 1fr) 80px; gap: 10px; }
+}
+.xi-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+#xi-body .gx-chips { flex-wrap: wrap; } #xi-body .chip-f { white-space: nowrap; }
