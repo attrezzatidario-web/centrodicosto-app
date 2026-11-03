@@ -182,6 +182,7 @@
       ['gierre', 'Gierre Scale', 'Scale, sgabelli, trabattelli e ricambi.', ['247 prodotti, 417 codici'], ['sez.preventivi']],
       ['akifix', 'Akifix', 'Cartongesso, fissaggi, finiture e utensileria.', ['1.756 prodotti, 6.594 codici'], ['sez.preventivi']],
       ['cmt', 'CMT Orange Tools', 'Lame, frese, punte e utensili per il legno.', ['992 prodotti, 5.560 codici'], ['sez.preventivi']],
+      ['ambrovit', 'Ambrovit', 'Viteria e fissaggi: viti, barre filettate, rivetti, tirafondi.', ['153 prodotti, 9.468 codici'], ['sez.preventivi']],
       ['mag', 'Magazzino', 'Gli articoli del magazzino dell\'azienda.', ['Prezzo di vendita e costo'], ['sez.magazzino', 'sez.preventivi']],
       ['srv', 'Servizi', 'Le righe di servizio preimpostate.', ['Codici SRV-001…'], ['sez.impostazioni', 'sez.preventivi']]
     ] },
