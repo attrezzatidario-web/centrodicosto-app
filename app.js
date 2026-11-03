@@ -3549,7 +3549,7 @@
     $$('[data-pvtab]').forEach(b => b.classList.toggle('on', b.dataset.pvtab === pvTab));
     const vpv = $('#v-preventivi'); if (vpv) { vpv.dataset.tab = pvTab; vpv.dataset.mode = pvTab === 'prev' ? (pvEdit ? 'ed' : 'list') : pvTab === 'cat' ? (pvItem ? 'item' : 'cat') : 'cli'; }
     $$('.pv-brand [data-pvsup]').forEach(b => { const on = b.dataset.pvsup === 'all' ? pvAll : !pvAll && b.dataset.pvsup === pvSup; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-    const br = $('.pv-brand'); if (br) { br.style.setProperty('--i', Math.max(0, pvOrdSups().indexOf(pvSup))); const bo = br.querySelector('button.on'); if (bo && br.scrollWidth > br.clientWidth + 2) { const x = bo.offsetLeft - (br.clientWidth - bo.offsetWidth) / 2; try { br.scrollTo({ left: x, behavior: reduced() ? 'auto' : 'smooth' }); } catch { br.scrollLeft = x; } } }
+    const br = $('.pv-brand'); if (br && !br._sc) { br._sc = 1; const sc = () => br.classList.toggle('sc', br.scrollLeft > 6); br.addEventListener('scroll', sc, { passive: true }); setTimeout(sc, 0); } if (br) { br.style.setProperty('--i', Math.max(0, pvOrdSups().indexOf(pvSup))); const bo = br.querySelector('button.on'); if (bo && br.scrollWidth > br.clientWidth + 2) { const x = bo.offsetLeft - (br.clientWidth - bo.offsetWidth) / 2; try { br.scrollTo({ left: x, behavior: reduced() ? 'auto' : 'smooth' }); } catch { br.scrollLeft = x; } } }
     const eye = $('#pv-eye'); if (eye) { eye.classList.toggle('on', pvCli); eye.setAttribute('aria-pressed', pvCli); eye.querySelector('span').textContent = pvCli ? 'Vista cliente' : 'Prezzi d\'acquisto visibili'; }
     document.body.classList.toggle('pv-cli', pvCli);
     const body = $('#pv-body');

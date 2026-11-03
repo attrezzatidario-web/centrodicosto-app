@@ -3784,3 +3784,11 @@ body.iva-anim .view:not([hidden]) :is(.gh-big, .gh-k b, .db-av b, .gx-kpi b, .pv
   .pv-gsc.ed { height: 64px; grid-template-columns: 22px 72px minmax(0, 1fr) 36px; align-content: normal; padding: 0 8px 0 6px; }
   .pv-gsc.ed img { width: 72px; height: 40px; object-position: center; }
 }
+
+/* v172 — «Tutti» sempre agganciato a sinistra nella barra fornitori: da qualsiasi fornitore si torna alla ricerca globale con un tocco, senza scorrere indietro */
+#v-preventivi .pv-brand .pv-ball { position: sticky; left: 6px; z-index: 3; background: var(--surface); transition: background .2s, border-color .2s, box-shadow .25s, transform .15s; }
+#v-preventivi .pv-brand .pv-ball:hover { background: var(--bg); }
+#v-preventivi .pv-brand .pv-ball.on { background: var(--surface); }
+#v-preventivi .pv-brand.sc .pv-ball:not(.on) { box-shadow: 10px 0 12px -8px rgba(15, 23, 42, .28); }
+#v-preventivi .pv-brand.sc .pv-ball.on { box-shadow: 0 0 0 3px var(--accent-soft), 10px 0 12px -8px rgba(15, 23, 42, .28); }
+@media (max-width: 899px) { #v-preventivi .pv-brand .pv-ball { left: 16px; } }
