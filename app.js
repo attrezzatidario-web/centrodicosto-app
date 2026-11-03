@@ -3543,12 +3543,13 @@
     if (pvCats.srv) pvCats.srv = pvSrvCat();
     { const sb = $('.pv-brand [data-pvsup="srv"]'); if (sb) sb.hidden = !SRV().length; if (pvSup === 'srv' && !SRV().length) pvSup = 'payper'; }
     { const mb = $('.pv-brand [data-pvsup="mag"]'); if (mb) mb.hidden = !pvMagOk(); if (pvSup === 'mag' && !pvMagOk()) pvSup = 'payper'; }
+    pvApplyBar();
     const gAll = pvAll && pvTab === 'cat' && !pvItem; document.body.classList.toggle('pv-all', gAll);
     sub(gAll ? 'Tutti i fornitori · ricerca e confronto' : `${PV_SUP[pvSup].n} · catalogo e preventivi`);
     $$('[data-pvtab]').forEach(b => b.classList.toggle('on', b.dataset.pvtab === pvTab));
     const vpv = $('#v-preventivi'); if (vpv) { vpv.dataset.tab = pvTab; vpv.dataset.mode = pvTab === 'prev' ? (pvEdit ? 'ed' : 'list') : pvTab === 'cat' ? (pvItem ? 'item' : 'cat') : 'cli'; }
     $$('.pv-brand [data-pvsup]').forEach(b => { const on = b.dataset.pvsup === 'all' ? pvAll : !pvAll && b.dataset.pvsup === pvSup; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
-    const br = $('.pv-brand'); if (br) { br.style.setProperty('--i', Math.max(0, Object.keys(PV_SUP).indexOf(pvSup))); const bo = br.querySelector('button.on'); if (bo && br.scrollWidth > br.clientWidth + 2) { const x = bo.offsetLeft - (br.clientWidth - bo.offsetWidth) / 2; try { br.scrollTo({ left: x, behavior: reduced() ? 'auto' : 'smooth' }); } catch { br.scrollLeft = x; } } }
+    const br = $('.pv-brand'); if (br) { br.style.setProperty('--i', Math.max(0, pvOrdSups().indexOf(pvSup))); const bo = br.querySelector('button.on'); if (bo && br.scrollWidth > br.clientWidth + 2) { const x = bo.offsetLeft - (br.clientWidth - bo.offsetWidth) / 2; try { br.scrollTo({ left: x, behavior: reduced() ? 'auto' : 'smooth' }); } catch { br.scrollLeft = x; } } }
     const eye = $('#pv-eye'); if (eye) { eye.classList.toggle('on', pvCli); eye.setAttribute('aria-pressed', pvCli); eye.querySelector('span').textContent = pvCli ? 'Vista cliente' : 'Prezzi d\'acquisto visibili'; }
     document.body.classList.toggle('pv-cli', pvCli);
     const body = $('#pv-body');
@@ -3657,9 +3658,64 @@
     if (pvGQ) pvGLoadAll();
     const gi = $('#pv-gq'); if (gi) { gi.addEventListener('focus', () => { pvGLoadAll(); pvGStatus(); }, { once: true }); gi.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pvGRemember(gi.value); if (matchMedia('(max-width: 899px)').matches) gi.blur(); } }); if (!pvGQ && matchMedia('(min-width: 900px)').matches) setTimeout(() => { if (document.activeElement === document.body || !document.activeElement) gi.focus(); }, 60); }
   }
-  function pvGSupCards() {
-    return `<div class="pv-sh"><h3>Oppure apri un catalogo</h3></div><div class="pv-gsups">${pvGSups().map((s, i) => { const c = pvCats[s]; return `<button type="button" class="pv-gsc" data-pvsup="${s}" style="--d:${80 + i * 25}ms"><img src="logo-${s}.svg" alt=""><span><b>${esc(PV_SUP[s].n)}</b><small>${c ? fmtNum(c.items.length, 0) + ' prodotti' : 'catalogo'}</small></span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`; }).join('')}</div>`;
+  // v162+: ordine e visibilità dei fornitori (Config «pv:ordine» = { o: [chiavi in ordine], h: [chiavi nascoste] }), uguale su tutti i dispositivi
+  let pvEditSup = false;
+  const pvOrdCfg = () => { const c = cfg('pv:ordine'); return { o: Array.isArray(c && c.o) ? c.o : [], h: Array.isArray(c && c.h) ? c.h : [] }; };
+  function pvOrdSups(all) {
+    const C = pvOrdCfg(), base = pvGSups(), rank = s => { const k = C.o.indexOf(s); return k < 0 ? 1e6 + base.indexOf(s) : k; };
+    const L = base.slice().sort((a, b) => rank(a) - rank(b));
+    return all ? L : L.filter(s => !C.h.includes(s));
   }
+  const pvCanOrd = () => !isDip() || secPerm('preventivi') === 'w';
+  function pvSaveOrd(o, h) { setConfig('pv:ordine', { o, h }); }
+  function pvGSupCards() {
+    const C = pvOrdCfg(), L = pvOrdSups(pvEditSup), ed = pvEditSup && pvCanOrd();
+    const bar = pvCanOrd() ? (ed ? '<span class="pv-sha"><button type="button" class="link" data-pvordreset="1">Ripristina</button><button type="button" class="btn primary sm" data-pvordedit="0">Fine</button></span>' : '<button type="button" class="link" data-pvordedit="1">Personalizza</button>') : '';
+    const card = (s, i) => {
+      const c = pvCats[s], hid = C.h.includes(s), inner = `<img src="logo-${s}.svg" alt=""><span><b>${esc(PV_SUP[s].n)}</b><small>${c ? fmtNum(c.items.length, 0) + ' prodotti' : 'catalogo'}</small></span>`;
+      if (!ed) return `<button type="button" class="pv-gsc" data-pvsup="${s}" style="--d:${80 + i * 25}ms">${inner}<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`;
+      return `<div class="pv-gsc ed${hid ? ' off' : ''}" data-pvk="${s}"><span class="pv-grip" title="Trascina per spostare" aria-label="Sposta ${esc(PV_SUP[s].n)}"><svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg></span>${inner}<button type="button" class="pv-eyeb" data-pvhid="${s}" title="${hid ? 'Mostra' : 'Nascondi'}" aria-label="${hid ? 'Mostra' : 'Nascondi'} ${esc(PV_SUP[s].n)}" aria-pressed="${hid}"><svg viewBox="0 0 24 24">${hid ? '<path d="M3 3l18 18M10.6 6.2A9.9 9.9 0 0 1 12 6c5 0 8.5 4 9.5 6a14 14 0 0 1-2.6 3.4M6.5 7.6C4.4 9 3 11 2.5 12c1 2 4.5 6 9.5 6 1.4 0 2.7-.3 3.8-.8"/>' : '<path d="M2.5 12C3.5 10 7 6 12 6s8.5 4 9.5 6c-1 2-4.5 6-9.5 6s-8.5-4-9.5-6z"/><circle cx="12" cy="12" r="2.6"/>'}</svg></button></div>`;
+    };
+    return `<div class="pv-sh"><h3>Oppure apri un catalogo</h3>${bar}</div><div class="pv-gsups${ed ? ' ed' : ''}" id="pv-gsups">${L.map(card).join('')}</div>`;
+  }
+  // barra dei loghi in alto: stesso ordine e stesse scelte
+  function pvApplyBar() {
+    const br = $('.pv-brand'); if (!br) return;
+    const C = pvOrdCfg(), L = pvOrdSups(true);
+    $$('.pv-brand [data-pvsup]').forEach(b => {
+      const s = b.dataset.pvsup; if (s === 'all') { b.style.order = -1; return; }
+      const k = L.indexOf(s); b.style.order = k < 0 ? 999 : k;
+      if (s === 'srv' || s === 'mag') b.hidden = b.hidden || C.h.includes(s); else b.hidden = C.h.includes(s);
+    });
+  }
+  function pvOrdClick(t) {
+    const ed = t.closest('[data-pvordedit]'); if (ed) { pvEditSup = ed.dataset.pvordedit === '1'; renderPv(); return true; }
+    if (t.closest('[data-pvordreset]')) { pvSaveOrd([], []); toast('Ordine ripristinato'); renderPv(); return true; }
+    const hb = t.closest('[data-pvhid]'); if (hb) { const s = hb.dataset.pvhid, C = pvOrdCfg(), o = pvOrdSups(true), h = C.h.includes(s) ? C.h.filter(x => x !== s) : C.h.concat(s); pvSaveOrd(o, h); renderPv(); return true; }
+    return false;
+  }
+  // trascinamento (mouse e touch): la card segue l'ordine sotto il dito, al rilascio si salva
+  function pvDragStart(e) {
+    const g = e.target.closest && e.target.closest('.pv-grip'); if (!g || e.button > 0) return;
+    const card = g.closest('.pv-gsc'), box = card && card.parentNode; if (!box) return;
+    e.preventDefault(); card.classList.add('drag'); card.style.pointerEvents = 'none';
+    let py = e.clientY, px = e.clientX; const auto = setInterval(() => { const h = window.innerHeight; if (py < 90) window.scrollBy(0, -14); else if (py > h - 90) window.scrollBy(0, 14); else return; swap(px, py); }, 16);
+    const swap = (x, y) => {
+      const t = document.elementFromPoint(x, y), over = t && t.closest && t.closest('.pv-gsc.ed');
+      if (!over || over === card || over.parentNode !== box) return;
+      const kids = Array.from(box.children);
+      if (kids.indexOf(over) < kids.indexOf(card)) box.insertBefore(card, over); else box.insertBefore(card, over.nextSibling);
+    };
+    const move = ev => { px = ev.clientX; py = ev.clientY; swap(px, py); };
+    const up = () => {
+      clearInterval(auto);
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      card.classList.remove('drag'); card.style.pointerEvents = '';
+      const o = Array.from(box.children).map(x => x.dataset.pvk).filter(Boolean); pvSaveOrd(o, pvOrdCfg().h); pvApplyBar();
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  }
+  document.addEventListener('pointerdown', pvDragStart);
   function pvGRes() {
     const box = $('#pv-gres'); if (!box) return;
     const sg = $('#pv-gsug'); if (sg) sg.hidden = !!pvGQ.trim();
@@ -9877,6 +9933,7 @@
       if (t.closest('#pz-cdc') || t.closest('#pz-cdc3')) { lyCdcForm(); return; }
       // ---- preventivi ----
       if (v89Click(t)) return;
+      if (view === 'preventivi' && pvOrdClick(t)) return;
       if (pvGClick(t)) return;
       const pvt = t.closest('[data-pvtab]'); if (pvt) { pvTab = pvt.dataset.pvtab; if (pvTab === 'cat') pvEdit = ''; else pvItem = ''; pvAnim = true; renderPv(); return; }
       const pvs = t.closest('[data-pvsup]'); if (pvs) { if (pvs.dataset.pvsup === 'all') pvAll = true; else { pvSup = pvs.dataset.pvsup; pvAll = false; } pvFromAll = false; pvTab = 'cat'; pvItem = ''; pvGroup = ''; pvQ = ''; pvCl = ''; pvAnim = true; renderPv(); return; }
