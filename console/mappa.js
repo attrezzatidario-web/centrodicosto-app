@@ -186,6 +186,7 @@
       ['mustad', 'Mustad', 'Viti Panelvit, Drillex, Kovervit e Formex per legno, PVC e metallo.', ['59 prodotti, 733 codici'], ['sez.preventivi']],
       ['dueci', 'Duecì Grafica', 'Vinili, banner, laminazione, termoadesivi e materiali per grafica.', ['347 prodotti'], ['sez.preventivi']],
       ['prodyver', 'Prodyver', 'Carta, panni, mascheratura e protezioni per officine e carrozzerie.', ['38 prodotti, 68 codici'], ['sez.preventivi']],
+      ['fermec', 'Fermec', 'Minuteria, fascette, tester, saldatori, cinghie e accessori.', ['595 prodotti, 908 codici'], ['sez.preventivi']],
       ['mag', 'Magazzino', 'Gli articoli del magazzino dell\'azienda.', ['Prezzo di vendita e costo'], ['sez.magazzino', 'sez.preventivi']],
       ['srv', 'Servizi', 'Le righe di servizio preimpostate.', ['Codici SRV-001…'], ['sez.impostazioni', 'sez.preventivi']]
     ] },
