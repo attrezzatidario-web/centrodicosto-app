@@ -195,7 +195,7 @@
       ['elepacking', 'Elepacking', 'Sacchi per rifiuti, teli copritutto, pacciamatura, imballi e nastri segnaletici.', ['100 prodotti, 384 codici'], ['sez.preventivi']],
       ['barbero', 'Barbero', 'DPI, imballaggio, reggia, sollevamento, fissaggio, igiene e segnaletica.', ['1.306 prodotti, 4.259 codici'], ['sez.preventivi']],
       ['svelt', 'Svelt', 'Scale, sgabelli, trabattelli, ponteggi e linee vita professionali.', ['809 prodotti, 3.041 codici'], ['sez.preventivi']],
-      ['centroreti', 'Centro Reti', 'Reti e recinzioni modulari, cancelli, pali e recinzioni da cantiere.', ['95 prodotti, 480 codici'], ['sez.preventivi']],
+      ['centroreti', 'Centro Reti', 'Reti e recinzioni modulari, cancelli, pali e recinzioni da cantiere.', ['95 prodotti, 480 codici, con foto'], ['sez.preventivi']],
       ['bluemaster', 'Bluemaster', 'Utensili da taglio: punte, lame a nastro, frese, maschi e seghe a tazza.', ['3.505 prodotti, 41.369 codici'], ['sez.preventivi']],
       ['cenigomma', 'Cenigomma', 'DPI, calzature, guanti, abbigliamento Carhartt e CAT, carrelli e macchine.', ['2.649 prodotti, 3.625 codici'], ['sez.preventivi']],
       ['facal', 'Facal Scale', 'Scale, trabattelli, sgabelli e rampe in alluminio e vetroresina, con accessori e ricambi.', ['646 prodotti, 1.469 codici'], ['sez.preventivi']],
