@@ -190,6 +190,7 @@
       ['tecfi', 'Tecfi', 'Fissaggi, viti, bulloneria, rivetti, punte, sigillanti e schiume.', ['717 prodotti, 6.469 codici'], ['sez.preventivi']],
       ['vorpa', 'Vorpa', 'Ancoranti chimici e meccanici, tasselli, barre filettate, schiume e fissaggi.', ['332 prodotti, 1.901 codici'], ['sez.preventivi']],
       ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
+      ['italfeltri', 'Italfeltri', 'Feltrini, puntali, piedini, scivoli, fermaporte, paracolpi e minuterie.', ['225 prodotti'], ['sez.preventivi']],
       ['valex', 'Valex', 'Utensili manuali ed elettrici, spray tecnici e accessori (marchi OneAll, Kapro, Garnext, Tech).', ['2.133 prodotti, 2.935 codici'], ['sez.preventivi']],
       ['elepacking', 'Elepacking', 'Sacchi per rifiuti, teli copritutto, pacciamatura, imballi e nastri segnaletici.', ['100 prodotti, 384 codici'], ['sez.preventivi']],
       ['barbero', 'Barbero', 'DPI, imballaggio, reggia, sollevamento, fissaggio, igiene e segnaletica.', ['1.306 prodotti, 4.259 codici'], ['sez.preventivi']],
