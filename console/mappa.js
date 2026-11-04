@@ -190,6 +190,8 @@
       ['tecfi', 'Tecfi', 'Fissaggi, viti, bulloneria, rivetti, punte, sigillanti e schiume.', ['717 prodotti, 6.469 codici'], ['sez.preventivi']],
       ['vorpa', 'Vorpa', 'Ancoranti chimici e meccanici, tasselli, barre filettate, schiume e fissaggi.', ['332 prodotti, 1.901 codici'], ['sez.preventivi']],
       ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
+      ['bluemaster', 'Bluemaster', 'Utensili da taglio: punte, lame a nastro, frese, maschi e seghe a tazza.', ['3.505 prodotti, 41.369 codici'], ['sez.preventivi']],
+      ['cenigomma', 'Cenigomma', 'DPI, calzature, guanti, abbigliamento Carhartt e CAT, carrelli e macchine.', ['2.649 prodotti, 3.625 codici'], ['sez.preventivi']],
       ['facal', 'Facal Scale', 'Scale, trabattelli, sgabelli e rampe in alluminio e vetroresina, con accessori e ricambi.', ['646 prodotti, 1.469 codici'], ['sez.preventivi']],
       ['1aid', '1AID', 'Kit e cassette di primo soccorso DM 388, medicazione, diagnostica e defibrillatori.', ['171 prodotti'], ['sez.preventivi']],
       ['mag', 'Magazzino', 'Gli articoli del magazzino dell\'azienda.', ['Prezzo di vendita e costo'], ['sez.magazzino', 'sez.preventivi']],
