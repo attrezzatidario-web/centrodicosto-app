@@ -390,7 +390,7 @@
   }
   // v97: presentazione «Scopri cosa può fare» (tour.js + tour.css, caricati solo quando servono)
   async function openTour() {
-    try { await loadLib('tour.js?v=175'); } catch { return demoInfo(); }
+    try { await loadLib('tour.js?v=176'); } catch { return demoInfo(); }
     const go = () => window.CDC_TOUR ? window.CDC_TOUR.open({ v: 133, settore: me ? settoreId() : '', demo: DEMO, contatti: CONTATTI,
       onDemo: () => demoStart(),
       onRequest: id => contactReq(id) }) : demoInfo();
