@@ -187,6 +187,10 @@
       ['dueci', 'Duecì Grafica', 'Vinili, banner, laminazione, termoadesivi e materiali per grafica.', ['347 prodotti'], ['sez.preventivi']],
       ['prodyver', 'Prodyver', 'Carta, panni, mascheratura e protezioni per officine e carrozzerie.', ['38 prodotti, 68 codici'], ['sez.preventivi']],
       ['fermec', 'Fermec', 'Utensili professionali: chiavi, bussole, automotive, pneumatica, officina e minuteria.', ['8.265 prodotti, 30.488 codici'], ['sez.preventivi']],
+      ['tecfi', 'Tecfi', 'Fissaggi, viti, bulloneria, rivetti, punte, sigillanti e schiume.', ['717 prodotti, 6.469 codici'], ['sez.preventivi']],
+      ['vorpa', 'Vorpa', 'Ancoranti chimici e meccanici, tasselli, barre filettate, schiume e fissaggi.', ['332 prodotti, 1.901 codici'], ['sez.preventivi']],
+      ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
+      ['1aid', '1AID', 'Kit e cassette di primo soccorso DM 388, medicazione, diagnostica e defibrillatori.', ['171 prodotti'], ['sez.preventivi']],
       ['mag', 'Magazzino', 'Gli articoli del magazzino dell\'azienda.', ['Prezzo di vendita e costo'], ['sez.magazzino', 'sez.preventivi']],
       ['srv', 'Servizi', 'Le righe di servizio preimpostate.', ['Codici SRV-001…'], ['sez.impostazioni', 'sez.preventivi']]
     ] },
