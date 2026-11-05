@@ -301,7 +301,7 @@
     CAT_DEF = [...new Set(RULES.map(r => r[0])), 'Altro'];
     AREAS = AREAS_ALL.filter(a => areaOn(a.k));
     PZ_AREAS = PZ_AREAS_ALL.filter(a => areaOn(a.k));
-    $$('.nav a[data-view]').forEach(a => { const v = a.dataset.view; if (MOD_K.includes(v)) a.hidden = !modOn(v); else if (v !== 'impostazioni') a.hidden = isDip() && !secPerm(v); });
+    $$('.nav a[data-view]').forEach(a => { const v = a.dataset.view; if (MOD_K.includes(v)) a.hidden = !modOn(v) || (v === 'fischer' && isDip() && !secPerm(v)); else if (v !== 'impostazioni') a.hidden = isDip() && !secPerm(v); });
     document.body.classList.toggle('is-dip', isDip()); document.body.classList.toggle('dip-noset', isDip() && !secPerm('impostazioni'));
     document.body.dataset.settore = s.id;
     lexSet(s);
@@ -747,7 +747,7 @@
   /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
   async function renderFi() {
     const el = $('#fi-body'); if (!el) return;
-    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=184').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=185').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
     if (!window.CDC_FI || $('#fi-body') !== el) return;
     window.CDC_FI.render(el, {
       db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },
@@ -758,7 +758,7 @@
   }
   // scheda Fischer nella Dashboard: ordini ancora da fatturare per piazzale (non sommati alla spesa: sono già negli acquisti e nelle fatture)
   function fiMini() {
-    if (!modOn('fischer')) return '';
+    if (!modOn('fischer') || (isDip() && !secPerm('fischer'))) return '';
     const fa = cfg('fiFatt') || {}, F = Object.keys(db.config || {}).filter(k => k.startsWith('fif:')).map(k => cfg(k)).filter(f => f && f.id && f.tipo !== 'TD02' && Array.isArray(f.righe));
     const P = new Map(); // parte di fattura = fattura × piazzale (la spunta «fatturato» è per ognuna)
     F.forEach(f => f.righe.forEach(x => { const k = f.id + '|' + String(x.pz || '').toUpperCase().trim(), p = P.get(k) || { f, pz: x.pz || '—', imp: 0 }; p.imp += num(x.importo); P.set(k, p); }));
