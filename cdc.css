@@ -3844,3 +3844,24 @@ body.iva-anim .view:not([hidden]) :is(.gh-big, .gh-k b, .db-av b, .gx-kpi b, .pv
 .fi-parts { gap: 10px 14px; } .fi-parts .fi-fatt { display: grid; gap: 4px; } .fi-pn { font-size: 11.5px; color: var(--muted); padding-left: 4px; }
 .fi-links { display: flex; flex-wrap: wrap; gap: 6px; } .fi-na { font-size: 13.5px; color: var(--muted); font-weight: 500; }
 #v-fischer table.mx th.l, #v-fischer table.mx td.l { text-align: left; }
+
+/* v187 Fischer: ricerca, esporta, listino */
+.fi-gs{margin:0 0 12px}
+.fi-xm{position:relative;display:inline-block}
+.fi-xm .btn{display:inline-flex;align-items:center;gap:6px}
+.fi-xd{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:270px;background:var(--card,#fff);border:1px solid var(--line,#e3e7ee);border-radius:12px;box-shadow:0 12px 32px rgba(20,30,60,.16);padding:6px}
+.fi-xd[hidden]{display:none}
+.fi-xd button{display:block;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 11px;cursor:pointer;font:inherit;color:inherit}
+.fi-xd button:hover{background:var(--soft,#f3f5fa)}
+.fi-xd b{display:block;font-size:13px}.fi-xd small{display:block;color:var(--muted,#78808e);font-size:11.5px;margin-top:1px}
+.fi-sres{display:grid;gap:14px}.fi-sh{font-size:13px;color:var(--muted,#78808e)}.fi-sh b{color:inherit}
+.fi-lt td,.fi-lt th{vertical-align:middle}
+.fi-in{width:96px;text-align:right;font:inherit;padding:6px 8px;border:1px solid var(--line,#dfe4ec);border-radius:8px;background:var(--card,#fff);color:inherit}
+.fi-in:focus{outline:2px solid #3362ab55;border-color:#3362ab}
+.fi-k{white-space:nowrap}.fi-k small,.fi-mod{display:block;color:var(--muted,#78808e);font-size:11px}
+.fi-neg{color:#c0392b}
+.fi-x{border:0;background:none;color:var(--muted,#78808e);cursor:pointer;font-size:16px}
+.fi-add{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.fi-add input{font:inherit;padding:7px 9px;border:1px solid var(--line,#dfe4ec);border-radius:8px;background:var(--card,#fff);color:inherit;flex:1;min-width:90px}
+.tr-none{padding:8px 4px}
+@media (max-width:640px){.fi-xd{right:-10px;min-width:240px}.fi-lt{font-size:12px}.fi-in{width:72px}}

@@ -747,23 +747,24 @@
   /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
   async function renderFi() {
     const el = $('#fi-body'); if (!el) return;
-    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=186').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=187').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
     if (!window.CDC_FI || $('#fi-body') !== el) return;
     window.CDC_FI.render(el, {
       db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },
       api, busy, toast, esc, eur, eur0, fmtNum, shortDate, countTo, sub, loadLib, today, reduced, isLocal, isAuth: e => e instanceof AuthError,
       cdcs: () => lyCdcList().filter(c => c.cod !== LY_NONE), cdcName: cod => lyName(cod), guess: name => pzGuess(name),
-      openDoc, canWrite: () => secPerm('fischer') === 'w'
+      openDoc, canWrite: () => secPerm('fischer') === 'w',
+      ivaOn: () => ivaOn, geo: c => lyGeo(c), map: pzMap, loadXlsx, ORG, pdfKit: async () => { const [jsPDF, logo, fonts] = await Promise.all([loadPdf(), logoPng(), loadFonts()]); return { jsPDF, logo, fonts }; }
     });
   }
   // scheda Fischer nella Dashboard: ordini ancora da fatturare per piazzale (non sommati alla spesa: sono già negli acquisti e nelle fatture)
   function fiMini() {
     if (!modOn('fischer') || (isDip() && !secPerm('fischer'))) return '';
     const fa = cfg('fiFatt') || {}, F = Object.keys(db.config || {}).filter(k => k.startsWith('fif:')).map(k => cfg(k)).filter(f => f && f.id && f.tipo !== 'TD02' && Array.isArray(f.righe));
-    const P = new Map(); // parte di fattura = fattura × piazzale (la spunta «fatturato» è per ognuna)
-    F.forEach(f => f.righe.forEach(x => { const k = f.id + '|' + String(x.pz || '').toUpperCase().trim(), p = P.get(k) || { f, pz: x.pz || '—', imp: 0 }; p.imp += num(x.importo); P.set(k, p); }));
+    const mu = f => ivaOn ? 1 + num(f.ivaPct) / 100 : 1, P = new Map(); // parte di fattura = fattura × piazzale (la spunta «fatturato» è per ognuna)
+    F.forEach(f => f.righe.forEach(x => { const k = f.id + '|' + String(x.pz || '').toUpperCase().trim(), p = P.get(k) || { f, pz: x.pz || '—', imp: 0 }; p.imp += num(x.importo) * mu(f); P.set(k, p); }));
     const parts = [...P.entries()].map(([k, p]) => ({ k, ...p, imp: r2(p.imp), done: !!fa[k] })), todo = parts.filter(p => !p.done), tT = r2(todo.reduce((a, p) => a + p.imp, 0));
-    const tot = r2(F.reduce((a, f) => a + num(f.imponibile), 0)), O = Object.keys(db.config || {}).filter(k => k.startsWith('fi:')).map(k => cfg(k)).filter(o => o && o.id && o.stato !== 'annullato');
+    const tot = r2(F.reduce((a, f) => a + num(f.imponibile) * mu(f), 0)), O = Object.keys(db.config || {}).filter(k => k.startsWith('fi:')).map(k => cfg(k)).filter(o => o && o.id && o.stato !== 'annullato');
     const nm = pz => { const c = pzGuess(pz); return c ? lyName(c) : pz; };
     const by = [...groupBy(todo, p => nm(p.pz))].map(([k, v]) => ({ k, n: v.length, t: r2(v.reduce((a, p) => a + p.imp, 0)) })).sort((a, b) => b.t - a.t).slice(0, 3);
     return `<a class="card db-mini a-fi" href="#fischer">
@@ -10209,7 +10210,7 @@
     authBind();
     window.addEventListener('online', () => { online = true; flush(); setSync(); });
     window.addEventListener('offline', () => { online = false; setSync(); });
-    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (view === 'movimenti' || view === 'articoli') render(); if (view === 'lyreco' && $('#ly-list')) { renderLyList(); renderLyDocs(); pzMap.redraw(); } if (view === 'amazon' && $('#am-list')) { renderAmList(); renderAmOrds(); pzMap.redraw(); } if (view === 'piazzali') pzMap.redraw(); }, 200); });
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (view === 'movimenti' || view === 'articoli') render(); if (view === 'lyreco' && $('#ly-list')) { renderLyList(); renderLyDocs(); pzMap.redraw(); } if (view === 'amazon' && $('#am-list')) { renderAmList(); renderAmOrds(); pzMap.redraw(); } if (view === 'piazzali' || view === 'fischer') pzMap.redraw(); }, 200); });
     document.addEventListener('visibilitychange', () => { if (!document.hidden && url && !isLocal() && Date.now() - pulledAt > 60000) pull(); }); // v118: al massimo una volta al minuto
   }
 

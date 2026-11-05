@@ -9,7 +9,7 @@
   const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
   const ST = { confermato: ['Confermato', ''], spedito: ['In consegna', 'soon'], consegnato: ['Consegnato', 'paid'], annullato: ['Annullato', 'late'] };
   const ST_K = Object.keys(ST);
-  let X = null, tab = 'pan', openId = '', openInv = '', fq = '', fpz = '', fst = '', fqf = '', fpzf = '', fsf = '', anim = true, lim = 40, limF = 40;
+  let X = null, tab = 'pan', openId = '', openInv = '', fq = '', fpz = '', fst = '', fqf = '', fpzf = '', fsf = '', gq = '', lq = '', anim = true, lim = 40, limF = 40;
 
   /* ---------- lettura del PDF ---------- */
   const N = s => { s = String(s == null ? '' : s).trim(); if (!s) return 0; const neg = /-$/.test(s) || /^-/.test(s); const v = parseFloat(s.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')); return isNaN(v) ? 0 : (neg ? -v : v); };
@@ -196,8 +196,8 @@
 
   /* ---------- dati ---------- */
   const byKey = p => Object.keys(X.db().config || {}).filter(k => k.startsWith(p)).map(k => X.cfg(k)).filter(o => o && o.id);
-  const list = () => byKey('fi:').sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
-  const listF = () => byKey('fif:').sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
+  const list = () => byKey('fi:').filter(o => Array.isArray(o.righe)).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
+  const listF = () => byKey('fif:').filter(o => Array.isArray(o.righe)).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
   const FA = () => { const c = X.cfg('fiFatt'); return c && typeof c === 'object' && !Array.isArray(c) ? c : {}; };
   const get = id => { const o = X.cfg('fi:' + id); return o ? JSON.parse(JSON.stringify(o)) : null; };
   const getF = id => { const o = X.cfg('fif:' + id); return o ? JSON.parse(JSON.stringify(o)) : null; };
@@ -211,6 +211,9 @@
   const nextDel = o => (o.righe || []).map(x => x.consegna).filter(Boolean).sort()[0] || '';
   const sum = L => r2(L.reduce((s, o) => s + o.imponibile, 0));
   const plur = (n, a, b) => `${n} ${n === 1 ? a : b}`;
+  const vat = () => !!(X.ivaOn && X.ivaOn());
+  const mulF = f => vat() ? 1 + (f.tipo === 'TD02' ? 0 : (f.ivaPct || 0) / 100) : 1, mulO = o => vat() ? 1 + (o.ivaPct || 0) / 100 : 1;
+  const fV = f => r2(f.imponibile * mulF(f)), oV = o => r2(o.imponibile * mulO(o));
 
   let M = null, gm = new Map();
   // piazzale per nome: collegato al centro di costo se riconosciuto, altrimenti raggruppato per nome
@@ -248,18 +251,18 @@
       f.righe.forEach(x => { const k = pzKey(x.pz); if (!by.has(k)) by.set(k, { pz: x.pz, L: [] }); by.get(k).L.push(x); });
       by.forEach((v, k) => {
         const g = gOf(v.pz || '—'), key = f.id + '|' + k;
-        const p = { key, f, pz: v.pz, g, L: v.L, imp: r2(v.L.reduce((s, x) => s + x.importo, 0)), q: v.L.reduce((s, x) => s + (x.spese ? 0 : x.q), 0), done: !!fa[key] };
+        const p = { key, f, pz: v.pz, g, L: v.L, net: r2(v.L.reduce((s, x) => s + x.importo, 0)), imp: r2(v.L.reduce((s, x) => s + x.importo, 0) * mulF(f)), q: v.L.reduce((s, x) => s + (x.spese ? 0 : x.q), 0), done: !!fa[key] };
         parts.push(p);
         if (!G.has(g.k)) G.set(g.k, { k: g.k, n: g.n, P: [], q: 0, tot: 0, ddt: new Set() });
         const o = G.get(g.k); o.P.push(p); o.q += p.q; o.tot += p.imp; v.L.forEach(x => { if (x.ddt) o.ddt.add(f.id + '|' + x.ddt); });
       });
-      f.righe.forEach(x => { if (x.spese) return; const a = arts.get(x.cod) || { cod: x.cod, desc: x.desc, q: 0, imp: 0, f: new Set() }; a.q += x.q; a.imp += x.importo; a.f.add(f.id); arts.set(x.cod, a); });
-      const mk = String(f.data || '').slice(0, 7); if (mk) { const a = mm.get(mk) || { k: mk, imp: 0, n: 0 }; a.imp += f.imponibile; a.n++; mm.set(mk, a); }
+      f.righe.forEach(x => { if (x.spese) return; const a = arts.get(x.cod) || { cod: x.cod, desc: x.desc, q: 0, imp: 0, f: new Set() }; a.q += x.q; a.imp += x.importo * mulF(f); a.f.add(f.id); arts.set(x.cod, a); });
+      const mk = String(f.data || '').slice(0, 7); if (mk) { const a = mm.get(mk) || { k: mk, imp: 0, n: 0 }; a.imp += fV(f); a.n++; mm.set(mk, a); }
     });
     const groups = [...G.values()].map(g => { const done = g.P.filter(p => p.done), todo = g.P.filter(p => !p.done); return { ...g, tot: r2(g.tot), done, todo, tTodo: r2(todo.reduce((s, p) => s + p.imp, 0)), nd: g.ddt.size }; })
       .sort((a, b) => b.tTodo - a.tTodo || b.tot - a.tot || a.n.localeCompare(b.n, 'it'));
     const scad = buy.filter(f => f.scad && f.scad[0] && f.scad[0].d >= X.today() && !/pagato/i.test(f.cond || '')).sort((a, b) => a.scad[0].d.localeCompare(b.scad[0].d));
-    return { O, FI, buy, acc, act, parts, groups, fa, rec: reconcile(act, buy), scad, arts: [...arts.values()].map(a => ({ ...a, n: a.f.size })).sort((a, b) => b.imp - a.imp), months: [...mm.values()].sort((a, b) => a.k.localeCompare(b.k)).slice(-12), spese: r2(buy.reduce((s, f) => s + f.righe.filter(x => x.spese).reduce((a, x) => a + x.importo, 0), 0)) };
+    return { O, FI, buy, acc, act, parts, groups, fa, rec: reconcile(act, buy), scad, arts: [...arts.values()].map(a => ({ ...a, n: a.f.size })).sort((a, b) => b.imp - a.imp), months: [...mm.values()].sort((a, b) => a.k.localeCompare(b.k)).slice(-12), spese: r2(buy.reduce((s, f) => s + f.righe.filter(x => x.spese).reduce((a, x) => a + x.importo, 0) * mulF(f), 0)) };
   }
 
   /* ---------- pagina ---------- */
@@ -271,22 +274,167 @@
   const monthLbl = k => { const [y, m] = k.split('-'); return `${MESI[+m - 1].slice(0, 3)} ${y}`; };
   const esc = s => X.esc(s);
   function draw(el) {
-    X.sub('acquisti dal fornitore Fischer · IVA esclusa, salvo dove indicato');
+    X.sub(`acquisti dal fornitore Fischer · ${vat() ? 'IVA inclusa' : 'IVA esclusa'}`);
     M = model();
     const can = X.canWrite();
     if (openId && !get(openId)) openId = ''; if (openInv && !getF(openInv)) openInv = '';
-    const body = openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : overview();
-    const t = openInv || openId ? 'ord' : tab;
-    el.innerHTML = `<div class="gl-bar"><div class="tr-seg tr-tabs" role="tablist"><button type="button" data-fitab="pan" class="${t === 'pan' ? 'on' : ''}">Panoramica</button><button type="button" data-fitab="ord" class="${t === 'ord' ? 'on' : ''}">Ordini</button></div>
-      <div class="gl-act">${can ? '<button type="button" class="btn sm primary" id="fi-up"><span class="lb-d">+ Carica ordini</span><span class="lb-m">+ Carica</span></button>' : ''}</div></div>
+    const t = openInv || openId ? 'ord' : tab, has = M.O.length || M.FI.length;
+    el.innerHTML = `<div class="gl-bar"><div class="tr-seg tr-tabs" role="tablist"><button type="button" data-fitab="pan" class="${t === 'pan' ? 'on' : ''}">Panoramica</button><button type="button" data-fitab="ord" class="${t === 'ord' ? 'on' : ''}">Ordini</button><button type="button" data-fitab="lst" class="${t === 'lst' ? 'on' : ''}">Listino</button></div>
+      <div class="gl-act">${has ? exportMenu() : ''}${can ? '<button type="button" class="btn sm primary" id="fi-up"><span class="lb-d">+ Carica ordini</span><span class="lb-m">+ Carica</span></button>' : ''}</div></div>
+      ${has || (X.cfg('fif:listino') || {}).v ? `<div class="pv-sb tro-sb fi-gs"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-gq" type="search" placeholder="Cerca in Fischer: ordine, DDT, piazzale, articolo, città…" value="${esc(gq)}" autocomplete="off"></div>` : ''}
       <input type="file" id="fi-file" accept="application/pdf,.pdf,application/zip,.zip" multiple hidden>
-      <div class="fi-body${anim && !X.reduced() ? ' cc-anim' : ''}">${body}</div>`;
+      <div class="fi-body${anim && !X.reduced() ? ' cc-anim' : ''}">${bodyHtml()}</div>`;
     anim = false;
-    counters(el);
+    after(el);
+  }
+  function bodyHtml() {
+    const can = X.canWrite();
+    if (gq.trim()) return searchView();
+    return openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : tab === 'lst' ? lstView() : overview();
+  }
+  function after(el) { counters(el); if (!gq.trim() && !openId && !openInv && tab === 'pan') drawMap(); }
+  function refreshBody(el) { const b = el.querySelector('.fi-body'); if (!b) return draw(el); b.classList.remove('cc-anim'); b.innerHTML = bodyHtml(); after(el); }
+  const gq0 = () => gq.trim();
+
+  /* ---------- mappa dei piazzali ---------- */
+  function groupGeo(g) {
+    const c = g.cdc ? X.cdcs().find(x => x.cod === g.cdc) : null;
+    let ge = c && X.geo(c);
+    if (!ge) { const x = g.P.map(p => p.L.find(l => l.dest && (l.dest.citta || l.dest.prov))).find(Boolean); if (x) ge = X.geo({ citta: x.dest.citta, prov: x.dest.prov }); }
+    return ge || null;
+  }
+  function mapCard() {
+    const G = M.groups.filter(g => g.tot > 0 || g.P.length), E = new Map();
+    M.act.forEach(o => { const k = gkey(o); E.set(k, (E.get(k) || 0) + 1); });
+    G.forEach(g => { g.nc = E.get(g.k) || 0; g.geo = groupGeo(g); });
+    const rk = G.slice().sort((a, b) => b.tot - a.tot), all = rk.reduce((a, g) => a + g.tot, 0) || 1, mx = Math.max(1, ...rk.map(g => g.tot)), none = rk.filter(g => !g.geo);
+    return `<div class="card ly-mapcard"><div class="card-h"><h3>Piazzali e ordini</h3><span class="muted small">${vat() ? 'IVA inclusa' : 'IVA esclusa'} · tocca un piazzale per vedere i suoi ordini</span></div>
+      <div class="tr-dash ly-dash"><div class="cc-map" id="fi-map"></div><div class="tr-rank" id="fi-rank">${rk.map((g, i) => `<button type="button" class="cr-row" data-ficdc="${esc(g.k)}" style="--d:${200 + i * 60}ms"><span class="cr-n">${i + 1}</span><span class="cr-main"><span class="cr-top"><b>${esc(g.n)}</b><span><em>${X.fmtNum(g.tot / all * 100, 1)}%</em><strong>${pzTot(g.tot)}</strong></span></span><span class="cr-track"><i style="width:${(g.tot / mx * 100).toFixed(2)}%"></i></span><span class="cr-sub">${plur(g.P.length, 'ordine', 'ordini')}${g.nc ? ' · ' + plur(g.nc, 'conferma', 'conferme') : ''} · ${plur(g.nd, 'consegna', 'consegne')}${g.todo.length ? ` · <u>${g.todo.length} da fatturare</u>` : ''}</span></span></button>`).join('')}${none.length ? `<div class="muted small tr-none">Non in mappa (manca la città): ${none.map(g => esc(g.n)).join(', ')}.</div>` : ''}</div></div></div>`;
+  }
+  function drawMap() {
+    if (!document.getElementById('fi-map') || !X.map) return;
+    const rk = M.groups.slice().sort((a, b) => b.tot - a.tot).filter(g => g.geo !== null && g.geo !== undefined || (g.geo = groupGeo(g)));
+    X.map('#fi-map', rk.map((g, i) => ({ cod: g.k, n: g.n, t: g.tot, rank: i + 1, sub: plur(g.P.length, 'ordine', 'ordini'), geo: g.geo })), { attr: 'ficdc', sel: '', rankEl: '#fi-rank', anim: false, label: 'Mappa dei piazzali Fischer' });
+  }
+
+  /* ---------- ricerca generale ---------- */
+  function searchView() {
+    const q = gq.toLowerCase().split(/\s+/).filter(Boolean), all = (...v) => q.every(w => v.join(' ').toLowerCase().includes(w));
+    const P = M.groups.filter(g => all(g.n)), D = M.FI.filter(f => all(f.num, f.righe.map(x => `${x.desc} ${x.cod} ${x.pz} ${x.ddt} ${x.dest && x.dest.citta || ''} ${x.dest && x.dest.rs || ''}`).join(' '), X.shortDate(f.data))),
+      C = M.O.filter(o => all(o.num, gname(o), o.dest && o.dest.citta || '', o.righe.map(x => x.desc + ' ' + x.cod).join(' '), X.shortDate(o.data))),
+      L = lstRows().filter(r => all(r.cod, r.desc)), T = [];
+    M.buy.forEach(f => { const seen = new Set(); f.righe.forEach(x => { if (x.ddt && !seen.has(x.ddt) && all('ddt', x.ddt, x.pz)) { seen.add(x.ddt); T.push({ f, x }); } }); });
+    const n = P.length + D.length + C.length + L.length;
+    const sec = (h, c, rows) => rows ? `<div class="card"><div class="card-h"><h3>${h}</h3><span class="muted small">${c}</span></div>${rows}</div>` : '';
+    const dRow = f => { const ps = M.parts.filter(p => p.f.id === f.id), names = [...new Set(ps.map(p => p.g.n))]; return `<button type="button" class="fi-or fi-sm" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>${esc(f.tipo === 'TD02' ? 'Deposito a garanzia' : names.join(' · ') || '—')}</b><small>${esc([...new Set(f.righe.filter(x => !x.spese).map(x => x.desc))].slice(0, 3).join(', '))}</small></span><span></span><b class="pv-qt">${money(fV(f))}</b></button>`; };
+    return `<div class="fi-sres"><div class="fi-sh"><b>${n || T.length ? plur(n + T.length, 'risultato', 'risultati') : 'Nessun risultato'}</b> per «${esc(gq.trim())}»</div>
+      ${sec('Piazzali', plur(P.length, 'piazzale', 'piazzali'), P.length ? `<div class="fi-ol">${P.map(g => `<button type="button" class="fi-or fi-sm" data-ficdc="${esc(g.k)}"><span class="pv-qn"><b>${esc(g.n)}</b></span><span class="pv-qc"><b>${pzTot(g.tot)}</b><small>${plur(g.P.length, 'ordine', 'ordini')} · ${plur(g.nd, 'consegna', 'consegne')}</small></span><span></span><span></span></button>`).join('')}</div>` : '')}
+      ${sec('Ordini', plur(D.length, 'ordine', 'ordini'), D.length ? `<div class="fi-ol">${D.slice(0, 8).map(dRow).join('')}${D.length > 8 ? `<button type="button" class="btn sm" data-fiall2="1" style="margin:12px auto 0;display:block">Vedi tutti i ${D.length} in Ordini</button>` : ''}</div>` : '')}
+      ${sec('Consegne (DDT)', plur(T.length, 'DDT', 'DDT'), T.length ? `<div class="fi-ol">${T.slice(0, 8).map(({ f, x }) => `<button type="button" class="fi-or fi-sm" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>DDT ${esc(x.ddt)}</b><small>${esc(X.shortDate(x.ddtData))}</small></span><span class="pv-qc"><b>${esc(gOf(x.pz).n)}</b><small>ordine ${esc(f.num)}</small></span><span></span><span></span></button>`).join('')}</div>` : '')}
+      ${sec("Conferme d'ordine", plur(C.length, 'conferma', 'conferme'), C.length ? `<div class="fi-ol">${C.slice(0, 8).map(o => `<button type="button" class="fi-or fi-sm" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>${esc(o.righe.map(x => x.desc).slice(0, 3).join(', '))}</small></span>${evaso(o) ? '<span class="fi-cs"><span class="chip paid">Evaso</span></span>' : '<span></span>'}<b class="pv-qt">${money(oV(o))}</b></button>`).join('')}</div>` : '')}
+      ${sec('Articoli del listino', plur(L.length, 'articolo', 'articoli'), L.length ? `<div class="fi-ol">${L.slice(0, 8).map(r => `<button type="button" class="fi-or fi-sm" data-filst="${esc(r.cod)}"><span class="pv-qn"><b>${esc(r.cod)}</b></span><span class="pv-qc"><b>${esc(r.desc)}</b><small>acquisto ${r.acq != null ? esc(pu(r.acq)) + ' €/pz' : '—'}${r.vend != null ? ' · vendita ' + esc(pu(r.vend)) + ' €/pz' : ''}</small></span><span></span><span></span></button>`).join('')}</div>` : '')}
+      ${n || T.length ? '' : '<div class="card"><div class="empty">Prova con un numero d\'ordine, un DDT, il nome di un piazzale o un articolo</div></div>'}</div>`;
+  }
+
+  /* ---------- listino: prezzo di acquisto e di vendita ---------- */
+  const LST = () => { const c = X.cfg('fif:listino'); return c && c.v && typeof c.v === 'object' ? c.v : {}; };
+  function lstRows() {
+    const V = LST(), A = new Map();
+    M.buy.slice().sort((a, b) => String(a.data).localeCompare(String(b.data))).forEach(f => f.righe.forEach(x => {
+      if (x.spese || !x.cod || !x.q) return;
+      const a = A.get(x.cod) || { cod: x.cod, desc: x.desc, q: 0, min: Infinity, max: 0 };
+      a.desc = x.desc || a.desc; a.last = x.prezzo; a.d = f.data; a.q += x.q; a.min = Math.min(a.min, x.prezzo); a.max = Math.max(a.max, x.prezzo); A.set(x.cod, a);
+    }));
+    M.O.forEach(o => o.righe.forEach(r => { if (!A.has(r.cod) && r.per) A.set(r.cod, { cod: r.cod, desc: r.desc, q: 0, min: Infinity, max: 0, last: r.prezzo / r.per, d: o.data, conf: true }); }));
+    Object.keys(V).forEach(c => { if (!A.has(c)) A.set(c, { cod: c, desc: V[c].desc || c, q: 0, min: Infinity, max: 0, man: true }); });
+    return [...A.values()].map(a => { const v = V[a.cod] || {}, auto = a.last == null ? null : a.last, acq = v.acq != null ? v.acq : auto; return { cod: a.cod, desc: v.desc || a.desc, auto, acq, vend: v.vend != null ? v.vend : null, ovr: v.acq != null, d: a.d, q: a.q, min: a.min === Infinity ? null : a.min, max: a.max || null, man: !!a.man || !!v.man, conf: !!a.conf }; }).sort((a, b) => b.q - a.q || a.cod.localeCompare(b.cod));
+  }
+  const mg = r => r.vend != null && r.acq != null ? { e: r.vend - r.acq, p: r.vend ? (r.vend - r.acq) / r.vend * 100 : 0 } : null;
+  function lstView() {
+    const R = lstRows(), q = lq.toLowerCase().split(/\s+/).filter(Boolean), can = X.canWrite(), S = R.filter(r => !q.length || q.every(w => `${r.cod} ${r.desc}`.toLowerCase().includes(w)));
+    const n = v => v == null ? '' : String(+(+v).toFixed(6)).replace('.', ',');
+    return `<div class="card"><div class="card-h"><div><h3>Listino Fischer</h3><span class="muted small">prezzi per pezzo, IVA esclusa · l'acquisto si aggiorna dall'ultimo ordine, puoi cambiarlo quando vuoi</span></div></div>
+      <div class="pv-sb tro-sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-lq" type="search" placeholder="Cerca un articolo…" value="${esc(lq)}" autocomplete="off"></div>
+      <div class="mx-wrap"><table class="mx fi-lt"><thead><tr><th class="l">Articolo</th><th>Acquisto €/pz</th><th>Acquisto ogni 1.000</th><th>Vendita €/pz</th>${vat() ? '<th>Vendita + IVA</th>' : ''}<th>Margine</th><th>Ultimo acquisto</th></tr></thead><tbody>
+      ${S.map(r => { const m = mg(r); return `<tr data-filr="${esc(r.cod)}"><td class="l"><b>${esc(r.desc)}</b><small class="fi-ean">cod. ${esc(r.cod)}${r.min != null && r.max && r.min !== r.max ? ` · da ${esc(pu(r.min))} a ${esc(pu(r.max))}` : ''}${r.q ? ' · ' + X.fmtNum(r.q, 0) + ' pz acquistati' : ''}</small></td>
+        <td>${can ? `<input class="fi-in" inputmode="decimal" data-filc="${esc(r.cod)}" data-fif="acq" value="${esc(n(r.acq))}" placeholder="${esc(n(r.auto))}" aria-label="Prezzo di acquisto ${esc(r.cod)}">` : esc(n(r.acq))}${r.ovr ? '<small class="fi-mod" title="Modificato a mano">modificato</small>' : ''}</td>
+        <td class="fi-k" data-fik1>${r.acq != null ? money(r.acq * 1000) : '—'}</td>
+        <td>${can ? `<input class="fi-in" inputmode="decimal" data-filc="${esc(r.cod)}" data-fif="vend" value="${esc(n(r.vend))}" placeholder="—" aria-label="Prezzo di vendita ${esc(r.cod)}">` : esc(n(r.vend) || '—')}</td>
+        ${vat() ? `<td class="fi-k" data-fik2>${r.vend != null ? esc(pu(r.vend * 1.22)) : '—'}</td>` : ''}
+        <td class="fi-k" data-fik3>${m ? `<b class="${m.e < 0 ? 'fi-neg' : ''}">${esc(pu(m.e))} €</b><small>${X.fmtNum(m.p, 1)}%</small>` : '—'}</td>
+        <td class="fi-k">${r.d ? esc(X.shortDate(r.d)) + (r.conf ? '<small>da conferma</small>' : '') : '—'}${can && r.man ? ` <button type="button" class="fi-x" data-filx="${esc(r.cod)}" title="Togli dal listino">×</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="7" class="empty">Nessun articolo</td></tr>'}</tbody></table></div>
+      ${can ? `<div class="fi-note fi-add"><input id="fi-ac" type="text" placeholder="Codice" autocomplete="off" style="max-width:120px"><input id="fi-ad" type="text" placeholder="Nuovo articolo (descrizione)" autocomplete="off"><input id="fi-aa" inputmode="decimal" placeholder="Acquisto" style="max-width:100px"><input id="fi-av" inputmode="decimal" placeholder="Vendita" style="max-width:100px"><button type="button" class="btn sm" id="fi-aadd">Aggiungi</button></div>` : ''}</div>`;
+  }
+  function lstSave(mut) {
+    const c = JSON.parse(JSON.stringify(X.cfg('fif:listino') || {})), v = c.v && typeof c.v === 'object' ? c.v : {};
+    mut(v); X.quiet([{ action: 'upsert', sheet: 'Config', row: { chiave: 'fif:listino', valore: JSON.stringify({ id: 'listino', v }) } }]);
+  }
+  const num0 = s => { s = String(s == null ? '' : s).trim(); if (!s) return null; const v = parseFloat(s.replace(/\s|€/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isNaN(v) || v < 0 ? null : v; };
+  /* ---------- esportazioni PDF / Excel ---------- */
+  const exportMenu = () => `<div class="fi-xm"><button type="button" class="btn sm" id="fi-xb" aria-haspopup="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg><span>Esporta</span></button>
+    <div class="fi-xd" id="fi-xd" hidden><button type="button" data-fix="pdf-riep"><b>PDF · Riepilogo acquisti</b><small>piazzali, ordini, scadenze</small></button><button type="button" data-fix="pdf-fatt"><b>PDF · Da fatturare ai piazzali</b><small>un elenco per ogni piazzale</small></button><button type="button" data-fix="pdf-lst"><b>PDF · Listino prezzi</b><small>acquisto, vendita, margine</small></button><button type="button" data-fix="xlsx"><b>Excel · Tutti i dati</b><small>6 fogli: riepilogo, ordini, righe, da fatturare, conferme, listino</small></button></div></div>`;
+  const fileDate = () => X.today();
+  const fmtD = d => d ? X.shortDate(d) : '';
+  function expData() {
+    const iva = vat(), T = totals(), L = lstRows();
+    const piaz = M.groups.slice().sort((a, b) => b.tot - a.tot).map(g => ({ n: g.n, ord: g.P.length, dd: g.nd, pz: g.q, tot: g.tot, fat: r2(g.tot - g.tTodo), da: g.tTodo, nda: g.todo.length }));
+    const ord = M.buy.slice().sort((a, b) => String(b.data).localeCompare(String(a.data))).map(f => { const ps = M.parts.filter(p => p.f.id === f.id), nd = ps.filter(p => !p.done).length; return { num: f.num, data: f.data, tipo: f.tipo === 'TD02' ? 'Deposito a garanzia' : 'Ordine', piaz: [...new Set(ps.map(p => p.g.n))].join(' · '), imp: f.imponibile, iva: f.iva, tot: f.totale, v: fV(f), scad: f.scad && f.scad[0] ? f.scad[0].d : '', stato: f.tipo === 'TD02' ? 'Acconto' : !ps.length ? '' : nd ? (nd === ps.length ? 'Da fatturare' : nd + ' da fatturare') : 'Fatturato', mp: f.mp || '' }; });
+    const righe = []; M.buy.slice().sort((a, b) => String(a.data).localeCompare(String(b.data))).forEach(f => f.righe.forEach(x => righe.push({ num: f.num, data: f.data, ddt: x.ddt || '', ddtData: x.ddtData || '', piaz: x.pz ? gOf(x.pz).n : '', cod: x.cod, desc: x.desc, q: x.spese ? null : x.q, pu: x.spese ? null : x.prezzo, imp: x.importo, v: r2(x.importo * mulF(f)), spese: !!x.spese })));
+    const da = M.parts.filter(p => !p.done).sort((a, b) => a.g.n.localeCompare(b.g.n) || String(a.f.data).localeCompare(String(b.f.data))).map(p => ({ piaz: p.g.n, num: p.f.num, data: p.f.data, q: p.q, imp: p.imp }));
+    const conf = M.O.slice().sort((a, b) => String(b.data).localeCompare(String(a.data))).map(o => ({ num: o.num, data: o.data, piaz: gname(o), art: o.righe.map(x => x.desc).join(', '), imp: o.imponibile, v: oV(o), stato: evaso(o) ? 'Evaso' : (ST[o.stato] || ST.confermato)[0], cons: nextDel(o) || '' }));
+    return { iva, T, L, piaz, ord, righe, da, conf };
+  }
+  async function pdfNew(titolo, sottotitolo) {
+    const { jsPDF, logo, fonts } = await X.pdfKit(), doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true }); let FF = 'helvetica';
+    if (fonts) { fonts.forEach(([w, data]) => { doc.addFileToVFS(`Inter-${w}.ttf`, data); doc.addFont(`Inter-${w}.ttf`, 'Inter', w === 'regular' ? 'normal' : w); }); FF = 'Inter'; }
+    const W = 210, H = 297, Mg = 14, C = { navy: [23, 54, 109], orange: [235, 104, 52], ink: [31, 36, 48], muted: [120, 128, 142], line: [214, 219, 228], soft: [245, 247, 251], white: [255, 255, 255] };
+    const fill = c => doc.setFillColor(...c), color = c => doc.setTextColor(...c), font = (st, sz) => { doc.setFont(FF, st); doc.setFontSize(sz); };
+    fill(C.navy); doc.rect(0, 0, W, 34, 'F'); fill(C.orange); doc.rect(0, 34, W, 1.2, 'F');
+    if (logo) { fill(C.white); doc.roundedRect(Mg, 8, 11, 11, 2.4, 2.4, 'F'); doc.addImage(logo, 'PNG', Mg + .6, 8.6, 9.8, 9.8); }
+    color(C.white); font('bold', 9); doc.text(String(X.ORG.N || X.ORG.n || '').toUpperCase(), Mg + 15, 13); font('normal', 7.8); doc.text('FISCHER · ' + (X.ORG.sede || ''), Mg + 15, 17.5);
+    font('bold', 19); doc.text(titolo, Mg, 28); font('normal', 8.6); doc.text(sottotitolo, W - Mg, 28, { align: 'right' });
+    const o = { doc, C, W, H, Mg, FF, y: 44, font, color, fill };
+    o.sec = (t, sub) => { if (o.y > H - 40) { doc.addPage(); o.y = 20; } color(C.navy); font('bold', 11); doc.text(t, Mg, o.y); if (sub) { color(C.muted); font('normal', 8); doc.text(sub, W - Mg, o.y, { align: 'right' }); } doc.setDrawColor(...C.navy); doc.setLineWidth(.4); doc.line(Mg, o.y + 2, W - Mg, o.y + 2); o.y += 5; };
+    o.table = (head, body, cols, foot) => { doc.autoTable({ startY: o.y, head: [head], body, foot: foot ? [foot] : undefined, margin: { left: Mg, right: Mg, top: 16, bottom: 16 }, theme: 'plain', showFoot: 'lastPage', styles: { font: FF, fontSize: 8, textColor: C.ink, cellPadding: 2, lineColor: C.line, lineWidth: { bottom: .2 } }, headStyles: { fillColor: C.navy, textColor: C.white, fontStyle: 'bold', fontSize: 7.4 }, footStyles: { fillColor: C.soft, textColor: C.navy, fontStyle: 'bold' }, alternateRowStyles: { fillColor: C.soft }, columnStyles: cols || {}, didParseCell: d => { if (cols && cols[d.column.index] && cols[d.column.index].halign && d.section !== 'body') d.cell.styles.halign = cols[d.column.index].halign; } }); o.y = doc.lastAutoTable.finalY + 8; };
+    o.kpis = K => { const kw = (W - 2 * Mg - 3 * (K.length - 1)) / K.length; K.forEach(([a, b], i) => { const x = Mg + i * (kw + 3); doc.setDrawColor(...C.line); doc.setLineWidth(.3); fill(C.white); doc.roundedRect(x, o.y, kw, 16, 2, 2, 'FD'); color(C.muted); font('normal', 6.8); doc.text(a.toUpperCase(), x + 3.5, o.y + 5.3); color(C.navy); font('bold', 12.5); doc.text(b, x + 3.5, o.y + 12.6); }); o.y += 23; };
+    o.save = nome => { const N = doc.internal.getNumberOfPages(); for (let i = 1; i <= N; i++) { doc.setPage(i); doc.setDrawColor(...C.line); doc.setLineWidth(.3); doc.line(Mg, H - 12, W - Mg, H - 12); color(C.muted); font('normal', 7.5); doc.text(X.ORG.foot || '', Mg, H - 7.5); doc.text(`Generato il ${fmtD(X.today())}`, W / 2, H - 7.5, { align: 'center' }); doc.text(`Pagina ${i} di ${N}`, W - Mg, H - 7.5, { align: 'right' }); } doc.save(nome); };
+    return o;
+  }
+  const R = { halign: 'right' };
+  async function exportPdf(kind) {
+    const D = expData(), e = D.iva ? 'IVA inclusa' : 'IVA esclusa', pdf = await pdfNew(kind === 'riep' ? 'Riepilogo acquisti' : kind === 'fatt' ? 'Da fatturare ai piazzali' : 'Listino prezzi', kind === 'lst' ? 'prezzi per pezzo · IVA esclusa' : e + ' · ' + fmtD(X.today()));
+    if (kind === 'riep') {
+      pdf.kpis([['Acquistato', money(D.T.tot)], ['Da fatturare', money(D.T.tTodo)], ['Fatturato', money(D.T.tDone)], ['Da pagare', money(D.T.scad)]]);
+      pdf.sec('Per piazzale', plur(D.piaz.length, 'piazzale', 'piazzali'));
+      pdf.table(['Piazzale', 'Ordini', 'Consegne', 'Pezzi', 'Totale', 'Fatturato', 'Da fatturare'], D.piaz.map(p => [p.n, p.ord, p.dd, X.fmtNum(p.pz, 0), money(p.tot), money(p.fat), money(p.da)]), { 0: { fontStyle: 'bold' }, 1: R, 2: R, 3: R, 4: R, 5: R, 6: R }, ['Totale', D.ord.length, '', X.fmtNum(D.T.pezzi, 0), money(D.piaz.reduce((a, p) => a + p.tot, 0)), money(D.T.tDone), money(D.T.tTodo)]);
+      pdf.sec('Ordini', plur(D.ord.length, 'ordine', 'ordini'));
+      pdf.table(['N.', 'Data', 'Piazzale', 'Scadenza', 'Stato', 'Totale'], D.ord.map(o => [o.num, fmtD(o.data), o.piaz || o.tipo, fmtD(o.scad), o.stato, money(o.v)]), { 0: { fontStyle: 'bold' }, 5: R });
+    } else if (kind === 'fatt') {
+      if (!D.da.length) { pdf.color(pdf.C.ink); pdf.font('normal', 10); pdf.doc.text('Tutti gli ordini risultano fatturati ai piazzali.', pdf.Mg, pdf.y + 6); }
+      const by = new Map(); D.da.forEach(r => (by.get(r.piaz) || by.set(r.piaz, []).get(r.piaz)).push(r));
+      by.forEach((rows, n) => { pdf.sec(n, plur(rows.length, 'ordine', 'ordini') + ' · ' + money(rows.reduce((a, r) => a + r.imp, 0))); pdf.table(['Ordine', 'Data', 'Pezzi', 'Importo', 'Fatturato'], rows.map(r => [r.num, fmtD(r.data), X.fmtNum(r.q, 0), money(r.imp), '☐']), { 0: { fontStyle: 'bold' }, 2: R, 3: R, 4: { halign: 'center', cellWidth: 22 } }); });
+      if (D.da.length) { pdf.sec('Totale da fatturare', e); pdf.color(pdf.C.navy); pdf.font('bold', 14); pdf.doc.text(money(D.T.tTodo), pdf.W - pdf.Mg, pdf.y + 4, { align: 'right' }); }
+    } else {
+      pdf.table(['Cod.', 'Articolo', 'Acquisto €/pz', 'Vendita €/pz', 'Margine €', 'Margine %'], D.L.map(r => { const m = mg(r); return [r.cod, r.desc, r.acq != null ? pu(r.acq) : '—', r.vend != null ? pu(r.vend) : '—', m ? pu(m.e) : '—', m ? X.fmtNum(m.p, 1) + '%' : '—']; }), { 0: { cellWidth: 26 }, 1: { fontStyle: 'bold' }, 2: R, 3: R, 4: R, 5: R });
+    }
+    pdf.save(`Fischer ${kind === 'riep' ? 'riepilogo' : kind === 'fatt' ? 'da fatturare' : 'listino'} ${fileDate()}.pdf`);
+  }
+  async function exportXlsx() {
+    await X.loadXlsx(); const D = expData(), U = window.XLSX.utils, wb = U.book_new(), e = D.iva ? 'IVA incl.' : 'IVA escl.';
+    const sh = (nome, head, rows, w, fm) => { const ws = U.aoa_to_sheet([head, ...rows]); ws['!cols'] = w.map(x => ({ wch: x })); ws['!autofilter'] = { ref: U.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(rows.length, 1), c: head.length - 1 } }) }; ws['!freeze'] = { xSplit: 0, ySplit: 1 }; ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+      rows.forEach((r, i) => r.forEach((v, c) => { const a = U.encode_cell({ r: i + 1, c }); if (ws[a] && typeof v === 'number' && fm[c]) ws[a].z = fm[c]; })); U.book_append_sheet(wb, ws, nome); };
+    const EU = '#,##0.00', PZ = '#,##0', P6 = '0.00####';
+    sh('Riepilogo piazzali', ['Piazzale', 'Ordini', 'Consegne', 'Pezzi', 'Totale ' + e, 'Fatturato', 'Da fatturare'], D.piaz.map(p => [p.n, p.ord, p.dd, p.pz, p.tot, p.fat, p.da]), [26, 9, 10, 10, 15, 15, 15], { 3: PZ, 4: EU, 5: EU, 6: EU });
+    sh('Ordini', ['Numero', 'Data', 'Tipo', 'Piazzali', 'Imponibile', 'IVA', 'Totale', 'Scadenza', 'Pagamento', 'Stato'], D.ord.map(o => [o.num, fmtD(o.data), o.tipo, o.piaz, o.imp, o.iva, o.tot, fmtD(o.scad), o.mp, o.stato]), [12, 11, 18, 28, 13, 12, 13, 11, 22, 16], { 4: EU, 5: EU, 6: EU });
+    sh('Righe e consegne', ['Ordine', 'Data', 'DDT', 'Data DDT', 'Piazzale', 'Codice', 'Articolo', 'Quantità', 'Prezzo unit.', 'Importo', 'Importo ' + e], D.righe.map(r => [r.num, fmtD(r.data), r.ddt, fmtD(r.ddtData), r.piaz, r.cod, r.desc, r.q, r.pu, r.imp, r.v]), [10, 11, 10, 11, 22, 14, 44, 10, 11, 12, 14], { 7: PZ, 8: P6, 9: EU, 10: EU });
+    sh('Da fatturare', ['Piazzale', 'Ordine', 'Data', 'Pezzi', 'Importo ' + e], D.da.map(r => [r.piaz, r.num, fmtD(r.data), r.q, r.imp]), [26, 12, 11, 10, 15], { 3: PZ, 4: EU });
+    sh("Conferme d'ordine", ['Numero', 'Data', 'Piazzale', 'Articoli', 'Imponibile', 'Importo ' + e, 'Stato', 'Consegna'], D.conf.map(o => [o.num, fmtD(o.data), o.piaz, o.art, o.imp, o.v, o.stato, fmtD(o.cons)]), [12, 11, 24, 50, 13, 14, 12, 11], { 4: EU, 5: EU });
+    sh('Listino', ['Codice', 'Articolo', 'Acquisto €/pz', 'Vendita €/pz', 'Margine €', 'Margine %', 'Pezzi acquistati', 'Ultimo acquisto'], D.L.map(r => { const m = mg(r); return [r.cod, r.desc, r.acq, r.vend, m ? m.e : null, m ? +m.p.toFixed(1) : null, r.q, fmtD(r.d)]; }), [14, 44, 13, 13, 11, 10, 13, 12], { 2: P6, 3: P6, 4: P6, 5: '0.0', 6: PZ });
+    window.XLSX.writeFile(wb, `Fischer ${fileDate()}.xlsx`);
   }
   function totals() {
     const todo = M.parts.filter(p => !p.done), done = M.parts.filter(p => p.done);
-    return { tot: r2(M.buy.reduce((s, f) => s + f.imponibile, 0)), todo, done, tTodo: r2(todo.reduce((s, p) => s + p.imp, 0)), tDone: r2(done.reduce((s, p) => s + p.imp, 0)), scad: r2(M.scad.reduce((s, f) => s + f.totale, 0)), pezzi: M.buy.reduce((s, f) => s + f.righe.reduce((a, x) => a + (x.spese ? 0 : x.q), 0), 0) };
+    return { tot: r2(M.buy.reduce((s, f) => s + fV(f), 0)), todo, done, tTodo: r2(todo.reduce((s, p) => s + p.imp, 0)), tDone: r2(done.reduce((s, p) => s + p.imp, 0)), scad: r2(M.scad.reduce((s, f) => s + f.totale, 0)), pezzi: M.buy.reduce((s, f) => s + f.righe.reduce((a, x) => a + (x.spese ? 0 : x.q), 0), 0) };
   }
   function counters(el) {
     if (openId || openInv || tab !== 'pan' || !(M.buy.length || M.act.length)) return;
@@ -308,9 +456,10 @@
     const A = []; m.FI.forEach(f => checksF(f).filter(c => c.t === 'warn').forEach(c => A.push({ f, c }))); m.act.forEach(o => checks(o).filter(c => c.t === 'warn').forEach(c => A.push({ o, c })));
     const mx = Math.max(1, ...m.months.map(x => x.imp)), ax = Math.max(1, ...m.arts.map(x => x.imp)), gx = Math.max(1, ...m.groups.map(g => g.tot));
     const acc = m.acc.reduce((s, f) => s + f.imponibile, 0);
-    return `<div class="gl-hero fi-hero"><div class="gh-top"><div class="gh-main"><span class="gh-lbl">Acquisti Fischer · imponibile ordinato</span><div class="gh-big" data-fik="0">0</div>
+    return `<div class="gl-hero fi-hero"><div class="gh-top"><div class="gh-main"><span class="gh-lbl">Acquisti Fischer · ${vat() ? 'totale IVA inclusa' : 'imponibile'}</span><div class="gh-big" data-fik="0">0</div>
         <div class="gh-sub"><span>${plur(m.buy.length, 'ordine', 'ordini')}</span><span>${plur(m.groups.length, 'piazzale', 'piazzali')}</span>${last ? `<span>ultimo il ${esc(X.shortDate(last))}</span>` : ''}${acc ? `<span>deposito a garanzia ${esc(pzTot(acc))}</span>` : ''}</div></div></div>
       <div class="gh-kpis">${KP.map(([l, v, s, i]) => `<div class="gh-k${i === 1 && T.todo.length ? ' ly-kwarn' : ''}"><span>${l}</span><b data-fik="${i}">0</b><small>${esc(s)}</small></div>`).join('')}</div></div>
+      ${m.groups.length ? mapCard() : ''}
       ${m.buy.length ? `<div class="card gf-card"><div class="card-h"><h3>Fatturato ai piazzali</h3><span class="muted small">spunta quando hai fatturato l'ordine al piazzale</span></div>
         <div class="gf-sum"><span><b>${T.done.length}</b> di ${m.parts.length} ordini fatturati</span>${T.todo.length ? `<span class="gf-todo">Da fatturare: <b>${pzTot(T.tTodo)}</b></span>` : '<span class="gf-ok">Tutto fatturato</span>'}</div>
         ${m.groups.map(g => pzBlock(g)).join('')}</div>` : ''}
@@ -319,10 +468,10 @@
         <div class="card"><div class="card-h"><h3>Articoli acquistati</h3><span class="muted small">pezzi e importo</span></div>
           <div class="fi-bars">${m.arts.map(a => `<div class="fi-br"><span class="fi-bn"><b>${esc(a.desc)}</b><small>cod. ${esc(a.cod)} · ${X.fmtNum(a.q, 0)} pz · ${plur(a.n, 'ordine', 'ordini')}</small></span><span class="fi-bt"><i style="width:${(a.imp / ax * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(a.imp)}</b></div>`).join('') || '<div class="empty">Nessun articolo</div>'}</div></div></div>
       <div class="fi-2"><div class="card"><div class="card-h"><h3>Conferme d'ordine in attesa</h3><span class="muted small">${wait.length ? plur(wait.length, 'ordine', 'ordini') : 'nessuno'}</span></div>
-          <div class="fi-ol">${wait.map(o => { const rc = m.rec[o.id]; return `<button type="button" class="fi-or fi-sm" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>${rc && rc.part ? 'parzialmente fatturato · ' : ''}${nextDel(o) ? (late(o) ? 'consegna prevista ' : 'consegna ') + esc(X.shortDate(nextDel(o))) : 'senza data di consegna'}</small></span>${late(o) ? '<span class="fi-cs"><span class="chip late">In ritardo</span></span>' : '<span></span>'}<b class="pv-qt">${money(o.imponibile)}</b></button>`; }).join('') || '<div class="empty">Tutte le conferme d\'ordine risultano evase</div>'}</div></div>
+          <div class="fi-ol">${wait.map(o => { const rc = m.rec[o.id]; return `<button type="button" class="fi-or fi-sm" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>${rc && rc.part ? 'parzialmente fatturato · ' : ''}${nextDel(o) ? (late(o) ? 'consegna prevista ' : 'consegna ') + esc(X.shortDate(nextDel(o))) : 'senza data di consegna'}</small></span>${late(o) ? '<span class="fi-cs"><span class="chip late">In ritardo</span></span>' : '<span></span>'}<b class="pv-qt">${money(oV(o))}</b></button>`; }).join('') || '<div class="empty">Tutte le conferme d\'ordine risultano evase</div>'}</div></div>
         <div class="card"><div class="card-h"><h3>Prossime scadenze</h3><span class="muted small">${m.scad.length ? 'da oggi in avanti · IVA inclusa' : 'nessuna'}</span></div>
           <div class="fi-ol">${m.scad.slice(0, 8).map(f => { const d = f.scad[0].d, days = Math.round((new Date(d) - new Date(X.today())) / 864e5); return `<button type="button" class="fi-or fi-sm" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>scade il ${esc(X.shortDate(d))}</b><small>${esc([f.mp, f.cond].filter(Boolean).join(' · '))}</small></span><span class="fi-cs"><span class="chip ${days <= 7 ? 'soon' : ''}">${days === 0 ? 'oggi' : 'tra ' + days + ' gg'}</span></span><b class="pv-qt">${money(f.scad[0].imp || f.totale)}</b></button>`; }).join('') || '<div class="empty">Nessun ordine da pagare</div>'}</div></div></div>
-      <div class="card"><div class="card-h"><h3>Mese per mese</h3><span class="muted small">imponibile ordinato${m.spese ? ' · compreso trasporto ' + pzTot(m.spese) : ''}</span></div>
+      <div class="card"><div class="card-h"><h3>Mese per mese</h3><span class="muted small">${vat() ? 'IVA inclusa' : 'imponibile'}${m.spese ? ' · compreso trasporto ' + pzTot(m.spese) : ''}</span></div>
         <div class="fi-bars">${m.months.map(x => `<div class="fi-br"><span class="fi-bn"><b>${esc(monthLbl(x.k))}</b><small>${plur(x.n, 'ordine', 'ordini')}</small></span><span class="fi-bt"><i style="width:${(x.imp / mx * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(x.imp)}</b></div>`).join('') || '<div class="empty">Nessuna fattura</div>'}</div></div>
       <div class="card"><div class="card-h"><h3>Controlli</h3><span class="muted small">${A.length ? plur(A.length, 'punto da verificare', 'punti da verificare') : 'i numeri di tutti i documenti tornano'}</span></div>
         ${A.length ? `<div class="gl-an">${A.slice(0, 8).map(({ o, f, c }, i) => `<div class="ga-row warn" style="--d:${i * 70}ms" ${f ? `data-fiinv="${esc(f.id)}"` : `data-fiopen="${esc(o.id)}"`}><span class="ci-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span><small>${f ? 'ordine ' + esc(f.num) : 'ordine ' + esc(o.num) + ' · ' + esc(gname(o))}</small></div></div>`).join('')}</div>` : '<div class="empty">Tutto in ordine</div>'}</div>`;
@@ -353,8 +502,8 @@
       <div class="card"><div class="card-h"><h3>Ordine ${esc(f.num)}</h3><span class="muted small">del ${esc(X.shortDate(f.data))}</span></div>
         <div class="fi-kv">${kv.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
         ${P.length ? `<div class="fi-act fi-parts">${P.map((p, i) => `<div class="fi-fatt">${ptick(p, i)}<small class="fi-pn">${esc(p.g.n)}</small></div>`).join('')}</div>` : ''}</div>
-      <div class="card"><div class="card-h"><h3>Righe</h3><span class="muted small">${plur(f.righe.length, 'riga', 'righe')} · divise per consegna (DDT)</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo unitario</th><th>Importo</th></tr></thead><tbody>
-        ${rows.map(g => `<tr class="fi-ddt"><td colspan="5"><b>${g.ddt ? 'DDT ' + esc(g.ddt) + (g.dd ? ' del ' + esc(X.shortDate(g.dd)) : '') : 'Documento'}</b>${g.pz ? ` <span>→ <b>${esc(gOf(g.pz).n)}</b> · ${esc([g.dest && g.dest.rs, g.dest && g.dest.via, g.dest && g.dest.citta, g.dest && g.dest.prov].filter(Boolean).join(', '))}</span>` : ''}${g.ord ? ` <small>ord. ${esc(g.ord)}</small>` : ''}</td></tr>${g.L.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td>${x.spese ? '' : X.fmtNum(x.q, 0) + (x.um ? ' ' + esc(x.um) : '')}</td><td>${x.spese ? '' : esc(pu(x.prezzo))}</td><td><b>${money(x.importo)}</b></td></tr>`).join('')}`).join('')}</tbody></table></div>
+      <div class="card"><div class="card-h"><h3>Righe</h3><span class="muted small">${plur(f.righe.length, 'riga', 'righe')} · divise per consegna (DDT)</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo unitario${vat() ? ' + IVA' : ''}</th><th>Importo${vat() ? ' + IVA' : ''}</th></tr></thead><tbody>
+        ${rows.map(g => `<tr class="fi-ddt"><td colspan="5"><b>${g.ddt ? 'DDT ' + esc(g.ddt) + (g.dd ? ' del ' + esc(X.shortDate(g.dd)) : '') : 'Documento'}</b>${g.pz ? ` <span>→ <b>${esc(gOf(g.pz).n)}</b> · ${esc([g.dest && g.dest.rs, g.dest && g.dest.via, g.dest && g.dest.citta, g.dest && g.dest.prov].filter(Boolean).join(', '))}</span>` : ''}${g.ord ? ` <small>ord. ${esc(g.ord)}</small>` : ''}</td></tr>${g.L.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td>${x.spese ? '' : X.fmtNum(x.q, 0) + (x.um ? ' ' + esc(x.um) : '')}</td><td>${x.spese ? '' : esc(pu(x.prezzo * mulF(f)))}</td><td><b>${money(x.importo * mulF(f))}</b></td></tr>`).join('')}`).join('')}</tbody></table></div>
         <div class="fi-tot"><div><span>Imponibile</span><b>${money(f.imponibile)}</b></div><div><span>IVA${f.ivaPct ? ' ' + X.fmtNum(f.ivaPct, 0) + '%' : f.ivaNat ? ' (' + esc(f.ivaNat) + ')' : ''}</span><b>${money(f.iva)}</b></div><div class="fi-tt"><span>Totale</span><b>${money(f.totale)}</b></div></div></div>
       <div class="card"><div class="card-h"><h3>Controlli</h3><span class="muted small">${C.some(c => c.t === 'warn') ? 'da verificare' : 'i numeri tornano'}</span></div>
         ${C.length ? `<div class="gl-an">${C.map((c, i) => `<div class="ga-row ${c.t}" style="--d:${i * 60}ms"><span class="ci-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span></div></div>`).join('')}</div>` : '<div class="empty">Quantità, prezzi, imponibile e totale sono coerenti</div>'}</div>`;
@@ -375,9 +524,9 @@
       <div class="fi-chips">${[['', 'Tutti', E.length], ['dafatt', 'Da fatturare ai piazzali', cnt('dafatt')], ['fatt', 'Fatturati ai piazzali', cnt('fatt')], ['conf', "Conferme d'ordine", cnt('conf')], ['attesa', 'Conferme in attesa', cnt('attesa')], ['acc', 'Acconti', cnt('acc')]].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="chip-f${fst === k ? ' on' : ''}" data-fist="${k}">${l}<em>${n}</em></button>`).join('')}</div>
       ${pzs.size > 1 ? `<div class="fi-chips">${[['', 'Tutti i piazzali'], ...[...pzs.entries()].sort((a, b) => a[1].localeCompare(b[1], 'it'))].map(([k, l]) => `<button type="button" class="chip-f${fpz === k ? ' on' : ''}" data-fipz="${esc(k)}">${esc(l)}</button>`).join('')}</div>` : ''}
       <div class="fi-ol">${R.slice(0, lim).map(e => {
-        if (e.t === 'c') { const o = e.o, st = ST[o.stato] || ST.confermato, rc = M.rec[o.id], w = checks(o).some(c => c.t === 'warn'); return `<button type="button" class="fi-or" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>conferma d'ordine · ${plur(o.righe.length, 'riga', 'righe')}${nextDel(o) && o.stato !== 'consegnato' && !evaso(o) ? ' · consegna ' + esc(X.shortDate(nextDel(o))) : ''}</small></span><span class="fi-cs"><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc && rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(o.imponibile)}</b></button>`; }
+        if (e.t === 'c') { const o = e.o, st = ST[o.stato] || ST.confermato, rc = M.rec[o.id], w = checks(o).some(c => c.t === 'warn'); return `<button type="button" class="fi-or" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>conferma d'ordine · ${plur(o.righe.length, 'riga', 'righe')}${nextDel(o) && o.stato !== 'consegnato' && !evaso(o) ? ' · consegna ' + esc(X.shortDate(nextDel(o))) : ''}</small></span><span class="fi-cs"><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc && rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(oV(o))}</b></button>`; }
         const f = e.f, P = e.P, nd = P.filter(p => !p.done).length, w = checksF(f).some(c => c.t === 'warn'), names = [...new Set(P.map(p => p.g.n))];
-        return `<button type="button" class="fi-or" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>${esc(f.tipo === 'TD02' ? 'Deposito a garanzia' : names.join(' · ') || '—')}</b><small>${plur(f.righe.length, 'riga', 'righe')}${f.scad && f.scad[0] ? ' · scade ' + esc(X.shortDate(f.scad[0].d)) : ''}</small></span><span class="fi-cs">${f.tipo === 'TD02' ? '<span class="chip">Acconto</span>' : !P.length ? '' : nd ? `<span class="chip soon">${nd === P.length ? 'Da fatturare' : `${nd} da fatturare`}</span>` : '<span class="chip paid">Fatturato</span>'}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(f.imponibile)}</b></button>`;
+        return `<button type="button" class="fi-or" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>${esc(f.tipo === 'TD02' ? 'Deposito a garanzia' : names.join(' · ') || '—')}</b><small>${plur(f.righe.length, 'riga', 'righe')}${f.scad && f.scad[0] ? ' · scade ' + esc(X.shortDate(f.scad[0].d)) : ''}</small></span><span class="fi-cs">${f.tipo === 'TD02' ? '<span class="chip">Acconto</span>' : !P.length ? '' : nd ? `<span class="chip soon">${nd === P.length ? 'Da fatturare' : `${nd} da fatturare`}</span>` : '<span class="chip paid">Fatturato</span>'}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(fV(f))}</b></button>`;
       }).join('') || '<div class="empty">Nessun ordine trovato</div>'}${R.length > lim ? `<button type="button" class="btn sm" id="fi-more" style="margin:12px auto 0;display:block">Mostra altri</button>` : ''}</div>`
       : '<div class="empty">Nessun ordine: carica i PDF di Fischer (anche uno zip con tutti)</div>'}</div>`;
   }
@@ -391,8 +540,8 @@
         <div class="fi-act">${rc.fatt.length ? `<div class="fi-sel"><small>${evaso(o) ? 'Ordini consegnati collegati' : 'Consegne parziali'}</small><div class="fi-links">${rc.ids.map((id, i) => `<button type="button" class="chip-f" data-fiinv="${esc(id)}">${esc(rc.fatt[i])}</button>`).join('')}</div></div>` : '<div class="fi-sel"><small>Consegna</small><b class="fi-na">non ancora evaso</b></div>'}
           ${can ? `<label class="fi-sel"><small>Piazzale collegato</small><select id="fi-cdc"><option value="">— da collegare —</option>${cd.map(c => `<option value="${esc(c.cod)}"${o.cdc === c.cod ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select></label>
           <div class="fi-sel"><small>Stato della consegna</small><div class="tr-seg">${ST_K.map(k => `<button type="button" data-fistato="${k}" class="${o.stato === k ? 'on' : ''}">${ST[k][0]}</button>`).join('')}</div></div>` : ''}</div></div>
-      <div class="card"><div class="card-h"><h3>Articoli</h3><span class="muted small">${plur(o.righe.length, 'riga', 'righe')}</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo ogni ${o.righe[0] ? X.fmtNum(o.righe[0].per, 0) : 100}</th><th>Importo</th><th>Consegna prevista</th></tr></thead><tbody>
-        ${o.righe.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td>${X.fmtNum(x.q, 0)} ${esc(x.um)}</td><td>${money(x.prezzo)}</td><td><b>${money(x.importo)}</b></td><td>${x.consegna ? esc(X.shortDate(x.consegna)) : '—'}</td></tr>`).join('')}</tbody></table></div>
+      <div class="card"><div class="card-h"><h3>Articoli</h3><span class="muted small">${plur(o.righe.length, 'riga', 'righe')}</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo ogni ${o.righe[0] ? X.fmtNum(o.righe[0].per, 0) : 100}${vat() ? ' + IVA' : ''}</th><th>Importo${vat() ? ' + IVA' : ''}</th><th>Consegna prevista</th></tr></thead><tbody>
+        ${o.righe.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td>${X.fmtNum(x.q, 0)} ${esc(x.um)}</td><td>${money(x.prezzo * mulO(o))}</td><td><b>${money(x.importo * mulO(o))}</b></td><td>${x.consegna ? esc(X.shortDate(x.consegna)) : '—'}</td></tr>`).join('')}</tbody></table></div>
         <div class="fi-tot"><div><span>Importo righe</span><b>${money(o.importoRighe)}</b></div>${o.scontoImp ? `<div><span>Sconto di testata ${X.fmtNum(o.scontoPct, 2)}%</span><b>− ${money(o.scontoImp)}</b></div>` : ''}${o.spese ? `<div><span>Spese di spedizione</span><b>${money(o.spese)}</b></div>` : ''}<div><span>Imponibile</span><b>${money(o.imponibile)}</b></div><div><span>IVA ${X.fmtNum(o.ivaPct, 0)}%</span><b>${money(o.iva)}</b></div><div class="fi-tt"><span>Totale ordine</span><b>${money(o.totale)}</b></div></div></div>
       <div class="card"><div class="card-h"><h3>Controlli</h3><span class="muted small">${C.some(c => c.t === 'warn') ? 'da verificare' : 'i numeri tornano'}</span></div>
         ${C.length ? `<div class="gl-an">${C.map((c, i) => `<div class="ga-row ${c.t}" style="--d:${i * 60}ms"><span class="ci-ic"><svg viewBox="0 0 24 24">${c.t === 'warn' ? '<path d="M12 3 2 20h20zM12 10v4M12 17h.01"/>' : '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'}</svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span></div></div>`).join('')}</div>` : '<div class="empty">Quantità, prezzi, sconto, IVA e totale sono coerenti</div>'}</div>
@@ -483,6 +632,18 @@
       if ((x = b('[data-fipz]'))) { fpz = x.dataset.fipz; lim = 40; return draw(el); }
       if ((x = b('[data-fisf]'))) { fsf = x.dataset.fisf; limF = 40; return draw(el); }
       if ((x = b('[data-fipzf]'))) { fpzf = x.dataset.fipzf; limF = 40; return draw(el); }
+      if (b('#fi-xb')) { const d = el.querySelector('#fi-xd'); d.hidden = !d.hidden; return; }
+      if ((x = b('[data-fix]'))) { const k = x.dataset.fix; el.querySelector('#fi-xd').hidden = true; X.busy('Preparo il file…'); return (k === 'xlsx' ? exportXlsx() : exportPdf(k.slice(4))).then(() => X.busy(), err => { X.busy(); X.toast('Errore: ' + (err && err.message || err)); }); }
+      if (!b('.fi-xm')) { const d = el.querySelector('#fi-xd'); if (d) d.hidden = true; }
+      if ((x = b('[data-ficdc]'))) { fpz = fpzf = x.dataset.ficdc; fst = fsf = ''; lim = limF = 40; gq = ''; openId = openInv = ''; tab = 'ord'; anim = true; return draw(el); }
+      if (b('[data-fiall2]')) { tab = 'ord'; fqf = gq; gq = ''; limF = 40; anim = true; return draw(el); }
+      if ((x = b('[data-filst]'))) { lq = x.dataset.filst; gq = ''; tab = 'lst'; anim = true; return draw(el); }
+      if ((x = b('[data-filx]'))) { const c = x.dataset.filx; lstSave(v => { delete v[c]; }); return refreshBody(el); }
+      if (b('#fi-aadd')) {
+        const c = el.querySelector('#fi-ac').value.trim(), d = el.querySelector('#fi-ad').value.trim(); if (!c || !d) return X.toast('Scrivi codice e descrizione');
+        const a = num0(el.querySelector('#fi-aa').value), v = num0(el.querySelector('#fi-av').value);
+        lstSave(L => { L[c] = { ...(L[c] || {}), desc: d, man: true, ...(a != null ? { acq: a } : {}), ...(v != null ? { vend: v } : {}) }; }); return refreshBody(el);
+      }
       if (b('#fi-more')) { lim += 60; return draw(el); }
       if (b('#fi-morf')) { limF += 60; return draw(el); }
       if ((x = b('[data-fiall]'))) {
@@ -505,6 +666,11 @@
         const o = { ...FA() }; if (t.checked) o[t.dataset.fi] = X.today(); else delete o[t.dataset.fi];
         X.quiet([opFatt(o)]); draw(el); return;
       }
+      if (t.dataset && t.dataset.filc) {
+        const c = t.dataset.filc, f = t.dataset.fif, v = num0(t.value); lstSave(L => { const r = L[c] = L[c] || {}; if (v == null) delete r[f]; else r[f] = v; if (!Object.keys(r).some(k => k === 'acq' || k === 'vend' || k === 'man')) delete L[c]; });
+        const tr = t.closest('tr'), R0 = lstRows().find(r => r.cod === c); if (tr && R0) { const m = mg(R0); tr.querySelector('[data-fik1]').textContent = R0.acq != null ? money(R0.acq * 1000) : '—'; const k2 = tr.querySelector('[data-fik2]'); if (k2) k2.textContent = R0.vend != null ? pu(R0.vend * 1.22) : '—'; tr.querySelector('[data-fik3]').innerHTML = m ? `<b class="${m.e < 0 ? 'fi-neg' : ''}">${esc(pu(m.e))} €</b><small>${X.fmtNum(m.p, 1)}%</small>` : '—'; if (v != null) t.value = String(+v.toFixed(6)).replace('.', ','); }
+        return;
+      }
       if (t.id === 'fi-cdc') {
         const o = get(openId); if (!o) return; const pz = pzKey(o.pz), ops = [];
         list().forEach(x => { if (x.id === o.id || (!x.cdc && pzKey(x.pz) === pz)) { const y = get(x.id); y.cdc = t.value; ops.push(opSave(y)); } });
@@ -512,7 +678,12 @@
       }
     });
     el.addEventListener('input', e => {
-      const id = e.target.id; if (id !== 'fi-q' && id !== 'fi-qf') return;
+      const id = e.target.id;
+      if (id === 'fi-gq' || id === 'fi-lq') {
+        if (id === 'fi-gq') gq = e.target.value; else lq = e.target.value;
+        clearTimeout(wire.T); wire.T = setTimeout(() => { refreshBody(el); if (id === 'fi-lq') { const i = el.querySelector('#fi-lq'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch { } } } }, 120); return;
+      }
+      if (id !== 'fi-q' && id !== 'fi-qf') return;
       if (id === 'fi-q') { fq = e.target.value; lim = 40; } else { fqf = e.target.value; limF = 40; }
       const pos = e.target.selectionStart; draw(el); const i = el.querySelector('#' + id); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch { } }
     });
