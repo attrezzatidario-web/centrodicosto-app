@@ -747,7 +747,7 @@
   /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
   async function renderFi() {
     const el = $('#fi-body'); if (!el) return;
-    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=187').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=188').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
     if (!window.CDC_FI || $('#fi-body') !== el) return;
     window.CDC_FI.render(el, {
       db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },

@@ -9,7 +9,7 @@
   const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
   const ST = { confermato: ['Confermato', ''], spedito: ['In consegna', 'soon'], consegnato: ['Consegnato', 'paid'], annullato: ['Annullato', 'late'] };
   const ST_K = Object.keys(ST);
-  let X = null, tab = 'pan', openId = '', openInv = '', fq = '', fpz = '', fst = '', fqf = '', fpzf = '', fsf = '', gq = '', lq = '', anim = true, lim = 40, limF = 40;
+  let X = null, tab = 'pan', openId = '', openInv = '', fq = '', fpz = '', fst = '', fqf = '', fpzf = '', fsf = '', gq = '', gback = '', lq = '', anim = true, lim = 40, limF = 40;
 
   /* ---------- lettura del PDF ---------- */
   const N = s => { s = String(s == null ? '' : s).trim(); if (!s) return 0; const neg = /-$/.test(s) || /^-/.test(s); const v = parseFloat(s.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')); return isNaN(v) ? 0 : (neg ? -v : v); };
@@ -624,10 +624,10 @@
       const t = e.target, b = s => t.closest(s);
       let x;
       if (b('#fi-up') || b('#fi-up2')) return el.querySelector('#fi-file').click();
-      if ((x = b('[data-fitab]'))) { tab = x.dataset.fitab; openId = ''; openInv = ''; anim = true; return draw(el); }
-      if ((x = b('[data-fiopen]'))) { openId = x.dataset.fiopen; openInv = ''; tab = 'ord'; anim = true; return draw(el); }
-      if ((x = b('[data-fiinv]'))) { openInv = x.dataset.fiinv; openId = ''; tab = 'ord'; anim = true; return draw(el); }
-      if (b('#fi-back')) { openId = ''; openInv = ''; anim = true; return draw(el); }
+      if ((x = b('[data-fitab]'))) { gq = gback = ''; tab = x.dataset.fitab; openId = ''; openInv = ''; anim = true; return draw(el); }
+      if ((x = b('[data-fiopen]'))) { if (gq.trim()) { gback = gq; gq = ''; } openId = x.dataset.fiopen; openInv = ''; tab = 'ord'; anim = true; return draw(el); }
+      if ((x = b('[data-fiinv]'))) { if (gq.trim()) { gback = gq; gq = ''; } openInv = x.dataset.fiinv; openId = ''; tab = 'ord'; anim = true; return draw(el); }
+      if (b('#fi-back')) { openId = ''; openInv = ''; if (gback) { gq = gback; gback = ''; } anim = true; return draw(el); }
       if ((x = b('[data-fist]'))) { fst = x.dataset.fist; lim = 40; return draw(el); }
       if ((x = b('[data-fipz]'))) { fpz = x.dataset.fipz; lim = 40; return draw(el); }
       if ((x = b('[data-fisf]'))) { fsf = x.dataset.fisf; limF = 40; return draw(el); }
@@ -637,7 +637,7 @@
       if (!b('.fi-xm')) { const d = el.querySelector('#fi-xd'); if (d) d.hidden = true; }
       if ((x = b('[data-ficdc]'))) { fpz = fpzf = x.dataset.ficdc; fst = fsf = ''; lim = limF = 40; gq = ''; openId = openInv = ''; tab = 'ord'; anim = true; return draw(el); }
       if (b('[data-fiall2]')) { tab = 'ord'; fqf = gq; gq = ''; limF = 40; anim = true; return draw(el); }
-      if ((x = b('[data-filst]'))) { lq = x.dataset.filst; gq = ''; tab = 'lst'; anim = true; return draw(el); }
+      if ((x = b('[data-filst]'))) { lq = x.dataset.filst; gq = gback = ''; tab = 'lst'; anim = true; return draw(el); }
       if ((x = b('[data-filx]'))) { const c = x.dataset.filx; lstSave(v => { delete v[c]; }); return refreshBody(el); }
       if (b('#fi-aadd')) {
         const c = el.querySelector('#fi-ac').value.trim(), d = el.querySelector('#fi-ad').value.trim(); if (!c || !d) return X.toast('Scrivi codice e descrizione');
