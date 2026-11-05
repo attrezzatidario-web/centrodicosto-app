@@ -292,7 +292,7 @@
     if (gq.trim()) return searchView();
     return openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : tab === 'lst' ? lstView() : overview();
   }
-  function after(el) { counters(el); if (!gq.trim() && !openId && !openInv && tab === 'pan') drawMap(); }
+  function after(el) { counters(el); if (!openId && !openInv && tab === 'pan' && !gq.trim()) { const f = el.querySelector('.fx-card'); if (f) fxCount(el); reveal(el); } if (!gq.trim() && !openId && !openInv && tab === 'pan') drawMap(); }
   function refreshBody(el) { const b = el.querySelector('.fi-body'); if (!b) return draw(el); b.classList.remove('cc-anim'); b.innerHTML = bodyHtml(); after(el); }
   const gq0 = () => gq.trim();
 
@@ -460,9 +460,7 @@
         <div class="gh-sub"><span>${plur(m.buy.length, 'ordine', 'ordini')}</span><span>${plur(m.groups.length, 'piazzale', 'piazzali')}</span>${last ? `<span>ultimo il ${esc(X.shortDate(last))}</span>` : ''}${acc ? `<span>deposito a garanzia ${esc(pzTot(acc))}</span>` : ''}</div></div></div>
       <div class="gh-kpis">${KP.map(([l, v, s, i]) => `<div class="gh-k${i === 1 && T.todo.length ? ' ly-kwarn' : ''}"><span>${l}</span><b data-fik="${i}">0</b><small>${esc(s)}</small></div>`).join('')}</div></div>
       ${m.groups.length ? mapCard() : ''}
-      ${m.buy.length ? `<div class="card gf-card"><div class="card-h"><h3>Fatturato ai piazzali</h3><span class="muted small">spunta quando hai fatturato l'ordine al piazzale</span></div>
-        <div class="gf-sum"><span><b>${T.done.length}</b> di ${m.parts.length} ordini fatturati</span>${T.todo.length ? `<span class="gf-todo">Da fatturare: <b>${pzTot(T.tTodo)}</b></span>` : '<span class="gf-ok">Tutto fatturato</span>'}</div>
-        ${m.groups.map(g => pzBlock(g)).join('')}</div>` : ''}
+      ${m.parts.length ? fxCard() : ''}
       <div class="fi-2"><div class="card"><div class="card-h"><h3>Acquisti per piazzale</h3><span class="muted small">imponibile · pezzi · consegne</span></div>
           <div class="fi-bars">${m.groups.slice().sort((a, b) => b.tot - a.tot).map(g => `<div class="fi-br"><span class="fi-bn"><b>${esc(g.n)}</b><small>${X.fmtNum(g.q, 0)} pz · ${plur(g.nd, 'consegna', 'consegne')}</small></span><span class="fi-bt"><i style="width:${(g.tot / gx * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(g.tot)}</b></div>`).join('') || '<div class="empty">Nessuna fattura</div>'}</div></div>
         <div class="card"><div class="card-h"><h3>Articoli acquistati</h3><span class="muted small">pezzi e importo</span></div>
@@ -477,6 +475,77 @@
         ${A.length ? `<div class="gl-an">${A.slice(0, 8).map(({ o, f, c }, i) => `<div class="ga-row warn" style="--d:${i * 70}ms" ${f ? `data-fiinv="${esc(f.id)}"` : `data-fiopen="${esc(o.id)}"`}><span class="ci-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span><small>${f ? 'ordine ' + esc(f.num) : 'ordine ' + esc(o.num) + ' · ' + esc(gname(o))}</small></div></div>`).join('')}</div>` : '<div class="empty">Tutto in ordine</div>'}</div>`;
   }
   // un piazzale: le sue parti di fattura, con la spunta verde «fatturato» (come in GLS)
+  /* ---------- fatturazione ai piazzali (v189) ---------- */
+  const fxOpen = new Set(); let fxInit = false;
+  const CHK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
+  const fxPct = (d, t) => t > 0.005 ? Math.min(100, d / t * 100) : 100;
+  const fxMiniC = g => !g.todo.length ? CHK : `<span>${g.done.length}/${g.P.length}</span>`;
+  const fxChip = g => g.todo.length ? `<span class="fx-cw">da fatturare </span>${pzTot(g.tTodo)}` : 'completo';
+  function fxOrder(p) {
+    const can = X.canWrite();
+    return `<label class="fx-o${p.done ? ' on' : ''}" data-fxk="${esc(p.key)}"><input type="checkbox" data-fi="${esc(p.key)}"${p.done ? ' checked' : ''}${can ? '' : ' disabled'}><span class="fx-sw">${CHK}</span><span class="fx-on"><b>Ordine ${esc(p.f.num)}</b><small>${esc(X.shortDate(p.f.data))}</small></span><span class="fx-od">${p.done ? 'fatturato il ' + esc(X.shortDate(M.fa[p.key])) : ''}</span><b class="fx-ov">${money(p.imp)}</b></label>`;
+  }
+  function fxRow(g, i) {
+    const full = !g.todo.length, can = X.canWrite(), pc = fxPct(g.tot - g.tTodo, g.tot), op = fxOpen.has(g.k);
+    const rows = g.P.slice().sort((a, b) => (a.done - b.done) || String(b.f.data).localeCompare(String(a.f.data)));
+    return `<div class="fx-pz${full ? ' full' : ''}${op ? ' open' : ''}" data-fxg="${esc(g.k)}" style="--d:${200 + i * 55}ms">
+      <button type="button" class="fx-row" data-fxo="${esc(g.k)}" aria-expanded="${op}">
+        <span class="fx-mini"><svg viewBox="0 0 44 44"><circle class="fx-rt" r="18" cx="22" cy="22"/><circle class="fx-rp" r="18" cx="22" cy="22" pathLength="100" style="stroke-dashoffset:${(100 - fxPct(g.done.length, g.P.length)).toFixed(2)}"/></svg><span class="fx-mc">${fxMiniC(g)}</span></span>
+        <span class="fx-nm"><b>${esc(g.n)}</b><small>${plur(g.P.length, 'ordine', 'ordini')} · <span data-fxt>${pzTot(g.tot)}</span></small></span>
+        <span class="fx-bar"><i style="--p:${pc.toFixed(1)}%"></i></span>
+        <span class="fx-chip" data-fxc>${fxChip(g)}</span>
+        <svg class="fx-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="fx-panel"><div class="fx-in"><div class="fx-ph"><span data-fxn>${g.done.length} di ${g.P.length} fatturati</span>${can ? `<button type="button" class="fi-all" data-fiall="${esc(g.k)}"${g.todo.length ? '' : ' hidden'}>Segna tutte</button>` : ''}</div><div class="fx-ol">${rows.map(fxOrder).join('')}</div></div></div></div>`;
+  }
+  function fxCard() {
+    const T = totals(), tot = T.tDone + T.tTodo, pc = T.todo.length ? Math.min(99, Math.floor(fxPct(T.tDone, tot))) : 100;
+    const G = M.groups.filter(g => g.P.length).sort((a, b) => (!!a.todo.length === !!b.todo.length ? b.tTodo - a.tTodo || b.tot - a.tot : a.todo.length ? -1 : 1));
+    if (!fxInit) { fxInit = true; const f = G.find(g => g.todo.length); if (f) fxOpen.add(f.k); }
+    return `<div class="card gf-card fx-card"><div class="card-h"><h3>Fatturazione ai piazzali</h3><span class="muted small">apri un piazzale e spunta gli ordini che hai fatturato</span></div>
+      <div class="fx-top"><div class="fx-ring${pc >= 100 ? ' full' : ''}${pc <= 0 ? ' zero' : ''}"><svg viewBox="0 0 120 120"><circle class="fx-rt" r="52" cx="60" cy="60"/><circle class="fx-rp" r="52" cx="60" cy="60" pathLength="100" style="stroke-dashoffset:${(100 - pc).toFixed(2)}"/></svg><div class="fx-rc"><b data-fx="pct">0%</b><small>fatturato</small></div></div>
+        <div class="fx-kpi"><div><span>Fatturato</span><b data-fx="done">0</b></div><div><span>Da fatturare</span><b data-fx="todo" class="${T.todo.length ? 'w' : 'g'}">0</b></div><div><span>Ordini</span><b data-fx="cnt">${T.done.length} / ${M.parts.length}</b></div></div></div>
+      <div class="fx-list">${G.map(fxRow).join('')}</div></div>`;
+  }
+  function fxCount(el) {
+    const T = totals(), pc = T.todo.length ? Math.min(99, Math.floor(fxPct(T.tDone, T.tDone + T.tTodo))) : 100, q = k => el.querySelector(`[data-fx="${k}"]`);
+    X.countTo(q('pct'), pc, v => Math.round(v) + '%'); X.countTo(q('done'), T.tDone, pzTot); X.countTo(q('todo'), T.tTodo, pzTot);
+    const c = q('cnt'); if (c) c.textContent = `${T.done.length} / ${M.parts.length}`;
+  }
+  function burst(host) {
+    if (!host || X.reduced()) return; const b = document.createElement('span'); b.className = 'fx-burst';
+    const col = ['#16a34a', '#3362ab', '#eb6834', '#f5b301', '#22c55e'];
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + Math.random() * .4, d = 34 + Math.random() * 34, s = document.createElement('i'); s.style.cssText = `--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d}px;--c:${col[i % col.length]};--s:${4 + Math.random() * 4}px`; b.appendChild(s); }
+    host.appendChild(b); setTimeout(() => b.remove(), 1100);
+  }
+  // aggiorna la scheda sul posto: anelli, barre e numeri si muovono senza ridisegnare
+  function fxSync(el, just) {
+    M = model(); const card = el.querySelector('.fx-card'); if (!card) return draw(el);
+    const T = totals(), pc = T.todo.length ? Math.min(99, Math.floor(fxPct(T.tDone, T.tDone + T.tTodo))) : 100, ring = card.querySelector('.fx-ring'), wasFull = ring.classList.contains('full');
+    card.querySelector('.fx-top .fx-rp').style.strokeDashoffset = (100 - pc).toFixed(2); ring.classList.toggle('full', pc >= 100); ring.classList.toggle('zero', pc <= 0);
+    fxCount(el); if (pc >= 100 && !wasFull) { ring.classList.add('pulse'); burst(ring); setTimeout(() => ring.classList.remove('pulse'), 1200); }
+    card.querySelector('[data-fx="todo"]').className = T.todo.length ? 'w' : 'g';
+    M.groups.forEach(g => {
+      const w = [...card.querySelectorAll('.fx-pz')].find(x => x.dataset.fxg === g.k); if (!w) return; const full = !g.todo.length, was = w.classList.contains('full');
+      w.classList.toggle('full', full); w.querySelector('.fx-mini .fx-rp').style.strokeDashoffset = (100 - fxPct(g.done.length, g.P.length)).toFixed(2);
+      w.querySelector('.fx-mc').innerHTML = fxMiniC(g); w.querySelector('.fx-bar i').style.setProperty('--p', fxPct(g.tot - g.tTodo, g.tot).toFixed(1) + '%');
+      w.querySelector('[data-fxc]').innerHTML = fxChip(g); w.querySelector('[data-fxn]').textContent = `${g.done.length} di ${g.P.length} fatturati`;
+      const all = w.querySelector('.fi-all'); if (all) all.hidden = full;
+      if (full && !was) { burst(w.querySelector('.fx-mini')); w.classList.add('pop'); setTimeout(() => w.classList.remove('pop'), 900); }
+    });
+    M.parts.forEach(p => {
+      const o = [...card.querySelectorAll('.fx-o')].find(x => x.dataset.fxk === p.key); if (!o || o.classList.contains('on') === p.done) return;
+      o.classList.toggle('on', p.done); o.querySelector('input').checked = p.done; o.querySelector('.fx-od').textContent = p.done ? 'fatturato il ' + X.shortDate(M.fa[p.key]) : '';
+      o.classList.add('just'); setTimeout(() => o.classList.remove('just'), 900);
+    });
+    const hk = el.querySelector('.fi-hero'); if (hk) counters(el);
+    const mc = el.querySelector('.ly-mapcard'); if (mc) { mc.outerHTML = mapCard(); drawMap(); }
+  }
+  // le schede sotto la piega entrano quando le raggiungi
+  function reveal(el) {
+    const b = el.querySelector('.fi-body.cc-anim'); if (!b || !window.IntersectionObserver || X.reduced()) return;
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('rv-on'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+    b.querySelectorAll('.card').forEach(c => { if (c.getBoundingClientRect().top > innerHeight * .92) { c.classList.add('rv'); io.observe(c); } });
+  }
   function pzBlock(g) {
     const todo = g.todo.slice().sort((a, b) => String(b.f.data).localeCompare(String(a.f.data))), done = g.done.slice().sort((a, b) => String(b.f.data).localeCompare(String(a.f.data))), can = X.canWrite();
     return `<div class="fi-pz"><div class="fi-ph"><b>${esc(g.n)}</b><span>${g.done.length} di ${g.P.length} fatturati · ${g.todo.length ? `<em class="fi-td">da fatturare ${pzTot(g.tTodo)}</em>` : '<em class="fi-ok">tutto fatturato</em>'} · ${pzTot(g.tot)}${can && g.todo.length ? ` · <button type="button" class="fi-all" data-fiall="${esc(g.k)}">segna tutte</button>` : ''}</span></div>
@@ -632,6 +701,7 @@
       if ((x = b('[data-fipz]'))) { fpz = x.dataset.fipz; lim = 40; return draw(el); }
       if ((x = b('[data-fisf]'))) { fsf = x.dataset.fisf; limF = 40; return draw(el); }
       if ((x = b('[data-fipzf]'))) { fpzf = x.dataset.fipzf; limF = 40; return draw(el); }
+      if ((x = b('[data-fxo]'))) { const w = x.closest('.fx-pz'), k = x.dataset.fxo, o = !fxOpen.has(k); o ? fxOpen.add(k) : fxOpen.delete(k); w.classList.toggle('open', o); x.setAttribute('aria-expanded', o); return; }
       if (b('#fi-xb')) { const d = el.querySelector('#fi-xd'); d.hidden = !d.hidden; return; }
       if ((x = b('[data-fix]'))) { const k = x.dataset.fix; el.querySelector('#fi-xd').hidden = true; X.busy('Preparo il file…'); return (k === 'xlsx' ? exportXlsx() : exportPdf(k.slice(4))).then(() => X.busy(), err => { X.busy(); X.toast('Errore: ' + (err && err.message || err)); }); }
       if (!b('.fi-xm')) { const d = el.querySelector('#fi-xd'); if (d) d.hidden = true; }
@@ -648,7 +718,7 @@
       if (b('#fi-morf')) { limF += 60; return draw(el); }
       if ((x = b('[data-fiall]'))) {
         const g = M.groups.find(g => g.k === x.dataset.fiall); if (!g || !g.todo.length) return;
-        if (confirm(`Segnare come fatturati i ${g.todo.length} ordini da fatturare di «${g.n}» (${pzTot(g.tTodo)})?`)) { const fa = { ...FA() }; g.todo.forEach(p => { fa[p.key] = X.today(); }); X.quiet([opFatt(fa)]); draw(el); }
+        if (confirm(`Segnare come fatturati i ${g.todo.length} ordini da fatturare di «${g.n}» (${pzTot(g.tTodo)})?`)) { const fa = { ...FA() }; g.todo.forEach(p => { fa[p.key] = X.today(); }); X.quiet([opFatt(fa)]); if (b('.fx-card')) fxSync(el); else draw(el); }
         return;
       }
       if (b('#fi-pdf')) { const o = openInv ? getF(openInv) : get(openId); return o && o.pdf && X.openDoc(o.pdf, openInv ? `Fischer ordine ${o.num}` : `Fischer ordine ${o.num}`); }
@@ -664,7 +734,7 @@
       if (t.id === 'fi-file') { const fs = [...t.files]; t.value = ''; if (fs.length) load(fs).catch(err => { X.busy(); X.toast('Errore: ' + (err && err.message || err)); }); return; }
       if (t.dataset && t.dataset.fi) {
         const o = { ...FA() }; if (t.checked) o[t.dataset.fi] = X.today(); else delete o[t.dataset.fi];
-        X.quiet([opFatt(o)]); draw(el); return;
+        X.quiet([opFatt(o)]); if (t.closest('.fx-card')) fxSync(el); else draw(el); return;
       }
       if (t.dataset && t.dataset.filc) {
         const c = t.dataset.filc, f = t.dataset.fif, v = num0(t.value); lstSave(L => { const r = L[c] = L[c] || {}; if (v == null) delete r[f]; else r[f] = v; if (!Object.keys(r).some(k => k === 'acq' || k === 'vend' || k === 'man')) delete L[c]; });
