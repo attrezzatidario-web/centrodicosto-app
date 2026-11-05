@@ -191,6 +191,7 @@
       ['tecfi', 'Tecfi', 'Fissaggi, viti, bulloneria, rivetti, punte, sigillanti e schiume.', ['717 prodotti, 6.469 codici'], ['sez.preventivi']],
       ['vorpa', 'Vorpa', 'Ancoranti chimici e meccanici, tasselli, barre filettate, schiume e fissaggi.', ['332 prodotti, 1.901 codici'], ['sez.preventivi']],
       ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
+      ['upower', 'U-Power', 'Scarpe antinfortunistiche U-Power (solo calzature) per linea: Red Lion, Red Industry, Stratos e altre.', ['494 prodotti'], ['sez.preventivi']],
       ['tyrolit', 'Tyrolit', 'Dischi da taglio e sbavo, mole, utensili diamantati, carotaggio, accessori e macchine.', ['1.086 prodotti, 9.425 codici'], ['sez.preventivi']],
       ['scar', 'SCAR', 'Ricambi e accessori per camion e furgoni, fissaggio carico, minuteria, utensili e prodotti chimici.', ['8.567 prodotti, 24.886 codici'], ['sez.preventivi']],
       ['tesa', 'tesa', 'Nastri adesivi, biadesivi, ganci adesivi, isolanti e protezioni per la casa.', ['219 prodotti, 439 codici'], ['sez.preventivi']],
