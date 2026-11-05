@@ -194,7 +194,7 @@
     { k: 'vendite', t: () => 'DDT e fatture ai clienti', d: () => 'DDT durante il mese e fatture di fine mese, con PDF e file XML per lo SdI' },
     { k: 'dipendenti', t: () => 'Dipendenti e presenze', d: () => 'Anagrafica del personale, timbrature dall\'app Presenze, ferie, permessi, scadenze e accessi con permessi per sezione' },
     { k: 'torental', t: () => 'Torental', d: () => 'Listino, ordini e clienti Torental', only: 'veicoli' },
-    { k: 'fischer', t: () => 'Fischer', d: () => 'Conferme d\'ordine del fornitore Fischer: lette, controllate e assegnate al piazzale, con movimentazioni e spunta «fatturato»', only: 'veicoli' }
+    { k: 'fischer', t: () => 'Fischer', d: () => 'Fatture e conferme d\'ordine del fornitore Fischer: lette, controllate e divise per piazzale, con consegne (DDT), scadenze e spunta «fatturato» al piazzale', only: 'veicoli' }
   ];
   const SEMPRE = ['Dashboard', 'Acquisti', 'Fatture fornitori', 'Preventivi e catalogo fornitori'];
   const PIANI = { prova: 'Prova gratuita', base: 'Base', pro: 'Pro' };

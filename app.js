@@ -272,7 +272,7 @@
     return 'w';
   }
   const SHEET_SEC = { Movimenti: 'attrezzatura', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyreco', Amazon: 'amazon', AmazonArticoli: 'amazon', Clienti: 'clienti', Articoli: 'magazzino', MagMov: 'magazzino', DDT: 'vendite', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'fornitori', Dipendenti: 'dipendenti', Presenze: 'dipendenti', Assenze: 'dipendenti' };
-  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fi:|^fiFatt$/.test(k) ? 'fischer' : 'impostazioni'; };
+  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fif?:|^fiFatt$/.test(k) ? 'fischer' : 'impostazioni'; };
   const opSec = op => op.sheet === 'Config' ? cfgSec(op.row ? op.row.chiave : op.id) : (SHEET_SEC[op.sheet] || 'impostazioni');
   const AREA_MOD = { gls: 'gls', gas: 'gasolio', ly: 'lyreco', am: 'amazon' };
   // la demo ricorda sul dispositivo il settore scelto; gli altri gestionali lo prendono dal registro «Gestionali»
@@ -747,7 +747,7 @@
   /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
   async function renderFi() {
     const el = $('#fi-body'); if (!el) return;
-    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=183').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=184').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
     if (!window.CDC_FI || $('#fi-body') !== el) return;
     window.CDC_FI.render(el, {
       db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },
@@ -759,14 +759,18 @@
   // scheda Fischer nella Dashboard: ordini ancora da fatturare per piazzale (non sommati alla spesa: sono già negli acquisti e nelle fatture)
   function fiMini() {
     if (!modOn('fischer')) return '';
-    const O = Object.keys(db.config || {}).filter(k => k.startsWith('fi:')).map(k => cfg(k)).filter(o => o && o.id && o.stato !== 'annullato'), fa = cfg('fiFatt') || {};
-    const todo = O.filter(o => !fa[o.id]), tT = r2(todo.reduce((a, o) => a + num(o.imponibile), 0)), arr = O.filter(o => o.stato !== 'consegnato');
-    const by = [...groupBy(todo, o => o.cdc ? lyName(o.cdc) : (o.pz || '—'))].map(([k, v]) => ({ k, n: v.length, t: r2(v.reduce((a, o) => a + num(o.imponibile), 0)) })).sort((a, b) => b.t - a.t).slice(0, 3);
+    const fa = cfg('fiFatt') || {}, F = Object.keys(db.config || {}).filter(k => k.startsWith('fif:')).map(k => cfg(k)).filter(f => f && f.id && f.tipo !== 'TD02' && Array.isArray(f.righe));
+    const P = new Map(); // parte di fattura = fattura × piazzale (la spunta «fatturato» è per ognuna)
+    F.forEach(f => f.righe.forEach(x => { const k = f.id + '|' + String(x.pz || '').toUpperCase().trim(), p = P.get(k) || { f, pz: x.pz || '—', imp: 0 }; p.imp += num(x.importo); P.set(k, p); }));
+    const parts = [...P.entries()].map(([k, p]) => ({ k, ...p, imp: r2(p.imp), done: !!fa[k] })), todo = parts.filter(p => !p.done), tT = r2(todo.reduce((a, p) => a + p.imp, 0));
+    const tot = r2(F.reduce((a, f) => a + num(f.imponibile), 0)), O = Object.keys(db.config || {}).filter(k => k.startsWith('fi:')).map(k => cfg(k)).filter(o => o && o.id && o.stato !== 'annullato');
+    const nm = pz => { const c = pzGuess(pz); return c ? lyName(c) : pz; };
+    const by = [...groupBy(todo, p => nm(p.pz))].map(([k, v]) => ({ k, n: v.length, t: r2(v.reduce((a, p) => a + p.imp, 0)) })).sort((a, b) => b.t - a.t).slice(0, 3);
     return `<a class="card db-mini a-fi" href="#fischer">
-            <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><span class="db-at">Ordini Fischer</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
-            ${O.length ? `<div class="db-mv"><b>${eur0(tT)}</b><span>da fatturare · ${todo.length} di ${O.length} ordini</span></div>
-            ${by.length ? `<div class="db-ml">${by.map(x => `<div class="db-mli"><span><b>${esc(x.k)}</b><small>${x.n} ${x.n === 1 ? 'ordine' : 'ordini'}</small></span><strong>${eur0(x.t)}</strong></div>`).join('')}</div>` : ''}
-            <div class="db-an">non sommati alla spesa · ${arr.length ? arr.length + (arr.length === 1 ? ' ordine in arrivo' : ' ordini in arrivo') : 'tutto consegnato'}</div>` : '<div class="db-an">Carica la prima conferma d\'ordine dalla sezione Fischer</div>'}
+            <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><span class="db-at">Acquisti Fischer</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            ${F.length || O.length ? `<div class="db-mv"><b>${eur0(tT)}</b><span>da fatturare ai piazzali · ${todo.length} ${todo.length === 1 ? 'fattura' : 'fatture'}</span></div>
+            ${by.length ? `<div class="db-ml">${by.map(x => `<div class="db-mli"><span><b>${esc(x.k)}</b><small>${x.n} ${x.n === 1 ? 'fattura' : 'fatture'}</small></span><strong>${eur0(x.t)}</strong></div>`).join('')}</div>` : ''}
+            <div class="db-an">${F.length ? `acquistato ${eur0(tot)} in ${F.length} fatture · ` : ''}non sommati alla spesa</div>` : '<div class="db-an">Carica le fatture Fischer dalla sezione Fischer</div>'}
           </a>`;
   }
 
