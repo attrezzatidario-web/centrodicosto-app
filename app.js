@@ -259,7 +259,7 @@
   /* ================= v95: settore di attività, moduli e nomi ================= */
   const SET = window.CDC_SETTORI || { list: [], moduli: [], sempre: [], piani: {}, get: () => null };
   const SET_DEF = { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', sede: ['Piazzale', 'Piazzali'], acq: 'Attrezzatura', mod: {}, cat: null };
-  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti'];
+  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti'];
   /* v127: permessi per sezione — un dipendente vede solo le sezioni che il titolare gli ha dato ('r' vede, 'w' modifica) */
   const isDip = () => !!(me && !DEMO && me.ruolo === 'dipendente');
   const isOwnerU = () => !!(DEMO || !me || me.admin || me.ruolo === 'utente');
@@ -272,7 +272,7 @@
     return 'w';
   }
   const SHEET_SEC = { Movimenti: 'attrezzatura', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyreco', Amazon: 'amazon', AmazonArticoli: 'amazon', Clienti: 'clienti', Articoli: 'magazzino', MagMov: 'magazzino', DDT: 'vendite', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'fornitori', Dipendenti: 'dipendenti', Presenze: 'dipendenti', Assenze: 'dipendenti' };
-  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : 'impostazioni'; };
+  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fi:|^fiFatt$/.test(k) ? 'fischer' : 'impostazioni'; };
   const opSec = op => op.sheet === 'Config' ? cfgSec(op.row ? op.row.chiave : op.id) : (SHEET_SEC[op.sheet] || 'impostazioni');
   const AREA_MOD = { gls: 'gls', gas: 'gasolio', ly: 'lyreco', am: 'amazon' };
   // la demo ricorda sul dispositivo il settore scelto; gli altri gestionali lo prendono dal registro «Gestionali»
@@ -667,7 +667,7 @@
   const rowsSoc = () => soc ? db.movimenti.filter(r => (r.societa || 'Soluzione Veicolare') === soc) : db.movimenti;
 
   /* ================= Router ================= */
-  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti' };
+  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', fischer: 'Fischer', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti' };
   let prevView = '', gKeep = false;
   function go() {
     prevView = view;
@@ -696,8 +696,8 @@
     $$('.sub-tabs a').forEach(x => x.classList.toggle('on', x.dataset.st === view));
     $('#title').textContent = ['attrezzatura', 'movimenti', 'articoli'].includes(view) ? (settore().acq || 'Acquisti') : TITLES[view];
     { const at = $('#add-top span'), acqV = ['attrezzatura', 'movimenti', 'articoli'].includes(view); if (at) at.textContent = acqV ? 'Registra DDT o fattura' : view === 'gasolio' ? 'Nuovo rifornimento' : view === 'fatture' ? 'Nuova fattura' : 'Nuovo movimento'; }
-    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'lyreco' || view === 'amazon';
-    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
+    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon';
+    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
     if (view !== 'movimenti') { sel.clear(); selMode = false; $('#selbar').hidden = true; document.body.classList.remove('has-sel'); }
     render();
     window.scrollTo(0, 0);
@@ -727,7 +727,7 @@
   function render() {
     applySettore();
     ivaUI();
-    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip }[view];
+    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, fischer: renderFi, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip }[view];
     fn && fn();
   }
   const sub = t => { $('#subtitle').textContent = t || ''; };
@@ -744,8 +744,34 @@
     });
   }
 
+  /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
+  async function renderFi() {
+    const el = $('#fi-body'); if (!el) return;
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=183').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI || $('#fi-body') !== el) return;
+    window.CDC_FI.render(el, {
+      db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },
+      api, busy, toast, esc, eur, eur0, fmtNum, shortDate, countTo, sub, loadLib, today, reduced, isLocal, isAuth: e => e instanceof AuthError,
+      cdcs: () => lyCdcList().filter(c => c.cod !== LY_NONE), cdcName: cod => lyName(cod), guess: name => pzGuess(name),
+      openDoc, canWrite: () => secPerm('fischer') === 'w'
+    });
+  }
+  // scheda Fischer nella Dashboard: ordini ancora da fatturare per piazzale (non sommati alla spesa: sono già negli acquisti e nelle fatture)
+  function fiMini() {
+    if (!modOn('fischer')) return '';
+    const O = Object.keys(db.config || {}).filter(k => k.startsWith('fi:')).map(k => cfg(k)).filter(o => o && o.id && o.stato !== 'annullato'), fa = cfg('fiFatt') || {};
+    const todo = O.filter(o => !fa[o.id]), tT = r2(todo.reduce((a, o) => a + num(o.imponibile), 0)), arr = O.filter(o => o.stato !== 'consegnato');
+    const by = [...groupBy(todo, o => o.cdc ? lyName(o.cdc) : (o.pz || '—'))].map(([k, v]) => ({ k, n: v.length, t: r2(v.reduce((a, o) => a + num(o.imponibile), 0)) })).sort((a, b) => b.t - a.t).slice(0, 3);
+    return `<a class="card db-mini a-fi" href="#fischer">
+            <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><span class="db-at">Ordini Fischer</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+            ${O.length ? `<div class="db-mv"><b>${eur0(tT)}</b><span>da fatturare · ${todo.length} di ${O.length} ordini</span></div>
+            ${by.length ? `<div class="db-ml">${by.map(x => `<div class="db-mli"><span><b>${esc(x.k)}</b><small>${x.n} ${x.n === 1 ? 'ordine' : 'ordini'}</small></span><strong>${eur0(x.t)}</strong></div>`).join('')}</div>` : ''}
+            <div class="db-an">non sommati alla spesa · ${arr.length ? arr.length + (arr.length === 1 ? ' ordine in arrivo' : ' ordini in arrivo') : 'tutto consegnato'}</div>` : '<div class="db-an">Carica la prima conferma d\'ordine dalla sezione Fischer</div>'}
+          </a>`;
+  }
+
   /* v127: Dipendenti e presenze (dipendenti.js, caricato quando serve) */
-  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'analisi', 'dipendenti', 'impostazioni'];
+  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'fischer', 'analisi', 'dipendenti', 'impostazioni'];
   const secTitle = k => k === 'piazzali' ? (settore().sede || [, 'Sedi'])[1] : k === 'attrezzatura' ? (settore().acq || 'Acquisti') : k === 'impostazioni' ? 'Impostazioni dell\'azienda' : TITLES[k];
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
@@ -3137,7 +3163,7 @@
             ${TK ? `<div class="db-mv"><b>${TK.n} kit</b><span>da ${eur0(TK.min)} a ${eur0(TK.max)}</span></div>
             <div class="db-ml">${TK.kits.slice(0, 3).map(k => `<div class="db-mli"><span><b>${esc(k.n)}</b><small>${k.cod ? 'cod. ' + esc(k.cod) : 'senza codice'}</small></span><strong>${eur(k.p)}</strong></div>`).join('')}</div>
             <div class="db-an">listino di vendita, non è una spesa · ${TK.s} articoli singoli · transferta ${eur0(TK.tr)}/giorno</div>` : '<div class="db-an">Importa il listino dalla sezione Torental</div>'}
-          </a>` : ovPvMini()}`,
+          </a>` : ovPvMini()}${fiMini()}`,
       interni: () => xiDash(),
       verifica: () => `<div class="card ov-ck" id="ov-ck"><div class="card-h"><h3>Cose da verificare</h3><span class="muted small">${CK.length ? `${CK.length} punti · ${ckW} importanti` : 'tutto coincide'}</span></div>
         <div class="ov-ckf">${[['', 'Tutte', CK.length], ...['att', 'gls', 'gas', 'ly', 'am', 'fat'].filter(areaOn).map(k => [k, ovShort[k], CK.filter(x => x.a === k).length])].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="ov-cf${k === '' ? ' on' : ''}" data-ckf="${k}">${k ? `<i class="a-${k}"></i>` : ''}${l}<b>${n}</b></button>`).join('')}</div>

@@ -26,7 +26,7 @@
     { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', s: 'Veicoli e attrezzature', d: 'Officine, allestimenti, ricambi, abbigliamento da lavoro, spedizioni e mezzi',
       ic: '<path d="M2 7h11v9H2zM13 10h4l3 3v3h-7z"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>',
       sede: ['Piazzale', 'Piazzali'], acq: 'Acquisti',
-      mod: { piazzali: true, gls: true, gasolio: true, lyreco: true, amazon: true, torental: true, incassi: true, clienti: true, fornitori: true, magazzino: true, vendite: true }, cat: null },
+      mod: { piazzali: true, gls: true, gasolio: true, lyreco: true, amazon: true, torental: true, fischer: true, incassi: true, clienti: true, fornitori: true, magazzino: true, vendite: true }, cat: null },
 
     { id: 'bar', n: 'Bar e caffetteria', s: 'Bar', d: 'Bar, caffetterie, pasticcerie e gelaterie',
       ic: '<path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z"/><path d="M16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3v3M11 3v3M14 3v3"/>',
@@ -193,7 +193,8 @@
     { k: 'interni', t: () => 'Documenti interni', d: () => 'Scarichi non fiscali e trasferimenti tra magazzini o ad altre aziende, con numerazione propria, centro di costo e PDF' },
     { k: 'vendite', t: () => 'DDT e fatture ai clienti', d: () => 'DDT durante il mese e fatture di fine mese, con PDF e file XML per lo SdI' },
     { k: 'dipendenti', t: () => 'Dipendenti e presenze', d: () => 'Anagrafica del personale, timbrature dall\'app Presenze, ferie, permessi, scadenze e accessi con permessi per sezione' },
-    { k: 'torental', t: () => 'Torental', d: () => 'Listino, ordini e clienti Torental', only: 'veicoli' }
+    { k: 'torental', t: () => 'Torental', d: () => 'Listino, ordini e clienti Torental', only: 'veicoli' },
+    { k: 'fischer', t: () => 'Fischer', d: () => 'Conferme d\'ordine del fornitore Fischer: lette, controllate e assegnate al piazzale, con movimentazioni e spunta «fatturato»', only: 'veicoli' }
   ];
   const SEMPRE = ['Dashboard', 'Acquisti', 'Fatture fornitori', 'Preventivi e catalogo fornitori'];
   const PIANI = { prova: 'Prova gratuita', base: 'Base', pro: 'Pro' };
