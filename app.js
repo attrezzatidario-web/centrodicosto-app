@@ -3626,7 +3626,7 @@
   // colore più «pulito» per la foto di copertina
   const pvCover = it => it.c.find(c => /^(BIANCO|WHITE)$/.test(c[1])) || it.c.find(c => /^(NERO|BLU NAVY|GRIGIO|BLACK|NAVY|GREY)$/.test(c[1])) || it.c[0];
   /* ---------- v88: ricerca in tutti i fornitori + confronto ---------- */
-  let pvAll = true, pvFromAll = false, pvGQ = '', pvGSort = '', pvGOnly = '', pvGLimit = 60, pvGSup = '', pvCmp = [], pvGDeb = null, pvGLoading = null;
+  let pvAll = true, pvFromAll = false, pvGQ = '', pvGSort = '', pvGOnly = '', pvGLimit = 60, pvGSup = '', pvGCat = '', pvGMin = '', pvGMax = '', pvGFz = false, pvGLast = [], pvGView = (() => { try { return localStorage.getItem('cdc_pvgv') === 'l' ? 'l' : 'g'; } catch { return 'g'; } })(), pvCmp = [], pvGDeb = null, pvGLoading = null;
   const PV_GSYN = [['GIUBBOTT', 'GIUBBIN', 'GIACC', 'PARKA', 'BOMBER', 'GIUBBETT'], ['T-SHIRT', 'TSHIRT', 'MAGLIETT'], ['SCARP', 'CALZATUR', 'SCARPONCIN', 'POLACC'], ['GIRAVIT', 'CACCIAVIT'],
     ['FLESSOMETR', 'METRO A NASTRO', 'ROTELLA METRIC'], ['ELMETT', 'CASCO', 'CASCHI'], ['GILET', 'SMANICAT'], ['ALTA VISIB', 'HI-VIS', 'HI VIS', 'HV '], ['OCCHIAL', 'OCCHIALI'], ['TRAPAN', 'AVVITATOR', 'TASSELLATOR'],
     ['VALIGI', 'VALIGETT', 'CASSETT', 'TROLLEY'], ['SMERIGLIATRIC', 'FLESSIBIL'], ['PILE', 'FLEECE'], ['FELP', 'SWEAT'], ['CHIAVE INGLESE', 'CHIAVE REGOLABIL'], ['PANTALON', 'BERMUDA', 'SHORT']];
@@ -3646,28 +3646,57 @@
     pvGLoading = Promise.all(todo.map(s => pvLoad(s).then(() => { pvMergeExtra(s); tick(); }).catch(e => { console.warn('Catalogo non caricato', s, e && e.message); tick(); }))).then(() => { pvGLoading = null; tick(); });
     return pvGLoading;
   }
-  function pvGSearch(raw0 = pvGQ, only = pvGOnly) {
-    const raw = String(raw0 || '').trim(); if (!raw) return [];
-    const words = raw.split(/\s+/).filter(Boolean), alts = words.map(pvGAlts), qn = amNorm(raw).replace(/\s+/g, ''), w0 = pvGStem(words[0]), A = pvAcqMap(), out = [];
+  // v190: virgolette = frase esatta, -parola = escludi, tolleranza ai refusi quando i risultati sono pochi
+  function pvGParse(raw) {
+    const ph = [], neg = [], words = []; let r = String(raw || '');
+    r = r.replace(/["“”]([^"“”]+)["“”]/g, (_, x) => { ph.push(pvGDeacc(amNorm(x))); return ' '; });
+    r.split(/\s+/).filter(Boolean).forEach(w => { if (/^-.{2,}/.test(w)) neg.push(pvGDeacc(amNorm(w.slice(1)))); else words.push(w); });
+    return { words, ph, neg };
+  }
+  const pvGLev1 = (a, b) => { if (a === b) return true; const d = a.length - b.length; if (d > 1 || d < -1) return false; let i = 0, j = 0, e = 0; while (i < a.length && j < b.length) { if (a[i] === b[j]) { i++; j++; continue; } if (++e > 1) return false; if (d > 0) i++; else if (d < 0) j++; else { i++; j++; } } return e + (a.length - i) + (b.length - j) <= 1; };
+  const pvGFzHit = (kg, w, ws) => { for (const v of kg.split(/[^A-Z0-9]+/)) if (v.length >= 4 && (pvGLev1(v, w) || pvGLev1(pvGStem(v), ws))) return true; return false; };
+  function pvGSearch(raw0 = pvGQ, only = pvGOnly, fuzzy = false) {
+    const P = pvGParse(raw0), raw = P.words.join(' ') || P.ph.join(' '); if (!raw && !P.neg.length) return [];
+    if (!P.words.length && !P.ph.length) return [];
+    const words = P.words, alts = words.map(pvGAlts), qn = amNorm(raw).replace(/\s+/g, ''), w0 = pvGStem(words[0] || P.ph[0]), A = pvAcqMap(), out = [];
     for (const sup of pvGReady()) {
       const cat = pvCats[sup];
       for (const it of cat.items) {
-        const kg = pvGK(it); if (!alts.every(a => a.some(x => kg.includes(x)))) continue;
-        const nm = pvGDeacc(amNorm(it.n)); let s = 0;
-        if (it.c.some(c => amNorm(c[0]).replace(/\s+/g, '') === qn) || amNorm(it.id) === qn) s += 200;
-        else if (it.c.some(c => amNorm(c[0]).startsWith(qn)) && qn.length >= 3) s += 60;
-        if (nm.startsWith(w0)) s += 30;
-        alts.forEach(a => { if (a.some(x => nm.includes(x))) s += 12; });
-        if (amNorm(it.mod || '').includes(amNorm(raw))) s += 25;
-        s -= Math.min(20, nm.length / 8);
+        const kg = pvGK(it); let fz = false;
+        if (P.ph.some(x => !kg.includes(x)) || P.neg.some(x => kg.includes(x))) continue;
+        if (!alts.every((a, ix) => a.some(x => kg.includes(x)) || (fuzzy && a.length === 1 && a[0].length >= 4 && /^[A-Z0-9]+$/.test(a[0]) && (fz = pvGFzHit(kg, pvGDeacc(amNorm(words[ix])), a[0]))))) continue;
+        const nm = pvGDeacc(amNorm(it.n)); let sc = 0;
+        if (it.c.some(c => amNorm(c[0]).replace(/\s+/g, '') === qn) || amNorm(it.id) === qn) sc += 200;
+        else if (it.c.some(c => amNorm(c[0]).startsWith(qn)) && qn.length >= 3) sc += 60;
+        if (nm.startsWith(w0)) sc += 30;
+        if (new RegExp('(^| )' + w0.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(nm)) sc += 10;
+        alts.forEach(a => { if (a.some(x => nm.includes(x))) sc += 12; });
+        P.ph.forEach(x => { if (nm.includes(x)) sc += 25; });
+        if (amNorm(it.mod || '').includes(amNorm(raw))) sc += 25;
+        if (fz) sc -= 40;
+        sc -= Math.min(20, nm.length / 8);
         const pubs = it.c.map(c => pvPub(it.id, c[0])).filter(v => v != null), pub = pubs.length ? Math.min(...pubs) : null, pubMax = pubs.length ? Math.max(...pubs) : null;
         const acqs = it.c.map(c => pvAcq(it.id, c[0])).filter(v => v != null), acq = acqs.length ? Math.min(...acqs) : null;
         if (only === 'acq' && acq == null && A[it.id] == null) continue;
-        if (pub != null) s += 8;
-        out.push({ sup, cat, it, s, pub, pubMax, acq, mg: pub && acq != null ? (pub - acq) / pub : null });
+        if (pub != null) sc += 8;
+        out.push({ sup, cat, it, s: sc, pub, pubMax, acq, mg: pub && acq != null ? (pub - acq) / pub : null, fz });
       }
     }
     return out;
+  }
+  function pvGSearchX() { let L = pvGSearch(); pvGFz = false; if (L.length < 3 && pvGParse(pvGQ).words.length) { const F = pvGSearch(pvGQ, pvGOnly, true); if (F.length > L.length) { L = F; pvGFz = F.some(r => r.fz); } } return L; }
+  const pvGClB = it => String(it.cl || '').split(' · ')[0].trim();
+  const pvGHl = (html, words) => { const ws = [...new Set(words.flatMap(w => [w, pvGStem(w)]).map(w => pvGDeacc(w)).filter(w => w.length >= 2))].map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')); if (!ws.length) return html; const re = new RegExp('(' + ws.join('|') + ')', 'gi'); return html.split(/(<[^>]+>)/).map(x => x.startsWith('<') ? x : x.replace(re, '<mark>$1</mark>')).join(''); };
+  function pvGExport() {
+    const R = pvGLast; if (!R.length) return toast('Niente da esportare');
+    toast('Preparo il file…');
+    loadXlsx().then(() => {
+      const U = XLSX.utils, head = ['Fornitore', 'Codice', 'Prodotto', 'Categoria', 'Prezzo da €', 'Prezzo a €'].concat(pvCli ? [] : ['Acquisto €', 'Margine %']);
+      const rows = R.map(r => [PV_SUP[r.sup].n, pvCode(r.it), r.it.n, pvGClB(r.it), r.pub, r.pubMax].concat(pvCli ? [] : [r.acq, r.mg != null ? +(r.mg * 100).toFixed(1) : null]));
+      const ws = U.aoa_to_sheet([head, ...rows]); ws['!cols'] = [18, 16, 46, 28, 12, 12, 12, 11].map(w => ({ wch: w })); ws['!autofilter'] = { ref: U.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: head.length - 1 } }) };
+      rows.forEach((r, i) => [4, 5, 6].forEach(c => { const a = U.encode_cell({ r: i + 1, c }); if (ws[a] && typeof r[c] === 'number') ws[a].z = '#,##0.00'; }));
+      const wb = U.book_new(); U.book_append_sheet(wb, ws, 'Ricerca'); XLSX.writeFile(wb, `Ricerca fornitori ${String(pvGQ).trim().slice(0, 30).replace(/[^\w\- ]+/g, '')} ${today()}.xlsx`);
+    }).catch(e => toast('Errore: ' + e.message));
   }
   function pvGStatus() {
     const el = $('#pv-gst'); if (!el) return;
@@ -3682,6 +3711,7 @@
       <section class="pv-ghero">
         <div class="pv-ght"><span class="pv-code">Ricerca globale</span><h2>Cerca in tutti i fornitori</h2><p class="muted" id="pv-gst"></p><i class="pv-gbar" id="pv-gbar"></i></div>
         <div class="pv-sb pv-gsx"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="pv-gq" type="search" enterkeyhint="search" placeholder="Cerca per nome, codice o modello…" value="${esc(pvGQ)}" autocomplete="off"></div>
+        <p class="pv-ghint">Prova: <code>"alta visibilità"</code> per la frase esatta · <code>giacca -estiva</code> per escludere · premi <kbd>/</kbd> per cercare</p>
         <div class="pv-gsug" id="pv-gsug">${(rec.length ? rec.map(q => `<button type="button" data-pvgs="${esc(q)}" class="rec"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8"/></svg>${esc(q)}</button>`) : []).concat(SUG.filter(s => !rec.includes(s)).slice(0, rec.length ? 6 : 9).map(q => `<button type="button" data-pvgs="${esc(q)}">${esc(q)}</button>`)).join('')}</div>
       </section>
       <div id="pv-gres"></div>`;
@@ -3747,37 +3777,59 @@
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
   }
   document.addEventListener('pointerdown', pvDragStart);
+  // v190: «/» porta nella ricerca, Esc la svuota
+  document.addEventListener('keydown', e => {
+    if (view !== 'preventivi' || !pvAll || pvItem || e.ctrlKey || e.metaKey || e.altKey) return;
+    const gi = $('#pv-gq'); if (!gi) return;
+    if (e.key === '/' && document.activeElement !== gi && !/^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '')) { e.preventDefault(); gi.focus(); gi.select(); }
+    else if (e.key === 'Escape' && document.activeElement === gi && gi.value) { e.preventDefault(); gi.value = ''; pvGQ = ''; pvGSup = pvGCat = ''; pvGRes(); }
+  });
   function pvGRes() {
     const box = $('#pv-gres'); if (!box) return;
     const sg = $('#pv-gsug'); if (sg) sg.hidden = !!pvGQ.trim();
     if (!pvGQ.trim()) { box.innerHTML = pvGSupCards() + pvGCmpBar(); return; }
-    const L = pvGSearch(), ready = pvGReady().length, tot = pvGSups().length;
+    let L = pvGSearchX(); const ready = pvGReady().length, tot = pvGSups().length, mn = parseFloat(String(pvGMin).replace(',', '.')), mxv = parseFloat(String(pvGMax).replace(',', '.'));
+    if (!isNaN(mn) || !isNaN(mxv)) L = L.filter(r => r.pub != null && (isNaN(mn) || r.pub >= mn) && (isNaN(mxv) || r.pub <= mxv));
     // riepilogo per fornitore
     const by = new Map(); L.forEach(r => { const b = by.get(r.sup) || { n: 0, min: null, best: null }; b.n++; if (r.pub != null && (b.min == null || r.pub < b.min)) { b.min = r.pub; b.best = r; } by.set(r.sup, b); });
     if (pvGSup && !by.has(pvGSup)) pvGSup = '';
-    const R = pvGSup ? L.filter(r => r.sup === pvGSup) : L.slice();
+    const LS = pvGSup ? L.filter(r => r.sup === pvGSup) : L, cm = new Map(); LS.forEach(r => { const k = pvGClB(r.it); if (k) cm.set(k, (cm.get(k) || 0) + 1); });
+    if (pvGCat && !cm.has(pvGCat)) pvGCat = '';
+    const cats = [...cm.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14), R = pvGCat ? LS.filter(r => pvGClB(r.it) === pvGCat) : LS.slice();
+    pvGLast = R; const pw = pvGParse(pvGQ).words;
     if (pvGSort === 'p') R.sort((a, b) => (a.pub ?? 1e12) - (b.pub ?? 1e12));
     else if (pvGSort === 'pd') R.sort((a, b) => (b.pub ?? -1) - (a.pub ?? -1));
     else if (pvGSort === 'm') R.sort((a, b) => (b.mg ?? -9) - (a.mg ?? -9));
+    else if (pvGSort === 'n') R.sort((a, b) => a.it.n.localeCompare(b.it.n));
     else if (pvGSort === 's') R.sort((a, b) => PV_SUP[a.sup].n.localeCompare(PV_SUP[b.sup].n) || b.s - a.s);
     else R.sort((a, b) => b.s - a.s || (a.pub ?? 1e12) - (b.pub ?? 1e12));
     const priced = L.filter(r => r.pub != null), cheapest = priced.length ? priced.reduce((m, r) => r.pub < m.pub ? r : m) : null;
     const minSup = [...by.values()].filter(b => b.min != null).sort((a, b) => a.min - b.min)[0];
     const sum = [...by.entries()].sort((a, b) => b[1].n - a[1].n);
     const sh = R.slice(0, pvGLimit);
+    const cap = r => { const c = pvGClB(r.it); return c.charAt(0) + c.slice(1).toLowerCase(); };
     box.innerHTML = `
       <div class="pv-gsum">
-        <div class="pv-gsh"><div><h3>${fmtNum(L.length, 0)} ${L.length === 1 ? 'prodotto' : 'prodotti'} per «${esc(pvGQ.trim())}»</h3><p class="muted small">${by.size} ${by.size === 1 ? 'fornitore' : 'fornitori'} con risultati${ready < tot ? ` · sto ancora caricando ${tot - ready} cataloghi` : ''}${cheapest ? ` · prezzo più basso ${eur(cheapest.pub)} (${esc(PV_SUP[cheapest.sup].n)})` : ''}</p></div></div>
+        <div class="pv-gsh"><div><h3>${fmtNum(R.length, 0)} ${R.length === 1 ? 'prodotto' : 'prodotti'} per «${esc(pvGQ.trim())}»</h3><p class="muted small">${by.size} ${by.size === 1 ? 'fornitore' : 'fornitori'} con risultati${ready < tot ? ` · sto ancora caricando ${tot - ready} cataloghi` : ''}${cheapest ? ` · prezzo più basso ${eur(cheapest.pub)} (${esc(PV_SUP[cheapest.sup].n)})` : ''}</p>${pvGFz ? '<p class="pv-gfz">Nessun risultato esatto: ti mostro risultati simili (forse c\'è un refuso)</p>' : ''}</div><button type="button" class="btn sm" id="pv-gxl" title="Scarica i risultati in Excel"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg>Excel</button></div>
         ${sum.length ? `<div class="pv-gcmp" role="group" aria-label="Confronto fornitori"><button type="button" data-pvgsup="" class="pv-gall${pvGSup ? '' : ' on'}"><b>Tutti</b><small>${fmtNum(L.length, 0)}</small></button>${sum.map(([s, b], i) => `<button type="button" data-pvgsup="${s}" class="${pvGSup === s ? 'on' : ''}" style="--d:${i * 35}ms"><img src="logo-${s}.svg" alt="${esc(PV_SUP[s].n)}"><span><b>${fmtNum(b.n, 0)}</b> ${b.n === 1 ? 'prodotto' : 'prodotti'}</span><small>${b.min != null ? `da <strong>${eur(b.min)}</strong>` : 'prezzi da inserire'}</small>${minSup && b === minSup && by.size > 1 ? '<em class="pv-gbest">più economico</em>' : ''}</button>`).join('')}</div>` : ''}
+        ${cats.length > 1 ? `<div class="pv-gcats" role="group" aria-label="Categorie"><button type="button" data-pvgcat="" class="${pvGCat ? '' : 'on'}">Tutte le categorie</button>${cats.map(([k, n]) => `<button type="button" data-pvgcat="${esc(k)}" class="${pvGCat === k ? 'on' : ''}">${esc(k.charAt(0) + k.slice(1).toLowerCase())}<em>${fmtNum(n, 0)}</em></button>`).join('')}</div>` : ''}
       </div>
       <div class="pv-fl">
         ${pvCli ? '' : `<div class="tr-seg">${[['', 'Tutti'], ['acq', 'Con prezzo d\'acquisto']].map(([k, l]) => `<button type="button" data-pvgonly="${k}" class="${pvGOnly === k ? 'on' : ''}">${l}</button>`).join('')}</div>`}
+        <label class="pv-gpr"><span>€</span><input id="pv-gmin" inputmode="decimal" placeholder="da" value="${esc(pvGMin)}" aria-label="Prezzo minimo"><i>–</i><input id="pv-gmax" inputmode="decimal" placeholder="a" value="${esc(pvGMax)}" aria-label="Prezzo massimo"></label>
         <span class="pv-sp"></span>
-        <select id="pv-gsort" aria-label="Ordina"><option value="">Ordina: più pertinenti</option><option value="p"${pvGSort === 'p' ? ' selected' : ''}>Prezzo crescente</option><option value="pd"${pvGSort === 'pd' ? ' selected' : ''}>Prezzo decrescente</option>${pvCli ? '' : `<option value="m"${pvGSort === 'm' ? ' selected' : ''}>Margine più alto</option>`}<option value="s"${pvGSort === 's' ? ' selected' : ''}>Fornitore A–Z</option></select>
+        <div class="tr-seg pv-gvw" role="group" aria-label="Vista"><button type="button" data-pvgview="g" class="${pvGView === 'g' ? 'on' : ''}" title="Griglia"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" data-pvgview="l" class="${pvGView === 'l' ? 'on' : ''}" title="Elenco"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
+        <select id="pv-gsort" aria-label="Ordina"><option value="">Ordina: più pertinenti</option><option value="p"${pvGSort === 'p' ? ' selected' : ''}>Prezzo crescente</option><option value="pd"${pvGSort === 'pd' ? ' selected' : ''}>Prezzo decrescente</option>${pvCli ? '' : `<option value="m"${pvGSort === 'm' ? ' selected' : ''}>Margine più alto</option>`}<option value="n"${pvGSort === 'n' ? ' selected' : ''}>Nome A–Z</option><option value="s"${pvGSort === 's' ? ' selected' : ''}>Fornitore A–Z</option></select>
       </div>
-      ${sh.length ? `<div class="pv-grid pv-ggrid">${sh.map((r, i) => { const k = pvGKey(r.sup, r.it.id), on = pvCmp.includes(k); return `<div class="pv-gcard${on ? ' cmp' : ''}">${pvCardHtml(r.cat, r.it, i).replace('data-pvitem="', `data-pvgo="${esc(r.sup)}|`)}<img class="pv-glogo" src="logo-${r.sup}.svg" alt="${esc(PV_SUP[r.sup].n)}" title="${esc(PV_SUP[r.sup].n)}">${cheapest && r === cheapest && priced.length > 1 ? '<em class="pv-gbest pv-gbc">prezzo più basso</em>' : ''}<div class="pv-gft"><button type="button" class="pv-gcb" data-pvcmp="${esc(k)}" aria-pressed="${on}" title="${on ? 'Togli dal confronto' : 'Aggiungi al confronto'}"><svg viewBox="0 0 24 24">${on ? '<path d="M5 12l5 5 9-10"/>' : '<path d="M12 5v14M5 12h14"/>'}</svg><span>${on ? 'Nel confronto' : 'Confronta'}</span></button>${!pvCli && r.mg != null ? `<span class="pv-gmg ${r.mg >= .3 ? 'ok' : r.mg >= .15 ? 'mid' : 'low'}">margine ${fmtNum(r.mg * 100, 0)}%</span>` : ''}</div></div>`; }).join('')}</div>${R.length > pvGLimit ? `<div class="more-row"><button class="btn sm" id="pv-gmore">Mostra altri (${fmtNum(R.length - pvGLimit, 0)})</button></div>` : ''}`
-        : `<div class="card"><div class="empty">${ready < tot ? 'Sto caricando i cataloghi…' : `Nessun prodotto trovato per «${esc(pvGQ.trim())}»: prova con meno parole o con il codice`}</div></div>`}
+      ${sh.length ? `${pvGView === 'l' ? pvGList(sh, pw, cheapest, priced) : ''}<div class="pv-grid pv-ggrid"${pvGView === 'l' ? ' hidden' : ''}>${pvGView === 'l' ? '' : sh.map((r, i) => { const k = pvGKey(r.sup, r.it.id), on = pvCmp.includes(k); return `<div class="pv-gcard${on ? ' cmp' : ''}">${pvGHlCard(pvCardHtml(r.cat, r.it, i).replace('data-pvitem="', `data-pvgo="${esc(r.sup)}|`), pw)}<img class="pv-glogo" src="logo-${r.sup}.svg" alt="${esc(PV_SUP[r.sup].n)}" title="${esc(PV_SUP[r.sup].n)}">${cheapest && r === cheapest && priced.length > 1 ? '<em class="pv-gbest pv-gbc">prezzo più basso</em>' : ''}<div class="pv-gft"><button type="button" class="pv-gcb" data-pvcmp="${esc(k)}" aria-pressed="${on}" title="${on ? 'Togli dal confronto' : 'Aggiungi al confronto'}"><svg viewBox="0 0 24 24">${on ? '<path d="M5 12l5 5 9-10"/>' : '<path d="M12 5v14M5 12h14"/>'}</svg><span>${on ? 'Nel confronto' : 'Confronta'}</span></button>${!pvCli && r.mg != null ? `<span class="pv-gmg ${r.mg >= .3 ? 'ok' : r.mg >= .15 ? 'mid' : 'low'}">margine ${fmtNum(r.mg * 100, 0)}%</span>` : ''}</div></div>`; }).join('')}</div>${R.length > pvGLimit ? `<div class="more-row"><button class="btn sm" id="pv-gmore">Mostra altri (${fmtNum(R.length - pvGLimit, 0)})</button></div>` : ''}`
+        : `<div class="card"><div class="empty">${ready < tot ? 'Sto caricando i cataloghi…' : `Nessun prodotto trovato per «${esc(pvGQ.trim())}»${pvGCat || pvGSup || pvGMin || pvGMax ? '<br><button type="button" class="btn sm" data-pvgreset="1" style="margin-top:12px">Togli i filtri</button>' : pw.length > 1 ? `<br><button type="button" class="btn sm" data-pvgs="${esc(pw.slice(0, -1).join(' '))}" style="margin-top:12px">Prova solo «${esc(pw.slice(0, -1).join(' '))}»</button>` : '<br>prova con il codice o un nome più corto'}`}</div></div>`}
       ${pvGCmpBar()}`;
+  }
+  const pvGHlCard = (h, w) => h.replace(/(<span class="pv-cm"><b>)([\s\S]*?)(<\/b>)/, (m, a, b, c) => a + pvGHl(b, w) + c);
+  function pvGList(sh, pw, cheapest, priced) {
+    const cap = c => { c = pvGClB({ cl: c }); return c.charAt(0) + c.slice(1).toLowerCase(); };
+    return `<div class="pv-glist" role="list"><div class="pv-glr pv-glh"><span></span><span>Prodotto</span><span>Prezzo</span>${pvCli ? '' : '<span class="x">Acquisto</span><span class="x">Margine</span>'}<span></span></div>${sh.map((r, i) => { const k = pvGKey(r.sup, r.it.id), on = pvCmp.includes(k), best = cheapest && r === cheapest && priced.length > 1;
+      return `<div class="pv-glr${on ? ' cmp' : ''}" role="listitem" style="--d:${Math.min(i, 14) * 22}ms"><button type="button" class="pv-glm" data-pvgo="${esc(r.sup)}|${esc(r.it.id)}"><img class="pv-gll" src="logo-${r.sup}.svg" alt="${esc(PV_SUP[r.sup].n)}" title="${esc(PV_SUP[r.sup].n)}"><span class="pv-gln"><b>${pvGHl(esc(r.it.n), pw)}${r.it.x ? ' <i class="pv-new">nuovo</i>' : ''}</b><small>${esc(pvCode(r.it))} · ${esc(cap(r.it.cl))}</small></span><span class="pv-glp">${r.pub != null ? `<strong>${r.pubMax > r.pub ? '<em>da</em> ' : ''}${eur(r.pub)}</strong>${best ? '<em class="pv-gbest">più basso</em>' : ''}` : '<span class="muted">—</span>'}</span>${pvCli ? '' : `<span class="pv-glp x">${r.acq != null ? eur(r.acq) : '<span class="muted">—</span>'}</span><span class="pv-glp x">${r.mg != null ? `<span class="pv-gmg ${r.mg >= .3 ? 'ok' : r.mg >= .15 ? 'mid' : 'low'}">${fmtNum(r.mg * 100, 0)}%</span>` : '<span class="muted">—</span>'}</span>`}</button><button type="button" class="pv-gcb" data-pvcmp="${esc(k)}" aria-pressed="${on}" title="${on ? 'Togli dal confronto' : 'Aggiungi al confronto'}"><svg viewBox="0 0 24 24">${on ? '<path d="M5 12l5 5 9-10"/>' : '<path d="M12 5v14M5 12h14"/>'}</svg></button></div>`; }).join('')}</div>`;
   }
   function pvGCmpBar() {
     pvCmp = pvCmp.filter(k => { const [s, id] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)]; return !pvCats[s] || pvCats[s].items.some(x => x.id === id); });
@@ -3821,10 +3873,14 @@
       return true; }
     if (t.closest('#pv-gcopen')) { pvGCompare(); return true; }
     if (t.closest('#pv-gcclr')) { pvCmp = []; if (pvAll && !pvItem) pvGRes(); else { const tr = $('#pv-gtray'); if (tr) tr.remove(); } return true; }
-    const gs = t.closest('[data-pvgs]'); if (gs) { pvGQ = gs.dataset.pvgs; pvGSup = ''; pvGLimit = 60; const i = $('#pv-gq'); if (i) i.value = pvGQ; pvGLoadAll(); pvGStatus(); pvGRes(); pvGRemember(pvGQ); return true; }
+    const gs = t.closest('[data-pvgs]'); if (gs) { pvGQ = gs.dataset.pvgs; pvGSup = ''; pvGCat = ''; pvGLimit = 60; const i = $('#pv-gq'); if (i) i.value = pvGQ; pvGLoadAll(); pvGStatus(); pvGRes(); pvGRemember(pvGQ); return true; }
     const gp = t.closest('[data-pvgsup]'); if (gp) { pvGSup = gp.dataset.pvgsup; pvGLimit = 60; pvGRes(); return true; }
     const go2 = t.closest('[data-pvgonly]'); if (go2) { pvGOnly = go2.dataset.pvgonly; pvGLimit = 60; pvGRes(); return true; }
     if (t.closest('#pv-gmore')) { pvGLimit += 60; pvGRes(); return true; }
+    const gc = t.closest('[data-pvgcat]'); if (gc) { pvGCat = gc.dataset.pvgcat; pvGLimit = 60; pvGRes(); return true; }
+    const gv = t.closest('[data-pvgview]'); if (gv) { pvGView = gv.dataset.pvgview; try { localStorage.setItem('cdc_pvgv', pvGView); } catch {} pvGRes(); return true; }
+    if (t.closest('#pv-gxl')) { pvGExport(); return true; }
+    if (t.closest('[data-pvgreset]')) { pvGCat = pvGSup = pvGMin = pvGMax = ''; pvGRes(); return true; }
     return false;
   }
   function pvCatalog(body, cat) {
@@ -10130,8 +10186,9 @@
     document.addEventListener('input', e => {
       const el = e.target;
       if (el.id === 'pv-rq' && pvR) { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvR.q = el.value; pvReplRes(); }, 180); return; }
-      if (el.id === 'pv-gq') { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvGQ = el.value; pvGSup = ''; pvGLimit = 60; if (pvGQ.trim()) pvGLoadAll(); pvGStatus(); pvGRes(); }, 200); return; }
+      if (el.id === 'pv-gq') { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvGQ = el.value; pvGSup = ''; pvGCat = ''; pvGLimit = 60; if (pvGQ.trim()) pvGLoadAll(); pvGStatus(); pvGRes(); }, 200); return; }
       if (el.id === 'pv-gsort') { pvGSort = el.value; pvGRes(); return; }
+      if (el.id === 'pv-gmin' || el.id === 'pv-gmax') { clearTimeout(pvGDeb); const id = el.id; pvGDeb = setTimeout(() => { if (id === 'pv-gmin') pvGMin = el.value; else pvGMax = el.value; pvGLimit = 60; pvGRes(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(n.value.length, n.value.length); } catch {} } }, 450); return; }
       if (el.id === 'pv-q') { clearTimeout(pvDeb); pvDeb = setTimeout(() => { const was = !!(pvQ || pvGroup); pvQ = el.value; pvLimit = 48; if (!$('#pv-res') || (!pvQ && !pvGroup) !== !was) { renderPv(); const i2 = $('#pv-q'); if (i2) { i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); } } else pvCatRes(); }, 180); return; }
       if (el.classList && el.classList.contains('pv-qi')) { const it = pvItem, k = el.dataset.pvq, v = Math.max(0, Math.round(num(el.value))); (pvGridQ[it] = pvGridQ[it] || {})[k] = v; const cat = pvCats[pvSup], o = cat && cat.items.find(x => x.id === it); if (o) pvSumUpd(o); return; }
       if (el.id === 'pv-acq') { const b = $('#pv-pub'), ph = num(el.placeholder); if (b) b.textContent = String(el.value).trim() ? eur(r2(num(el.value) * pvRic())) : ph > 0 ? eur(r2(ph * pvRic())) : '—'; return; }
