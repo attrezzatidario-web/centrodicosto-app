@@ -109,11 +109,11 @@
   const isInvoice = txt => /Cedente\/prestatore/i.test(txt) && /fischer/i.test(txt) && /Numero documento/i.test(txt);
   function parseInv(items) {
     const all = lines(items), txt = all.map(l => l.t).join('\n');
-    if (!isInvoice(txt)) throw new Error('non sembra una fattura Fischer');
+    if (!isInvoice(txt)) throw new Error('documento Fischer non riconosciuto');
     const f = { righe: [] };
     let m;
     for (const l of all) { if ((m = /^(TD\d{2})\b.*?\b(\d{5,})\s+(\d{2}-\d{2}-\d{4})\b/.exec(l.t))) { f.tipo = m[1]; f.num = m[2]; f.data = dIt(m[3]); break; } }
-    if (!f.num) throw new Error('numero fattura non trovato');
+    if (!f.num) throw new Error('numero documento non trovato');
     f.id = 'f' + f.num;
     let ddt = null, ord = '', r = null, blk = null, tot = false;
     const ends = t => /^(Tipo dato:|DDT\s|Vs\.?\s*Ord|-{5,}|RIEPILOGHI)/i.test(t) || IROW.test(t);
@@ -275,10 +275,10 @@
     M = model();
     const can = X.canWrite();
     if (openId && !get(openId)) openId = ''; if (openInv && !getF(openInv)) openInv = '';
-    const body = openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : tab === 'fat' ? invoices() : overview();
-    const t = openInv ? 'fat' : openId ? 'ord' : tab;
-    el.innerHTML = `<div class="gl-bar"><div class="tr-seg tr-tabs" role="tablist"><button type="button" data-fitab="pan" class="${t === 'pan' ? 'on' : ''}">Panoramica</button><button type="button" data-fitab="fat" class="${t === 'fat' ? 'on' : ''}">Fatture</button><button type="button" data-fitab="ord" class="${t === 'ord' ? 'on' : ''}">Ordini</button></div>
-      <div class="gl-act">${can ? '<button type="button" class="btn sm primary" id="fi-up"><span class="lb-d">+ Carica fatture o ordini</span><span class="lb-m">+ Carica</span></button>' : ''}</div></div>
+    const body = openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : overview();
+    const t = openInv || openId ? 'ord' : tab;
+    el.innerHTML = `<div class="gl-bar"><div class="tr-seg tr-tabs" role="tablist"><button type="button" data-fitab="pan" class="${t === 'pan' ? 'on' : ''}">Panoramica</button><button type="button" data-fitab="ord" class="${t === 'ord' ? 'on' : ''}">Ordini</button></div>
+      <div class="gl-act">${can ? '<button type="button" class="btn sm primary" id="fi-up"><span class="lb-d">+ Carica ordini</span><span class="lb-m">+ Carica</span></button>' : ''}</div></div>
       <input type="file" id="fi-file" accept="application/pdf,.pdf,application/zip,.zip" multiple hidden>
       <div class="fi-body${anim && !X.reduced() ? ' cc-anim' : ''}">${body}</div>`;
     anim = false;
@@ -296,71 +296,52 @@
 
   function overview() {
     const m = M;
-    if (!m.O.length && !m.FI.length) return `<div class="card fi-empty"><div class="pv-empty"><div class="pv-ei"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div><h3>Nessun documento Fischer</h3><p>Carica le fatture (anche tutte insieme, in PDF o in uno zip) e le conferme d'ordine: vengono lette, controllate e divise per piazzale di destinazione.</p>${X.canWrite() ? '<button type="button" class="btn primary" id="fi-up2">+ Carica fatture o ordini</button>' : ''}</div></div>`;
+    if (!m.O.length && !m.FI.length) return `<div class="card fi-empty"><div class="pv-empty"><div class="pv-ei"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></div><h3>Nessun ordine Fischer</h3><p>Carica i PDF di Fischer (anche tutti insieme, in PDF o in uno zip): vengono letti, controllati e divisi per piazzale di destinazione.</p>${X.canWrite() ? '<button type="button" class="btn primary" id="fi-up2">+ Carica ordini</button>' : ''}</div></div>`;
     const T = totals(), last = m.buy.map(f => f.data).sort().pop();
     const wait = m.act.filter(o => !evaso(o) && o.stato !== 'consegnato');
     const KP = [
-      ['Da fatturare ai piazzali', T.tTodo, T.todo.length ? plur(T.todo.length, 'fattura da emettere', 'fatture da emettere') : 'tutto fatturato', 1],
-      ['Fatturato ai piazzali', T.tDone, plur(T.done.length, 'fattura emessa', 'fatture emesse'), 2],
+      ['Da fatturare ai piazzali', T.tTodo, T.todo.length ? plur(T.todo.length, 'ordine da fatturare', 'ordini da fatturare') : 'tutto fatturato', 1],
+      ['Fatturato ai piazzali', T.tDone, plur(T.done.length, 'ordine fatturato', 'ordini fatturati'), 2],
       ['Da pagare a Fischer', T.scad, m.scad.length ? `IVA inclusa · prima il ${X.shortDate(m.scad[0].scad[0].d)}` : 'nessuna scadenza futura', 3],
       ['Pezzi acquistati', T.pezzi, plur(m.arts.length, 'articolo', 'articoli'), 4]
     ];
     const A = []; m.FI.forEach(f => checksF(f).filter(c => c.t === 'warn').forEach(c => A.push({ f, c }))); m.act.forEach(o => checks(o).filter(c => c.t === 'warn').forEach(c => A.push({ o, c })));
     const mx = Math.max(1, ...m.months.map(x => x.imp)), ax = Math.max(1, ...m.arts.map(x => x.imp)), gx = Math.max(1, ...m.groups.map(g => g.tot));
     const acc = m.acc.reduce((s, f) => s + f.imponibile, 0);
-    return `<div class="gl-hero fi-hero"><div class="gh-top"><div class="gh-main"><span class="gh-lbl">Acquisti Fischer · imponibile fatturato</span><div class="gh-big" data-fik="0">0</div>
-        <div class="gh-sub"><span>${plur(m.buy.length, 'fattura', 'fatture')}</span><span>${plur(m.groups.length, 'piazzale', 'piazzali')}</span>${last ? `<span>ultima il ${esc(X.shortDate(last))}</span>` : ''}${acc ? `<span>deposito a garanzia ${esc(pzTot(acc))}</span>` : ''}</div></div></div>
+    return `<div class="gl-hero fi-hero"><div class="gh-top"><div class="gh-main"><span class="gh-lbl">Acquisti Fischer · imponibile ordinato</span><div class="gh-big" data-fik="0">0</div>
+        <div class="gh-sub"><span>${plur(m.buy.length, 'ordine', 'ordini')}</span><span>${plur(m.groups.length, 'piazzale', 'piazzali')}</span>${last ? `<span>ultimo il ${esc(X.shortDate(last))}</span>` : ''}${acc ? `<span>deposito a garanzia ${esc(pzTot(acc))}</span>` : ''}</div></div></div>
       <div class="gh-kpis">${KP.map(([l, v, s, i]) => `<div class="gh-k${i === 1 && T.todo.length ? ' ly-kwarn' : ''}"><span>${l}</span><b data-fik="${i}">0</b><small>${esc(s)}</small></div>`).join('')}</div></div>
-      ${m.buy.length ? `<div class="card gf-card"><div class="card-h"><h3>Fatturato ai piazzali</h3><span class="muted small">spunta quando hai fatturato al piazzale la sua parte di fattura</span></div>
-        <div class="gf-sum"><span><b>${T.done.length}</b> di ${m.parts.length} fatturate</span>${T.todo.length ? `<span class="gf-todo">Da fatturare: <b>${pzTot(T.tTodo)}</b></span>` : '<span class="gf-ok">Tutto fatturato</span>'}</div>
+      ${m.buy.length ? `<div class="card gf-card"><div class="card-h"><h3>Fatturato ai piazzali</h3><span class="muted small">spunta quando hai fatturato l'ordine al piazzale</span></div>
+        <div class="gf-sum"><span><b>${T.done.length}</b> di ${m.parts.length} ordini fatturati</span>${T.todo.length ? `<span class="gf-todo">Da fatturare: <b>${pzTot(T.tTodo)}</b></span>` : '<span class="gf-ok">Tutto fatturato</span>'}</div>
         ${m.groups.map(g => pzBlock(g)).join('')}</div>` : ''}
       <div class="fi-2"><div class="card"><div class="card-h"><h3>Acquisti per piazzale</h3><span class="muted small">imponibile · pezzi · consegne</span></div>
           <div class="fi-bars">${m.groups.slice().sort((a, b) => b.tot - a.tot).map(g => `<div class="fi-br"><span class="fi-bn"><b>${esc(g.n)}</b><small>${X.fmtNum(g.q, 0)} pz · ${plur(g.nd, 'consegna', 'consegne')}</small></span><span class="fi-bt"><i style="width:${(g.tot / gx * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(g.tot)}</b></div>`).join('') || '<div class="empty">Nessuna fattura</div>'}</div></div>
         <div class="card"><div class="card-h"><h3>Articoli acquistati</h3><span class="muted small">pezzi e importo</span></div>
-          <div class="fi-bars">${m.arts.map(a => `<div class="fi-br"><span class="fi-bn"><b>${esc(a.desc)}</b><small>cod. ${esc(a.cod)} · ${X.fmtNum(a.q, 0)} pz · ${plur(a.n, 'fattura', 'fatture')}</small></span><span class="fi-bt"><i style="width:${(a.imp / ax * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(a.imp)}</b></div>`).join('') || '<div class="empty">Nessun articolo</div>'}</div></div></div>
-      <div class="fi-2"><div class="card"><div class="card-h"><h3>Ordini in attesa di fattura</h3><span class="muted small">${wait.length ? plur(wait.length, 'ordine', 'ordini') : 'nessuno'}</span></div>
-          <div class="fi-ol">${wait.map(o => { const rc = m.rec[o.id]; return `<button type="button" class="fi-or fi-sm" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>${rc && rc.part ? 'parzialmente fatturato · ' : ''}${nextDel(o) ? (late(o) ? 'consegna prevista ' : 'consegna ') + esc(X.shortDate(nextDel(o))) : 'senza data di consegna'}</small></span>${late(o) ? '<span class="fi-cs"><span class="chip late">In ritardo</span></span>' : '<span></span>'}<b class="pv-qt">${money(o.imponibile)}</b></button>`; }).join('') || '<div class="empty">Tutti gli ordini caricati risultano fatturati</div>'}</div></div>
+          <div class="fi-bars">${m.arts.map(a => `<div class="fi-br"><span class="fi-bn"><b>${esc(a.desc)}</b><small>cod. ${esc(a.cod)} · ${X.fmtNum(a.q, 0)} pz · ${plur(a.n, 'ordine', 'ordini')}</small></span><span class="fi-bt"><i style="width:${(a.imp / ax * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(a.imp)}</b></div>`).join('') || '<div class="empty">Nessun articolo</div>'}</div></div></div>
+      <div class="fi-2"><div class="card"><div class="card-h"><h3>Conferme d'ordine in attesa</h3><span class="muted small">${wait.length ? plur(wait.length, 'ordine', 'ordini') : 'nessuno'}</span></div>
+          <div class="fi-ol">${wait.map(o => { const rc = m.rec[o.id]; return `<button type="button" class="fi-or fi-sm" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>${rc && rc.part ? 'parzialmente fatturato · ' : ''}${nextDel(o) ? (late(o) ? 'consegna prevista ' : 'consegna ') + esc(X.shortDate(nextDel(o))) : 'senza data di consegna'}</small></span>${late(o) ? '<span class="fi-cs"><span class="chip late">In ritardo</span></span>' : '<span></span>'}<b class="pv-qt">${money(o.imponibile)}</b></button>`; }).join('') || '<div class="empty">Tutte le conferme d\'ordine risultano evase</div>'}</div></div>
         <div class="card"><div class="card-h"><h3>Prossime scadenze</h3><span class="muted small">${m.scad.length ? 'da oggi in avanti · IVA inclusa' : 'nessuna'}</span></div>
-          <div class="fi-ol">${m.scad.slice(0, 8).map(f => { const d = f.scad[0].d, days = Math.round((new Date(d) - new Date(X.today())) / 864e5); return `<button type="button" class="fi-or fi-sm" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>scade il ${esc(X.shortDate(d))}</b><small>${esc([f.mp, f.cond].filter(Boolean).join(' · '))}</small></span><span class="fi-cs"><span class="chip ${days <= 7 ? 'soon' : ''}">${days === 0 ? 'oggi' : 'tra ' + days + ' gg'}</span></span><b class="pv-qt">${money(f.scad[0].imp || f.totale)}</b></button>`; }).join('') || '<div class="empty">Nessuna fattura da pagare</div>'}</div></div></div>
-      <div class="card"><div class="card-h"><h3>Mese per mese</h3><span class="muted small">imponibile fatturato${m.spese ? ' · compreso trasporto ' + pzTot(m.spese) : ''}</span></div>
-        <div class="fi-bars">${m.months.map(x => `<div class="fi-br"><span class="fi-bn"><b>${esc(monthLbl(x.k))}</b><small>${plur(x.n, 'fattura', 'fatture')}</small></span><span class="fi-bt"><i style="width:${(x.imp / mx * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(x.imp)}</b></div>`).join('') || '<div class="empty">Nessuna fattura</div>'}</div></div>
+          <div class="fi-ol">${m.scad.slice(0, 8).map(f => { const d = f.scad[0].d, days = Math.round((new Date(d) - new Date(X.today())) / 864e5); return `<button type="button" class="fi-or fi-sm" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>scade il ${esc(X.shortDate(d))}</b><small>${esc([f.mp, f.cond].filter(Boolean).join(' · '))}</small></span><span class="fi-cs"><span class="chip ${days <= 7 ? 'soon' : ''}">${days === 0 ? 'oggi' : 'tra ' + days + ' gg'}</span></span><b class="pv-qt">${money(f.scad[0].imp || f.totale)}</b></button>`; }).join('') || '<div class="empty">Nessun ordine da pagare</div>'}</div></div></div>
+      <div class="card"><div class="card-h"><h3>Mese per mese</h3><span class="muted small">imponibile ordinato${m.spese ? ' · compreso trasporto ' + pzTot(m.spese) : ''}</span></div>
+        <div class="fi-bars">${m.months.map(x => `<div class="fi-br"><span class="fi-bn"><b>${esc(monthLbl(x.k))}</b><small>${plur(x.n, 'ordine', 'ordini')}</small></span><span class="fi-bt"><i style="width:${(x.imp / mx * 100).toFixed(1)}%"></i></span><b class="fi-bv">${pzTot(x.imp)}</b></div>`).join('') || '<div class="empty">Nessuna fattura</div>'}</div></div>
       <div class="card"><div class="card-h"><h3>Controlli</h3><span class="muted small">${A.length ? plur(A.length, 'punto da verificare', 'punti da verificare') : 'i numeri di tutti i documenti tornano'}</span></div>
-        ${A.length ? `<div class="gl-an">${A.slice(0, 8).map(({ o, f, c }, i) => `<div class="ga-row warn" style="--d:${i * 70}ms" ${f ? `data-fiinv="${esc(f.id)}"` : `data-fiopen="${esc(o.id)}"`}><span class="ci-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span><small>${f ? 'fattura ' + esc(f.num) : 'ordine ' + esc(o.num) + ' · ' + esc(gname(o))}</small></div></div>`).join('')}</div>` : '<div class="empty">Tutto in ordine</div>'}</div>`;
+        ${A.length ? `<div class="gl-an">${A.slice(0, 8).map(({ o, f, c }, i) => `<div class="ga-row warn" style="--d:${i * 70}ms" ${f ? `data-fiinv="${esc(f.id)}"` : `data-fiopen="${esc(o.id)}"`}><span class="ci-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span><small>${f ? 'ordine ' + esc(f.num) : 'ordine ' + esc(o.num) + ' · ' + esc(gname(o))}</small></div></div>`).join('')}</div>` : '<div class="empty">Tutto in ordine</div>'}</div>`;
   }
   // un piazzale: le sue parti di fattura, con la spunta verde «fatturato» (come in GLS)
   function pzBlock(g) {
     const todo = g.todo.slice().sort((a, b) => String(b.f.data).localeCompare(String(a.f.data))), done = g.done.slice().sort((a, b) => String(b.f.data).localeCompare(String(a.f.data))), can = X.canWrite();
-    return `<div class="fi-pz"><div class="fi-ph"><b>${esc(g.n)}</b><span>${g.done.length} di ${g.P.length} fatturate · ${g.todo.length ? `<em class="fi-td">da fatturare ${pzTot(g.tTodo)}</em>` : '<em class="fi-ok">tutto fatturato</em>'} · ${pzTot(g.tot)}${can && g.todo.length ? ` · <button type="button" class="fi-all" data-fiall="${esc(g.k)}">segna tutte</button>` : ''}</span></div>
+    return `<div class="fi-pz"><div class="fi-ph"><b>${esc(g.n)}</b><span>${g.done.length} di ${g.P.length} fatturati · ${g.todo.length ? `<em class="fi-td">da fatturare ${pzTot(g.tTodo)}</em>` : '<em class="fi-ok">tutto fatturato</em>'} · ${pzTot(g.tot)}${can && g.todo.length ? ` · <button type="button" class="fi-all" data-fiall="${esc(g.k)}">segna tutte</button>` : ''}</span></div>
       ${todo.length ? `<div class="fi-grid">${todo.map((p, i) => ptick(p, i)).join('')}</div>` : ''}
-      ${done.length ? `<details class="fi-dn"${todo.length ? '' : ' open'}><summary>Fatturate (${done.length})</summary><div class="fi-grid">${done.map((p, i) => ptick(p, i)).join('')}</div></details>` : ''}</div>`;
+      ${done.length ? `<details class="fi-dn"${todo.length ? '' : ' open'}><summary>Fatturati (${done.length})</summary><div class="fi-grid">${done.map((p, i) => ptick(p, i)).join('')}</div></details>` : ''}</div>`;
   }
   function ptick(p, i) {
     const on = p.done, can = X.canWrite();
-    return `<label class="gf-m${on ? ' on' : ' due'}" style="--d:${Math.min(i, 12) * 30}ms"><input type="checkbox" data-fi="${esc(p.key)}"${on ? ' checked' : ''}${can ? '' : ' disabled'}><span class="gf-box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span><span class="gf-t"><b>Fattura ${esc(p.f.num)}</b><small>${on ? 'fatturato il ' + esc(X.shortDate(M.fa[p.key])) : `${esc(X.shortDate(p.f.data))} · ${money(p.imp)}`}</small></span></label>`;
-  }
-
-  /* ---------- elenco fatture ---------- */
-  function invoices() {
-    const FI = M.FI, q = fqf.toLowerCase().split(/\s+/).filter(Boolean), pgs = new Map();
-    M.groups.forEach(g => pgs.set(g.k, g.n));
-    const partsOf = f => M.parts.filter(p => p.f.id === f.id);
-    const hay = f => `${f.num} ${f.righe.map(x => `${x.desc} ${x.cod} ${x.pz} ${x.ddt}`).join(' ')}`.toLowerCase();
-    const R = FI.filter(f => (!q.length || q.every(w => hay(f).includes(w))) && (!fpzf || partsOf(f).some(p => p.g.k === fpzf)) && (!fsf || (fsf === 'dafatt' ? partsOf(f).some(p => !p.done) : fsf === 'fatt' ? partsOf(f).length && partsOf(f).every(p => p.done) : fsf === 'acc' ? f.tipo === 'TD02' : true)));
-    const cnt = k => FI.filter(f => k === 'dafatt' ? partsOf(f).some(p => !p.done) : k === 'fatt' ? partsOf(f).length && partsOf(f).every(p => p.done) : f.tipo === 'TD02').length;
-    return `<div class="card"><div class="card-h"><h3>Fatture Fischer</h3><span class="muted small">${plur(FI.length, 'fattura', 'fatture')}</span></div>
-      ${FI.length ? `<div class="pv-sb tro-sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-qf" type="search" placeholder="Cerca per numero, DDT, piazzale o articolo…" value="${esc(fqf)}" autocomplete="off"></div>
-      <div class="fi-chips">${[['', 'Tutte', FI.length], ['dafatt', 'Da fatturare ai piazzali', cnt('dafatt')], ['fatt', 'Fatturate', cnt('fatt')], ['acc', 'Acconti', cnt('acc')]].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="chip-f${fsf === k ? ' on' : ''}" data-fisf="${k}">${l}<em>${n}</em></button>`).join('')}</div>
-      ${pgs.size > 1 ? `<div class="fi-chips">${[['', 'Tutti i piazzali'], ...[...pgs.entries()].sort((a, b) => a[1].localeCompare(b[1], 'it'))].map(([k, l]) => `<button type="button" class="chip-f${fpzf === k ? ' on' : ''}" data-fipzf="${esc(k)}">${esc(l)}</button>`).join('')}</div>` : ''}
-      <div class="fi-ol">${R.slice(0, limF).map(f => {
-        const P = partsOf(f), nd = P.filter(p => !p.done).length, w = checksF(f).some(c => c.t === 'warn'), names = [...new Set(P.map(p => p.g.n))];
-        return `<button type="button" class="fi-or" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>${esc(f.tipo === 'TD02' ? 'Deposito a garanzia' : names.join(' · ') || '—')}</b><small>${plur(f.righe.length, 'riga', 'righe')}${f.scad && f.scad[0] ? ' · scade ' + esc(X.shortDate(f.scad[0].d)) : ''}</small></span><span class="fi-cs">${f.tipo === 'TD02' ? '<span class="chip">Acconto</span>' : !P.length ? '' : nd ? `<span class="chip soon">${nd === P.length ? 'Da fatturare' : `${nd} da fatturare`}</span>` : '<span class="chip paid">Fatturata</span>'}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(f.imponibile)}</b></button>`;
-      }).join('') || '<div class="empty">Nessuna fattura trovata</div>'}${R.length > limF ? '<button type="button" class="btn sm" id="fi-morf" style="margin:12px auto 0;display:block">Mostra altre</button>' : ''}</div>`
-      : '<div class="empty">Nessuna fattura: carica i PDF delle fatture Fischer (anche uno zip con tutte)</div>'}</div>`;
+    return `<label class="gf-m${on ? ' on' : ' due'}" style="--d:${Math.min(i, 12) * 30}ms"><input type="checkbox" data-fi="${esc(p.key)}"${on ? ' checked' : ''}${can ? '' : ' disabled'}><span class="gf-box"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span><span class="gf-t"><b>Ordine ${esc(p.f.num)}</b><small>${on ? 'fatturato il ' + esc(X.shortDate(M.fa[p.key])) : `${esc(X.shortDate(p.f.data))} · ${money(p.imp)}`}</small></span></label>`;
   }
 
   function invDetail(f, can) {
     const P = M.parts.filter(p => p.f.id === f.id), C = checksF(f), acc = f.tipo === 'TD02';
-    const kv = [['Data fattura', X.shortDate(f.data)], ['Tipo', acc ? 'Acconto / anticipo (TD02)' : 'Fattura differita (TD24)'], ['Pagamento', [f.cond, f.mp].filter(Boolean).join(' · ')], ['Scadenza', f.scad && f.scad[0] ? X.shortDate(f.scad[0].d) : ''], ['N. cliente', f.cliente]].filter(([, v]) => v);
+    const kv = [['Data', X.shortDate(f.data)], ['Tipo', acc ? 'Acconto / anticipo' : 'Ordine consegnato'], ['Pagamento', [f.cond, f.mp].filter(Boolean).join(' · ')], ['Scadenza', f.scad && f.scad[0] ? X.shortDate(f.scad[0].d) : ''], ['N. cliente', f.cliente]].filter(([, v]) => v);
     const rows = []; let cur = null;
     f.righe.forEach(x => {
       const k = x.spese ? (cur ? cur.k : '') : `${x.ddt}|${x.pz}`;
@@ -368,40 +349,46 @@
       cur.L.push(x);
     });
     const bp = M.groups.find(g => g.P.some(p => p.f.id === f.id));
-    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Fatture</button>${acc ? '<span class="chip">Acconto</span>' : P.length ? (P.every(p => p.done) ? '<span class="chip paid">Fatturata ai piazzali</span>' : `<span class="chip soon">${P.filter(p => !p.done).length} da fatturare</span>`) : ''}<span class="pv-sp"></span>${f.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
-      <div class="card"><div class="card-h"><h3>Fattura ${esc(f.num)}</h3><span class="muted small">del ${esc(X.shortDate(f.data))}</span></div>
+    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Ordini</button>${acc ? '<span class="chip">Acconto</span>' : P.length ? (P.every(p => p.done) ? '<span class="chip paid">Fatturato ai piazzali</span>' : `<span class="chip soon">${P.filter(p => !p.done).length} da fatturare</span>`) : ''}<span class="pv-sp"></span>${f.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
+      <div class="card"><div class="card-h"><h3>Ordine ${esc(f.num)}</h3><span class="muted small">del ${esc(X.shortDate(f.data))}</span></div>
         <div class="fi-kv">${kv.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
         ${P.length ? `<div class="fi-act fi-parts">${P.map((p, i) => `<div class="fi-fatt">${ptick(p, i)}<small class="fi-pn">${esc(p.g.n)}</small></div>`).join('')}</div>` : ''}</div>
       <div class="card"><div class="card-h"><h3>Righe</h3><span class="muted small">${plur(f.righe.length, 'riga', 'righe')} · divise per consegna (DDT)</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo unitario</th><th>Importo</th></tr></thead><tbody>
         ${rows.map(g => `<tr class="fi-ddt"><td colspan="5"><b>${g.ddt ? 'DDT ' + esc(g.ddt) + (g.dd ? ' del ' + esc(X.shortDate(g.dd)) : '') : 'Documento'}</b>${g.pz ? ` <span>→ <b>${esc(gOf(g.pz).n)}</b> · ${esc([g.dest && g.dest.rs, g.dest && g.dest.via, g.dest && g.dest.citta, g.dest && g.dest.prov].filter(Boolean).join(', '))}</span>` : ''}${g.ord ? ` <small>ord. ${esc(g.ord)}</small>` : ''}</td></tr>${g.L.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td>${x.spese ? '' : X.fmtNum(x.q, 0) + (x.um ? ' ' + esc(x.um) : '')}</td><td>${x.spese ? '' : esc(pu(x.prezzo))}</td><td><b>${money(x.importo)}</b></td></tr>`).join('')}`).join('')}</tbody></table></div>
-        <div class="fi-tot"><div><span>Imponibile</span><b>${money(f.imponibile)}</b></div><div><span>IVA${f.ivaPct ? ' ' + X.fmtNum(f.ivaPct, 0) + '%' : f.ivaNat ? ' (' + esc(f.ivaNat) + ')' : ''}</span><b>${money(f.iva)}</b></div><div class="fi-tt"><span>Totale documento</span><b>${money(f.totale)}</b></div></div></div>
+        <div class="fi-tot"><div><span>Imponibile</span><b>${money(f.imponibile)}</b></div><div><span>IVA${f.ivaPct ? ' ' + X.fmtNum(f.ivaPct, 0) + '%' : f.ivaNat ? ' (' + esc(f.ivaNat) + ')' : ''}</span><b>${money(f.iva)}</b></div><div class="fi-tt"><span>Totale</span><b>${money(f.totale)}</b></div></div></div>
       <div class="card"><div class="card-h"><h3>Controlli</h3><span class="muted small">${C.some(c => c.t === 'warn') ? 'da verificare' : 'i numeri tornano'}</span></div>
         ${C.length ? `<div class="gl-an">${C.map((c, i) => `<div class="ga-row ${c.t}" style="--d:${i * 60}ms"><span class="ci-ic"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span></div></div>`).join('')}</div>` : '<div class="empty">Quantità, prezzi, imponibile e totale sono coerenti</div>'}</div>`;
   }
 
-  /* ---------- ordini (conferme d'ordine) ---------- */
+  /* ---------- elenco ordini: documenti caricati (consegne con DDT) e conferme d'ordine insieme ---------- */
   function orders() {
-    const O = M.O, q = fq.toLowerCase().split(/\s+/).filter(Boolean);
-    const pzs = [...new Map(O.map(o => [gkey(o), gname(o)])).entries()].sort((a, b) => a[1].localeCompare(b[1], 'it'));
-    const hay = o => `${o.num} ${gname(o)} ${o.dest && o.dest.citta || ''} ${o.righe.map(x => x.desc + ' ' + x.cod).join(' ')}`.toLowerCase();
-    const is = (o, k) => k === 'attesa' ? o.stato !== 'annullato' && !evaso(o) : k === 'evaso' ? evaso(o) : o.stato === k;
-    const R = O.filter(o => (!q.length || q.every(w => hay(o).includes(w))) && (!fpz || gkey(o) === fpz) && (!fst || is(o, fst)));
-    const cnt = k => O.filter(o => is(o, k)).length;
-    return `<div class="card"><div class="card-h"><h3>Ordini Fischer</h3><span class="muted small">${plur(O.length, 'ordine', 'ordini')}</span></div>
-      ${O.length ? `<div class="pv-sb tro-sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-q" type="search" placeholder="Cerca per numero, piazzale o articolo…" value="${esc(fq)}" autocomplete="off"></div>
-      <div class="fi-chips">${[['', 'Tutti', O.length], ['attesa', 'In attesa di fattura', cnt('attesa')], ['evaso', 'Fatturati da Fischer', cnt('evaso')], ['confermato', 'Confermati', cnt('confermato')], ['spedito', 'In consegna', cnt('spedito')], ['consegnato', 'Consegnati', cnt('consegnato')], ['annullato', 'Annullati', cnt('annullato')]].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="chip-f${fst === k ? ' on' : ''}" data-fist="${k}">${l}<em>${n}</em></button>`).join('')}</div>
-      ${pzs.length > 1 ? `<div class="fi-chips">${[['', 'Tutti i piazzali'], ...pzs].map(([k, l]) => `<button type="button" class="chip-f${fpz === k ? ' on' : ''}" data-fipz="${esc(k)}">${esc(l)}</button>`).join('')}</div>` : ''}
-      <div class="fi-ol">${R.slice(0, lim).map(o => { const st = ST[o.stato] || ST.confermato, rc = M.rec[o.id], w = checks(o).some(c => c.t === 'warn'); return `<button type="button" class="fi-or" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>${plur(o.righe.length, 'riga', 'righe')}${nextDel(o) && o.stato !== 'consegnato' && !evaso(o) ? ' · consegna ' + esc(X.shortDate(nextDel(o))) : ''}</small></span><span class="fi-cs"><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Fatturato</span>' : rc && rc.part ? '<span class="chip soon">Parziale</span>' : ''}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(o.imponibile)}</b></button>`; }).join('') || '<div class="empty">Nessun ordine trovato</div>'}${R.length > lim ? `<button type="button" class="btn sm" id="fi-more" style="margin:12px auto 0;display:block">Mostra altri</button>` : ''}</div>`
-      : '<div class="empty">Nessun ordine: carica la prima conferma d\'ordine</div>'}</div>`;
+    const O = M.O, FI = M.FI, q = fq.toLowerCase().split(/\s+/).filter(Boolean);
+    const partsOf = f => M.parts.filter(p => p.f.id === f.id);
+    const E = [...O.map(o => ({ t: 'c', o, d: o.data, id: o.id })), ...FI.map(f => ({ t: 'd', f, d: f.data, id: f.id, P: partsOf(f) }))].sort((a, b) => String(b.d).localeCompare(String(a.d)) || String(b.id).localeCompare(String(a.id)));
+    const pzs = new Map(); M.groups.forEach(g => pzs.set(g.k, g.n)); O.forEach(o => pzs.set(gkey(o), gname(o)));
+    const hay = e => e.t === 'c' ? `${e.o.num} ${gname(e.o)} ${e.o.dest && e.o.dest.citta || ''} ${e.o.righe.map(x => x.desc + ' ' + x.cod).join(' ')}`.toLowerCase() : `${e.f.num} ${e.f.righe.map(x => `${x.desc} ${x.cod} ${x.pz} ${x.ddt}`).join(' ')}`.toLowerCase();
+    const is = (e, k) => k === 'dafatt' ? e.t === 'd' && e.f.tipo !== 'TD02' && e.P.some(p => !p.done) : k === 'fatt' ? e.t === 'd' && e.P.length > 0 && e.P.every(p => p.done) : k === 'attesa' ? e.t === 'c' && e.o.stato !== 'annullato' && !evaso(e.o) : k === 'conf' ? e.t === 'c' : k === 'acc' ? e.t === 'd' && e.f.tipo === 'TD02' : true;
+    const R = E.filter(e => (!q.length || q.every(w => hay(e).includes(w))) && (!fpz || (e.t === 'c' ? gkey(e.o) === fpz : e.P.some(p => p.g.k === fpz))) && (!fst || is(e, fst)));
+    const cnt = k => E.filter(e => is(e, k)).length;
+    return `<div class="card"><div class="card-h"><h3>Ordini Fischer</h3><span class="muted small">${plur(E.length, 'ordine', 'ordini')}</span></div>
+      ${E.length ? `<div class="pv-sb tro-sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-q" type="search" placeholder="Cerca per numero, DDT, piazzale o articolo…" value="${esc(fq)}" autocomplete="off"></div>
+      <div class="fi-chips">${[['', 'Tutti', E.length], ['dafatt', 'Da fatturare ai piazzali', cnt('dafatt')], ['fatt', 'Fatturati ai piazzali', cnt('fatt')], ['conf', "Conferme d'ordine", cnt('conf')], ['attesa', 'Conferme in attesa', cnt('attesa')], ['acc', 'Acconti', cnt('acc')]].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="chip-f${fst === k ? ' on' : ''}" data-fist="${k}">${l}<em>${n}</em></button>`).join('')}</div>
+      ${pzs.size > 1 ? `<div class="fi-chips">${[['', 'Tutti i piazzali'], ...[...pzs.entries()].sort((a, b) => a[1].localeCompare(b[1], 'it'))].map(([k, l]) => `<button type="button" class="chip-f${fpz === k ? ' on' : ''}" data-fipz="${esc(k)}">${esc(l)}</button>`).join('')}</div>` : ''}
+      <div class="fi-ol">${R.slice(0, lim).map(e => {
+        if (e.t === 'c') { const o = e.o, st = ST[o.stato] || ST.confermato, rc = M.rec[o.id], w = checks(o).some(c => c.t === 'warn'); return `<button type="button" class="fi-or" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>conferma d'ordine · ${plur(o.righe.length, 'riga', 'righe')}${nextDel(o) && o.stato !== 'consegnato' && !evaso(o) ? ' · consegna ' + esc(X.shortDate(nextDel(o))) : ''}</small></span><span class="fi-cs"><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc && rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(o.imponibile)}</b></button>`; }
+        const f = e.f, P = e.P, nd = P.filter(p => !p.done).length, w = checksF(f).some(c => c.t === 'warn'), names = [...new Set(P.map(p => p.g.n))];
+        return `<button type="button" class="fi-or" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>${esc(f.tipo === 'TD02' ? 'Deposito a garanzia' : names.join(' · ') || '—')}</b><small>${plur(f.righe.length, 'riga', 'righe')}${f.scad && f.scad[0] ? ' · scade ' + esc(X.shortDate(f.scad[0].d)) : ''}</small></span><span class="fi-cs">${f.tipo === 'TD02' ? '<span class="chip">Acconto</span>' : !P.length ? '' : nd ? `<span class="chip soon">${nd === P.length ? 'Da fatturare' : `${nd} da fatturare`}</span>` : '<span class="chip paid">Fatturato</span>'}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(f.imponibile)}</b></button>`;
+      }).join('') || '<div class="empty">Nessun ordine trovato</div>'}${R.length > lim ? `<button type="button" class="btn sm" id="fi-more" style="margin:12px auto 0;display:block">Mostra altri</button>` : ''}</div>`
+      : '<div class="empty">Nessun ordine: carica i PDF di Fischer (anche uno zip con tutti)</div>'}</div>`;
   }
 
   function detail(o, can) {
     const st = ST[o.stato] || ST.confermato, rc = M.rec[o.id] || { fatt: [], ids: [] }, C = checks(o), cd = X.cdcs();
     const kv = [['Piazzale', gname(o)], ['Destinatario', o.dest.rs], ['Indirizzo', [o.dest.via, [o.dest.cap, o.dest.citta, o.dest.prov].filter(Boolean).join(' ')].filter(Boolean).join(' · ')], ['Pagamento', o.pagamento], ['Corriere', o.corriere], ['Porto / resa', o.porto], ['Peso', o.peso ? X.fmtNum(o.peso, 3) + ' kg' : ''], ['Magazzino Fischer', o.magForn], ['N. cliente', o.cliente]].filter(([, v]) => v);
-    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Ordini</button><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Fatturato da Fischer</span>' : rc.part ? '<span class="chip soon">Parzialmente fatturato</span>' : ''}<span class="pv-sp"></span>${o.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
+    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Ordini</button><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}<span class="pv-sp"></span>${o.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
       <div class="card"><div class="card-h"><h3>Ordine ${esc(o.num)}</h3><span class="muted small">del ${esc(X.shortDate(o.data))}</span></div>
         <div class="fi-kv">${kv.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
-        <div class="fi-act">${rc.fatt.length ? `<div class="fi-sel"><small>${evaso(o) ? 'Fatture collegate' : 'Fatture parziali'}</small><div class="fi-links">${rc.ids.map((id, i) => `<button type="button" class="chip-f" data-fiinv="${esc(id)}">${esc(rc.fatt[i])}</button>`).join('')}</div></div>` : '<div class="fi-sel"><small>Fattura Fischer</small><b class="fi-na">non ancora fatturato</b></div>'}
+        <div class="fi-act">${rc.fatt.length ? `<div class="fi-sel"><small>${evaso(o) ? 'Ordini consegnati collegati' : 'Consegne parziali'}</small><div class="fi-links">${rc.ids.map((id, i) => `<button type="button" class="chip-f" data-fiinv="${esc(id)}">${esc(rc.fatt[i])}</button>`).join('')}</div></div>` : '<div class="fi-sel"><small>Consegna</small><b class="fi-na">non ancora evaso</b></div>'}
           ${can ? `<label class="fi-sel"><small>Piazzale collegato</small><select id="fi-cdc"><option value="">— da collegare —</option>${cd.map(c => `<option value="${esc(c.cod)}"${o.cdc === c.cod ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select></label>
           <div class="fi-sel"><small>Stato della consegna</small><div class="tr-seg">${ST_K.map(k => `<button type="button" data-fistato="${k}" class="${o.stato === k ? 'on' : ''}">${ST[k][0]}</button>`).join('')}</div></div>` : ''}</div></div>
       <div class="card"><div class="card-h"><h3>Articoli</h3><span class="muted small">${plur(o.righe.length, 'riga', 'righe')}</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo ogni ${o.righe[0] ? X.fmtNum(o.righe[0].per, 0) : 100}</th><th>Importo</th><th>Consegna prevista</th></tr></thead><tbody>
@@ -450,7 +437,7 @@
             const p = parseInv(items), ex = X.cfg('fif:' + p.id), f2 = { ...p, nomeFile: f.name, pdf: ex ? ex.pdf || '' : '', creato: ex ? ex.creato : new Date().toISOString() };
             if (!X.isLocal() && !f2.pdf) {
               X.busy(`Salvo il PDF ${i} di ${docs.length} nel tuo Drive…`); nUp++;
-              try { f2.pdf = await X.api('uploadDoc', { name: `Fischer fattura ${f2.num} ${f2.data}.pdf`, mime: 'application/pdf', data: b64(u8) }); }
+              try { f2.pdf = await X.api('uploadDoc', { name: `Fischer ordine ${f2.num} ${f2.data}.pdf`, mime: 'application/pdf', data: b64(u8) }); }
               catch (e) { if (X.isAuth && X.isAuth(e)) throw e; nopdf++; }
             }
             ops.push(opSaveF(f2)); nF++; last = { inv: f2.id }; if (checksF(f2).some(c => c.t === 'warn')) warn++;
@@ -471,10 +458,10 @@
     } finally { X.busy(); }
     if (ops.length || nF || nO) {
       anim = true;
-      if (nF + nO === 1 && last) { if (last.inv) { openInv = last.inv; openId = ''; tab = 'fat'; } else { openId = last.ord; openInv = ''; tab = 'ord'; } } else { openId = ''; openInv = ''; tab = nF >= nO ? 'pan' : 'ord'; }
+      if (nF + nO === 1 && last) { if (last.inv) { openInv = last.inv; openId = ''; tab = 'fat'; } else { openId = last.ord; openInv = ''; tab = 'ord'; } } else { openId = ''; openInv = ''; tab = 'pan'; }
       flush();
     }
-    const parts = [nF ? plur(nF, 'fattura caricata', 'fatture caricate') : '', nO ? plur(nO, 'ordine caricato', 'ordini caricati') : ''].filter(Boolean).join(' · ');
+    const parts = [nF ? plur(nF, 'ordine caricato', 'ordini caricati') : '', nO ? plur(nO, 'conferma d\'ordine caricata', 'conferme d\'ordine caricate') : ''].filter(Boolean).join(' · ');
     X.toast(parts ? `${parts}${warn ? ` · ${warn} da controllare` : ''}${nopdf ? ` · PDF non archiviato su Drive (${nopdf})` : ''}${bad.length ? ` · ${bad.length} non letti` : ''}` : `Non letto: ${bad[0] || 'file non valido'}`);
     if (bad.length && parts) setTimeout(() => X.toast('Non letti: ' + bad.slice(0, 3).join(' | ')), 2800);
   }
@@ -490,7 +477,7 @@
       if (b('#fi-up') || b('#fi-up2')) return el.querySelector('#fi-file').click();
       if ((x = b('[data-fitab]'))) { tab = x.dataset.fitab; openId = ''; openInv = ''; anim = true; return draw(el); }
       if ((x = b('[data-fiopen]'))) { openId = x.dataset.fiopen; openInv = ''; tab = 'ord'; anim = true; return draw(el); }
-      if ((x = b('[data-fiinv]'))) { openInv = x.dataset.fiinv; openId = ''; tab = 'fat'; anim = true; return draw(el); }
+      if ((x = b('[data-fiinv]'))) { openInv = x.dataset.fiinv; openId = ''; tab = 'ord'; anim = true; return draw(el); }
       if (b('#fi-back')) { openId = ''; openInv = ''; anim = true; return draw(el); }
       if ((x = b('[data-fist]'))) { fst = x.dataset.fist; lim = 40; return draw(el); }
       if ((x = b('[data-fipz]'))) { fpz = x.dataset.fipz; lim = 40; return draw(el); }
@@ -500,12 +487,12 @@
       if (b('#fi-morf')) { limF += 60; return draw(el); }
       if ((x = b('[data-fiall]'))) {
         const g = M.groups.find(g => g.k === x.dataset.fiall); if (!g || !g.todo.length) return;
-        if (confirm(`Segnare come fatturate le ${g.todo.length} fatture da fatturare di «${g.n}» (${pzTot(g.tTodo)})?`)) { const fa = { ...FA() }; g.todo.forEach(p => { fa[p.key] = X.today(); }); X.quiet([opFatt(fa)]); draw(el); }
+        if (confirm(`Segnare come fatturati i ${g.todo.length} ordini da fatturare di «${g.n}» (${pzTot(g.tTodo)})?`)) { const fa = { ...FA() }; g.todo.forEach(p => { fa[p.key] = X.today(); }); X.quiet([opFatt(fa)]); draw(el); }
         return;
       }
-      if (b('#fi-pdf')) { const o = openInv ? getF(openInv) : get(openId); return o && o.pdf && X.openDoc(o.pdf, openInv ? `Fischer fattura ${o.num}` : `Fischer ordine ${o.num}`); }
+      if (b('#fi-pdf')) { const o = openInv ? getF(openInv) : get(openId); return o && o.pdf && X.openDoc(o.pdf, openInv ? `Fischer ordine ${o.num}` : `Fischer ordine ${o.num}`); }
       if (b('#fi-del')) {
-        if (openInv) { const f = getF(openInv); if (f && confirm(`Eliminare la fattura ${f.num}?`)) { const fa = { ...FA() }; Object.keys(fa).forEach(k => { if (k.startsWith(f.id + '|')) delete fa[k]; }); X.write([{ action: 'delete', sheet: 'Config', id: 'fif:' + f.id }, opFatt(fa)]); openInv = ''; X.toast('Fattura eliminata'); } return; }
+        if (openInv) { const f = getF(openInv); if (f && confirm(`Eliminare l\'ordine ${f.num}?`)) { const fa = { ...FA() }; Object.keys(fa).forEach(k => { if (k.startsWith(f.id + '|')) delete fa[k]; }); X.write([{ action: 'delete', sheet: 'Config', id: 'fif:' + f.id }, opFatt(fa)]); openInv = ''; X.toast('Ordine eliminato'); } return; }
         const o = get(openId); if (o && confirm(`Eliminare l'ordine ${o.num}?`)) { X.write([{ action: 'delete', sheet: 'Config', id: 'fi:' + o.id }]); openId = ''; X.toast('Ordine eliminato'); } return;
       }
       if ((x = b('[data-fistato]'))) { const o = get(openId); if (o) setStato(o, x.dataset.fistato); return; }

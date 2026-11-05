@@ -747,7 +747,7 @@
   /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
   async function renderFi() {
     const el = $('#fi-body'); if (!el) return;
-    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=185').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=186').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
     if (!window.CDC_FI || $('#fi-body') !== el) return;
     window.CDC_FI.render(el, {
       db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },
@@ -768,9 +768,9 @@
     const by = [...groupBy(todo, p => nm(p.pz))].map(([k, v]) => ({ k, n: v.length, t: r2(v.reduce((a, p) => a + p.imp, 0)) })).sort((a, b) => b.t - a.t).slice(0, 3);
     return `<a class="card db-mini a-fi" href="#fischer">
             <div class="db-ah"><span class="ov-ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg></span><span class="db-at">Acquisti Fischer</span><svg class="db-go" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
-            ${F.length || O.length ? `<div class="db-mv"><b>${eur0(tT)}</b><span>da fatturare ai piazzali · ${todo.length} ${todo.length === 1 ? 'fattura' : 'fatture'}</span></div>
-            ${by.length ? `<div class="db-ml">${by.map(x => `<div class="db-mli"><span><b>${esc(x.k)}</b><small>${x.n} ${x.n === 1 ? 'fattura' : 'fatture'}</small></span><strong>${eur0(x.t)}</strong></div>`).join('')}</div>` : ''}
-            <div class="db-an">${F.length ? `acquistato ${eur0(tot)} in ${F.length} fatture · ` : ''}non sommati alla spesa</div>` : '<div class="db-an">Carica le fatture Fischer dalla sezione Fischer</div>'}
+            ${F.length || O.length ? `<div class="db-mv"><b>${eur0(tT)}</b><span>da fatturare ai piazzali · ${todo.length} ${todo.length === 1 ? 'ordine' : 'ordini'}</span></div>
+            ${by.length ? `<div class="db-ml">${by.map(x => `<div class="db-mli"><span><b>${esc(x.k)}</b><small>${x.n} ${x.n === 1 ? 'ordine' : 'ordini'}</small></span><strong>${eur0(x.t)}</strong></div>`).join('')}</div>` : ''}
+            <div class="db-an">${F.length ? `acquistato ${eur0(tot)} in ${F.length} ordini · ` : ''}non sommati alla spesa</div>` : '<div class="db-an">Carica i PDF Fischer dalla sezione Fischer</div>'}
           </a>`;
   }
 
