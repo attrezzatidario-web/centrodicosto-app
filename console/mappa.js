@@ -185,7 +185,7 @@
       ['cmt', 'CMT Orange Tools', 'Lame, frese, punte e utensili per il legno.', ['992 prodotti, 5.560 codici'], ['sez.preventivi']],
       ['ambrovit', 'Ambrovit', 'Viteria e fissaggi: viti, barre filettate, rivetti, tirafondi.', ['153 prodotti, 9.468 codici'], ['sez.preventivi']],
       ['mustad', 'Mustad', 'Viti Panelvit, Drillex, Kovervit e Formex per legno, PVC e metallo.', ['59 prodotti, 733 codici'], ['sez.preventivi']],
-      ['dueci', 'Duecì Grafica', 'Vinili, banner, laminazione, termoadesivi e materiali per grafica.', ['347 prodotti'], ['sez.preventivi']],
+      ['dueci', 'Duecì Grafica', 'Vinili, banner, laminazione, termoadesivi e materiali per grafica.', ['386 prodotti, con foto'], ['sez.preventivi']],
       ['prodyver', 'Prodyver', 'Carta, panni, mascheratura e protezioni per officine e carrozzerie.', ['38 prodotti, 68 codici'], ['sez.preventivi']],
       ['fermec', 'Fermec', 'Utensili professionali: chiavi, bussole, automotive, pneumatica, officina e minuteria.', ['8.265 prodotti, 30.488 codici'], ['sez.preventivi']],
       ['tecfi', 'Tecfi', 'Fissaggi, viti, bulloneria, rivetti, punte, sigillanti e schiume.', ['717 prodotti, 6.469 codici'], ['sez.preventivi']],
