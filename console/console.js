@@ -478,10 +478,46 @@
     if (view === 'team') render(); else badges();
   }
   const tRep = k => ((T && T.report) || []).filter(r => r && r.agente === k).sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  /* ---- chat con l'agente (pannello a destra della scena, come nel video) ---- */
+  let tChat = LS.get('cdcx_tchat', {}), tChatBusy = '';
+  const tcSave = () => { const o = {}; Object.keys(tChat).forEach(k => o[k] = tChat[k].slice(-16)); LS.set('cdcx_tchat', o); };
+  const tcHtml = t => esc(t).replace(/\n/g, '<br>');
+  function tcMsgs(k) {
+    const a = AGENTI.find(x => x.k === k), r = tRep(k)[0], L = tChat[k] || [];
+    const hi = r ? `Ciao, sono ${a.n}. Ultimo report: «${r.titolo || ST_T[r.stato] || ''}» (${ago(r.data)}). Chiedimi pure.` : `Ciao, sono ${a.n}. Non sono ancora partito: appena avrò un report potrò risponderti sui risultati.`;
+    return `<div class="tc-m a">${tcHtml(hi)}</div>` + L.map(m => `<div class="tc-m ${m.r === 'u' ? 'u' : m.r === 'e' ? 'e' : 'a'}">${tcHtml(m.t)}</div>`).join('') + (tChatBusy === k ? '<div class="tc-m a typ"><i></i><i></i><i></i></div>' : '');
+  }
+  function tcPaint(k) { const b = $('#tc-list'); if (!b || b.dataset.k !== k) return; b.innerHTML = tcMsgs(k); b.scrollTop = b.scrollHeight; const f = $('#tm-chat'); if (f) f.querySelector('button[type=submit]').disabled = tChatBusy === k; }
+  function tcPanel(k) {
+    const a = AGENTI.find(x => x.k === k), r = tRep(k)[0], st = r ? r.stato : 'off';
+    return `<aside class="card tm-chat"><div class="tc-h"><span class="tm-ic st-${st}"><svg viewBox="0 0 24 24">${a.ic}</svg></span><div><b>${a.n}</b><small>${esc(a.r)}</small></div></div>
+      <div class="tc-list" id="tc-list" data-k="${k}">${tcMsgs(k)}</div>
+      <div class="tc-q">${['Cosa hai trovato?', 'Cosa devo fare per primo?'].map(q => `<button type="button" data-tcq="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <form id="tm-chat" class="tc-f" autocomplete="off"><input name="m" maxlength="400" placeholder="Scrivi a ${a.n}…" aria-label="Messaggio"><button class="btn sm" type="submit">Invia</button></form></aside>`;
+  }
+  async function tcSend(k, text) {
+    text = String(text || '').trim(); if (!text || tChatBusy) return;
+    const L = tChat[k] = tChat[k] || []; L.push({ r: 'u', t: text }); tChatBusy = k; tcSave(); tcPaint(k);
+    try {
+      const hist = L.filter(m => m.r !== 'e').slice(-10).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t }));
+      let r; try { r = await fetch(TEAM_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'chat', token: tok, agente: k, messaggi: hist }), credentials: 'omit', referrerPolicy: 'no-referrer' }); } catch { throw new Error('Connessione assente'); }
+      const j = await r.json().catch(() => ({ ok: false, error: 'Risposta non valida dallo script del Team' }));
+      if (!j.ok) throw new Error(/sconosciuta/i.test(j.error || '') ? 'Aggiorna lo script del Team all\'ultima versione (team.gs)' : j.error || 'Errore');
+      L.push({ r: 'a', t: j.result.testo || '…' });
+    } catch (e) { L.push({ r: 'e', t: e.message }); }
+    tChatBusy = ''; tcSave(); tcPaint(k);
+  }
+  function tcBind() {
+    const f = $('#tm-chat'); if (!f || f._b) return; f._b = 1; const k = $('#tc-list').dataset.k;
+    f.addEventListener('submit', ev => { ev.preventDefault(); const i = f.m; const t = i.value; i.value = ''; tcSend(k, t); });
+    $$('[data-tcq]').forEach(b => b.addEventListener('click', () => tcSend(k, b.dataset.tcq)));
+    const l = $('#tc-list'); l.scrollTop = l.scrollHeight; if (innerWidth > 900 && !tChatBusy) f.m.focus({ preventScroll: true });
+  }
   // Ufficio 3D (team3d.js + three.js, caricati solo quando serve). Se il dispositivo non ha WebGL restano le schede.
   let tFocus = '';
   function tmLoad(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
   async function tmMount() {
+    tcBind();
     const box = $('#tm3d'); if (!box) return;
     try {
       if (!window.THREE) await tmLoad('../lib-three.min.js?v=160');
@@ -512,7 +548,7 @@
           <p class="muted small tm-when">${esc(when(last.data))}${last.durata ? ` · ${last.durata} s` : ''}</p>${voci}</div>${storia}`
       : `<div class="card">${empty(`${agent.n}: da attivare`, esc(agent.r) + '. Chiedi a Claude di attivarlo: qui vedrai i suoi report.')}</div>`;
     return `${tErr ? `<div class="card flat tm-err"><b>Report non disponibili.</b> <span class="muted small">${esc(tErr)}</span></div>` : ''}
-      <div class="tm3d" id="tm3d"></div><div class="tm-grid">${cards}</div>
+      <div class="tm-split ${tFocus ? 'on' : ''}"><div class="tm3d" id="tm3d"></div>${tFocus ? tcPanel(tFocus) : ''}</div><div class="tm-grid">${cards}</div>
       <div class="tm-head"><div><h3>${agent.n}</h3><p class="muted small">${esc(agent.r)}</p></div><button class="btn sm ghost" type="button" data-act="tmreload">Aggiorna</button></div>
       ${main}
       <p class="muted small foot">Gli agenti lavorano su Claude, non sul tuo server: non rallentano il gestionale. Leggono solo la demo e i file del sito, mai i dati dei clienti.</p>`;
@@ -911,7 +947,7 @@
       const cp = t.closest('[data-copy]'); if (cp) { const v = cp.dataset.copy; (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(() => toast('Copiato', 'ok'), () => toast(v)); return; }
       const th = t.closest('[data-theme]'); if (th && th.tagName === 'BUTTON') { LS.set('cdcx_theme', th.dataset.theme); applyTheme(th.dataset.theme); render(); return; }
       const fc = t.closest('[data-fcli]'); if (fc) { F.cli = fc.dataset.fcli; LS.set('cdcx_fcli', F.cli); render(); return; }
-      const tm = t.closest('[data-tm]'); if (tm) { tSel = tm.dataset.tm; render(); return; }
+      const tm = t.closest('[data-tm]'); if (tm) { tSel = tm.dataset.tm; if (tm.classList.contains('tm-a')) tFocus = tSel; render(); return; }
       const fu = t.closest('[data-fut]'); if (fu) { F.ut = fu.dataset.fut; render(); return; }
       const fr = t.closest('[data-freg]'); if (fr) { F.reg = fr.dataset.freg; render(); return; }
       const frg = t.closest('[data-freg-go]'); if (frg) { F.reg = frg.dataset.fregGo; F.q = ''; }

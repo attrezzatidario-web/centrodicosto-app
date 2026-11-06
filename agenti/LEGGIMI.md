@@ -17,3 +17,6 @@ Nome file: `<agente>-AAAA-MM-GG-HHMM.json`.
 | informatico | ogni lunedì 7:12 | rivede i commit della settimana, sicurezza, peso dei file, coerenza versioni; solo suggerimenti | — |
 
 Regole: gli agenti **non modificano mai** codice, Fogli o dati dei clienti. Le modifiche le fa Claude in chat su richiesta di Dario.
+
+## Chat con gli agenti (team.gs team-2)
+Nella Console › Team, cliccando una scrivania (o una scheda) si apre a destra la chat con l'agente. La Console chiama team.gs con `action: 'chat'`; team.gs risponde con l'API Anthropic usando la chiave `ANTHROPIC_KEY` nelle Proprietà dello script (mai nel repo), solo in base ai report dell'agente, max 60 messaggi/giorno. L'agente non esegue nulla: per modifiche si scrive a Claude nella chat del progetto.
