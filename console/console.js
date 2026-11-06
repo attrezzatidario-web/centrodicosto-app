@@ -521,7 +521,7 @@
     const box = $('#tm3d'); if (!box) return;
     try {
       if (!window.THREE) await tmLoad('../lib-three.min.js?v=160');
-      if (!window.TM3D) await tmLoad('team3d.js?v=4');
+      if (!window.TM3D) await tmLoad('team3d.js?v=5');
       if (!TM3D.ok()) throw 0;
       TM3D.onPick = k => { tFocus = k; if (k) tSel = k; render(); };
       const b2 = $('#tm3d'); if (!b2) return;
