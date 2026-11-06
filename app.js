@@ -402,9 +402,10 @@
   function demoStart() {
     try { localStorage.removeItem('cdc_demo_set'); } catch {}
     setSession({ email: 'demo', nome: 'Ospite', azienda: '', ruolo: 'demo', stato: 'attivo', admin: false, ws: 'DEMO2026', wsNome: 'Versione demo', demo: true, principale: false }, '');
+    window.cdcPixel && cdcPixel.demo();
     start(); toast('Benvenuto nella demo');
   }
-  const contactReq = id => { const s = SET.get(id || settoreId()) || {}; location.href = `mailto:${CONTATTI.email}?subject=${encodeURIComponent('Richiesta gestionale · ' + (s.n || ''))}&body=${encodeURIComponent(`Ciao ${CONTATTI.nome},\nvorrei attivare il gestionale per la mia attività (${s.n || ''}).\n\nAzienda:\nCittà:\nTelefono:\nCosa mi servirebbe:\n`)}`; };
+  const contactReq = id => { window.cdcPixel && cdcPixel.lead(); const s = SET.get(id || settoreId()) || {}; location.href = `mailto:${CONTATTI.email}?subject=${encodeURIComponent('Richiesta gestionale · ' + (s.n || ''))}&body=${encodeURIComponent(`Ciao ${CONTATTI.nome},\nvorrei attivare il gestionale per la mia attività (${s.n || ''}).\n\nAzienda:\nCittà:\nTelefono:\nCosa mi servirebbe:\n`)}`; };
   function renderDemoBar() {
     let bar = $('#demo-bar');
     const vis = me && me.admin && !DEMO && !me.principale; // v102: l'amministratore è entrato dalla Console nel gestionale di un cliente
@@ -462,6 +463,7 @@
   }
   function showLogin(msg) {
     $('#app').hidden = true; $('#setup').hidden = false;
+    window.cdcPixel && cdcPixel.page();
     authMsg(msg);
     // pagina d'ingresso: chi non è entrato vede subito la presentazione, con «Accedi» in alto
     if (!msg && !window.__trLanding && !/accedi/i.test(location.hash + location.search) && !$('.tr-scroll')) { window.__trLanding = 1; openTour({ landing: true }); }
