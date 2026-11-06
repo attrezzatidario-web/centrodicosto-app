@@ -500,7 +500,7 @@
     const L = tChat[k] = tChat[k] || []; L.push({ r: 'u', t: text }); tChatBusy = k; tcSave(); tcPaint(k);
     try {
       const hist = L.filter(m => m.r !== 'e').slice(-10).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t }));
-      let r; try { r = await fetch(TEAM_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'chat', token: tok, agente: k, messaggi: hist }), credentials: 'omit', referrerPolicy: 'no-referrer' }); } catch { throw new Error('Connessione assente'); }
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 45000); let r; try { r = await fetch(TEAM_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'chat', token: tok, agente: k, messaggi: hist }), credentials: 'omit', referrerPolicy: 'no-referrer', signal: ac.signal }); } catch (e) { throw new Error(e && e.name === 'AbortError' ? 'L\'agente non risponde (oltre 45 secondi): controlla di aver pubblicato la nuova versione dello script' : 'Connessione assente'); } finally { clearTimeout(to); }
       const j = await r.json().catch(() => ({ ok: false, error: 'Risposta non valida dallo script del Team' }));
       if (!j.ok) throw new Error(/sconosciuta/i.test(j.error || '') ? 'Aggiorna lo script del Team all\'ultima versione (team.gs)' : j.error || 'Errore');
       L.push({ r: 'a', t: j.result.testo || '…' });

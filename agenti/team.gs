@@ -4,7 +4,7 @@
  * Nessuna chat che modifica Code.gs deve toccare questo script.
  * Accesso: controlla il token chiedendo allo script principale chi è l'utente (azione «me»): solo l'amministratore.
  */
-const TEAM_V = 'team-2';
+const TEAM_V = 'team-3';
 const MAIN_URL = 'https://script.google.com/macros/s/AKfycbxExGwxVNa08xHz1zp2BmoGkvT1LX7jj-yfdbzbWckqOBsMxPsISmDdKgDmx4uqwRiW/exec';
 const ADMIN = 'attrezzatidario@gmail.com';
 const FOLDER = 'Centro di Costo - Team', MAX = 150;
@@ -67,7 +67,7 @@ function chat(b) {
   const msgs = (Array.isArray(b.messaggi) ? b.messaggi : []).slice(-10).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content || '').slice(0, 1500) })).filter(m => m.content);
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   if (!msgs.length) throw new Error('Scrivi un messaggio');
-  const mine = report().report.filter(r => r.agente === ag).sort((a, c) => String(c.data).localeCompare(String(a.data)));
+  const mine = reportAgente(ag, 6);
   const last = mine[0] ? JSON.stringify(mine[0]).slice(0, 6000) : 'nessun report ancora (l\'agente non è mai partito)';
   const storia = mine.slice(0, 6).map(r => r.data + ' · ' + r.stato + ' · ' + (r.titolo || '')).join('\n') || '—';
   const system = 'Sei l\'agente ' + ag.toUpperCase() + ' del gestionale «Centro di Costo» di Dario (Soluzione Veicolare / Attrezzati). Il tuo lavoro: ' + desc + '.\n' +
@@ -82,6 +82,20 @@ function chat(b) {
   props.setProperty(day, String(n + 1));
   return { testo: j.content.map(c => c.text || '').join('').trim() };
 }
+
+// legge solo gli ultimi report di UN agente (i file si chiamano <agente>-AAAA-MM-GG-HHMM.json): molto più veloce di report()
+function reportAgente(ag, n) {
+  const it = DriveApp.getFoldersByName(FOLDER); if (!it.hasNext()) return [];
+  const files = [], fi = it.next().getFiles();
+  while (fi.hasNext()) { const f = fi.next(), nm = f.getName(); if (nm.indexOf(ag + '-') === 0 && /\.json$/i.test(nm)) files.push(f); }
+  files.sort((a, b) => b.getName().localeCompare(a.getName()));
+  const res = [];
+  files.slice(0, n).forEach(f => { try { const j = JSON.parse(f.getBlob().getDataAsString('UTF-8')); if (j && j.agente) res.push(j); } catch (e) {} });
+  return res;
+}
+
+// prova dall'editor (Esegui): scrive nel registro la risposta dell'agente, per vedere subito eventuali errori
+function provaChat() { Logger.log(JSON.stringify(chat({ agente: 'guardiano', messaggi: [{ role: 'user', content: 'Cosa hai trovato?' }] }))); }
 
 function out(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
