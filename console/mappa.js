@@ -192,7 +192,6 @@
       ['vorpa', 'Vorpa', 'Ancoranti chimici e meccanici, tasselli, barre filettate, schiume e fissaggi.', ['332 prodotti, 1.901 codici'], ['sez.preventivi']],
       ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
       ['ryobi', 'Ryobi', 'Elettroutensili, giardinaggio, pulizia, batterie e accessori Ryobi (791 modelli, 947 codici).', ['791 prodotti'], ['sez.preventivi']],
-      ['forwardlift', 'Forward Lift', 'Ponti sollevatori a 2 colonne Forward Lift (PL35, PL40, PL45, PL55, PL65).', ['5 prodotti'], ['sez.preventivi']],
       ['kapro', 'Kapro', 'Strumenti di misura Kapro: livelle, laser rotativi, a punti e a linee, metri, squadre e tracciatura.', ['147 prodotti'], ['sez.preventivi']],
       ['qbricksys', 'Qbrick System', 'Cassette portautensili, organizer, cassettiere, carrelli, valigie e set Qbrick System (linee ONE, PRO, PRIME, TWO, Red Ultra HD, Black).', ['185 prodotti'], ['sez.preventivi']],
       ['flex', 'FLEX', 'Elettroutensili FLEX (a batteria e a filo): levigatrici, lucidatrici, smerigliatrici, accessori e sistema di stoccaggio.', ['1.092 prodotti'], ['sez.preventivi']],
