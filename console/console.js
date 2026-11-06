@@ -516,12 +516,15 @@
   // Ufficio 3D (team3d.js + three.js, caricati solo quando serve). Se il dispositivo non ha WebGL restano le schede.
   let tFocus = '';
   function tmLoad(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
+  // precarico in parallelo appena la Console parte: quando apri Team è già pronto
+  let tmP = null;
+  function tmPre() { return tmP || (tmP = Promise.all([window.THREE ? 0 : tmLoad('../lib-three.min.js?v=160'), tmLoad('team3d.js?v=6')])); }
+  addEventListener('load', () => { if (innerWidth > 560 && !(navigator.connection && navigator.connection.saveData)) setTimeout(() => tmPre().catch(() => { tmP = null; }), 1200); });
   async function tmMount() {
     tcBind();
     const box = $('#tm3d'); if (!box) return;
     try {
-      if (!window.THREE) await tmLoad('../lib-three.min.js?v=160');
-      if (!window.TM3D) await tmLoad('team3d.js?v=5');
+      await tmPre();
       if (!TM3D.ok()) throw 0;
       TM3D.onPick = k => { tFocus = k; if (k) tSel = k; render(); };
       const b2 = $('#tm3d'); if (!b2) return;

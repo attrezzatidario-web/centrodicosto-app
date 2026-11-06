@@ -123,11 +123,11 @@
     const headEl = document.createElement('div'); headEl.className = 'tm3d-head'; wrap.appendChild(headEl);
     const all = document.createElement('button'); all.type = 'button'; all.className = 'tm3d-all'; all.textContent = 'Vista intera'; all.hidden = true; all.addEventListener('click', () => TM3D.onPick && TM3D.onPick('')); wrap.appendChild(all);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, innerWidth < 700 ? 1.5 : 2)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
     wrap.insertBefore(renderer.domElement, wrap.firstChild);
     const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(38, 1.6, .1, 100);
     scene.add(new THREE.HemisphereLight(0xfdfcff, 0xc9b79a, .95));
-    const sun = new THREE.DirectionalLight(0xfff1dc, 2.1); sun.position.set(-9, 15, 8); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+    const sun = new THREE.DirectionalLight(0xfff1dc, 2.1); sun.position.set(-9, 15, 8); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
     Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 10, bottom: -10, near: 1, far: 40 }); sun.shadow.bias = -.0004; sun.shadow.radius = 5; scene.add(sun);
     const fill = new THREE.DirectionalLight(0xcfe0ff, .45); fill.position.set(8, 9, 10); scene.add(fill);
 
