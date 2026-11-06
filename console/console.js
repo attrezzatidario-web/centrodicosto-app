@@ -478,36 +478,66 @@
     if (view === 'team') render(); else badges();
   }
   const tRep = k => ((T && T.report) || []).filter(r => r && r.agente === k).sort((a, b) => String(b.data).localeCompare(String(a.data)));
-  // Ufficio: scena isometrica con una scrivania per agente. Scrivania occupata = ha già un report; vuota = da attivare.
+  // Ufficio: scena isometrica con una scrivania per agente, collegate al «cervello condiviso» (i report su Drive).
+  // Scrivania occupata = l'agente ha già un report; vuota = da attivare. Colore dello schermo = stato dell'ultimo report.
   const OF_POS = { guardiano: [0.5, 0.5], informatico: [2.8, 0.5], commerciale: [5.1, 0.5], marketing: [0.6, 3.7], grafico: [3.7, 3.7] };
+  const OF_LOOK = { guardiano: ['#3f7fc4', '#2b2f3a'], informatico: ['#7a5fd0', '#5a3b2a'], commerciale: ['#d98a2b', '#1f1f1f'], marketing: ['#d4568a', '#b8862d'], grafico: ['#2fa58a', '#7a2e2e'] };
+  function ofScreen(k) { // contenuto dello schermo, disegnato in un rettangolo 0.7 × 0.43 (unità locali)
+    const L = 'fill="#fff"';
+    if (k === 'guardiano') return `<circle cx=".35" cy=".215" r=".13" fill="none" stroke="#fff" stroke-width=".035" class="of-ring"/><path d="M.28 .22l.05.05.1-.11" fill="none" stroke="#fff" stroke-width=".04" stroke-linecap="round" stroke-linejoin="round"/>`;
+    if (k === 'informatico') { let r = ''; [.5, .3, .55, .2, .4, .6, .25, .45].forEach((w, i) => r += `<rect x="${i % 3 === 1 ? .16 : .08}" y="${.04 + i * .07}" width="${w * .7}" height=".035" rx=".017" ${L} opacity=".85"/>`); return `<g class="of-code">${r}<g transform="translate(0 .56)">${r}</g></g>`; }
+    if (k === 'commerciale') return [0, 1, 2].map(i => `<rect x=".07" y="${.05 + i * .12}" width=".56" height=".09" rx=".02" ${L} opacity=".3"/><rect x=".1" y="${.075 + i * .12}" width=".18" height=".035" rx=".017" ${L}/>`).join('') + `<rect class="of-sel" x=".07" y=".05" width=".56" height=".09" rx=".02" fill="none" stroke="#fff" stroke-width=".02"/>`;
+    if (k === 'marketing') return [.28, .5, .36, .7, .55].map((h, i) => `<rect class="of-bar" style="animation-delay:${i * .25}s" x="${.07 + i * .12}" y="${.4 - h * .5}" width=".08" height="${h * .5}" rx=".015" ${L} opacity=".9"/>`).join('');
+    return `<circle class="of-shp" cx=".2" cy=".21" r=".1" ${L} opacity=".9"/><rect class="of-shp" style="animation-delay:.6s" x=".32" y=".11" width=".18" height=".18" rx=".03" ${L} opacity=".6"/><path class="of-shp" style="animation-delay:1.2s" d="M.58 .32L.66 .12L.74 .32z" ${L} opacity=".8" transform="translate(-.08 0)"/>`;
+  }
   function tmOffice(sel) {
     const A = 44, B = 25.4, H = 46, OX = 276, OY = 74, W = 7.2, D = 6, f = n => Math.round(n * 10) / 10;
     const P = (x, y, z = 0) => [OX + (x - y) * A, OY + (x + y) * B - z * H];
     const pts = a => a.map(q => f(q[0]) + ',' + f(q[1])).join(' ');
     const poly = (a, cls, st = '') => `<polygon points="${pts(a)}" class="${cls}"${st ? ` style="${st}"` : ''}/>`;
+    const ring = (x, y, r) => Array.from({ length: 28 }, (_, i) => P(x + Math.cos(i / 28 * 6.2832) * r, y + Math.sin(i / 28 * 6.2832) * r));
     const box = (x, y, w, d, h, z0, c = 'of-w') => poly([P(x, y + d, z0 + h), P(x + w, y + d, z0 + h), P(x + w, y, z0 + h), P(x, y, z0 + h)], c + ' t')
       + poly([P(x, y + d, z0), P(x + w, y + d, z0), P(x + w, y + d, z0 + h), P(x, y + d, z0 + h)], c + ' l')
       + poly([P(x + w, y + d, z0), P(x + w, y, z0), P(x + w, y, z0 + h), P(x + w, y + d, z0 + h)], c + ' r');
-    let g = poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], 'of-floor')
-      + poly([P(0, 0), P(W, 0), P(W, 0, 2), P(0, 0, 2)], 'of-wall') + poly([P(0, 0), P(0, D), P(0, D, 2), P(0, 0, 2)], 'of-wall l');
+    const plant = (x, y) => box(x, y, .34, .34, .26, 0, 'of-pot') + (() => { const [px, py] = P(x + .17, y + .17, .26); return `<g transform="translate(${f(px)} ${f(py)})" class="of-leaf"><ellipse cx="-6" cy="-12" rx="5" ry="13" transform="rotate(-24 -6 -12)"/><ellipse cx="6" cy="-12" rx="5" ry="13" transform="rotate(24 6 -12)"/><ellipse cx="0" cy="-15" rx="5" ry="15"/></g>`; })();
+    const [hx, hy] = [6.15, 4.75], [ox, oy] = P(hx, hy, 1.25);
+    let g = `<defs><linearGradient id="of-fl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--panel)"/><stop offset="1" style="stop-color:var(--panel2)"/></linearGradient><radialGradient id="of-orb"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".45" style="stop-color:var(--acc2)"/><stop offset="1" style="stop-color:var(--acc)"/></radialGradient></defs>`
+      + poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], 'of-floor')
+      + poly([P(0, 0), P(W, 0), P(W, 0, 2), P(0, 0, 2)], 'of-wall') + poly([P(0, 0), P(0, D), P(0, D, 2), P(0, 0, 2)], 'of-wall l')
+      + poly([P(.4, 0, 1.35), P(W - .4, 0, 1.35), P(W - .4, 0, 1.42), P(.4, 0, 1.42)], 'of-strip');
     for (let i = 1; i < W; i++) g += `<line x1="${f(P(i, 0)[0])}" y1="${f(P(i, 0)[1])}" x2="${f(P(i, D)[0])}" y2="${f(P(i, D)[1])}" class="of-grid"/>`;
     for (let i = 1; i < D; i++) g += `<line x1="${f(P(0, i)[0])}" y1="${f(P(0, i)[1])}" x2="${f(P(W, i)[0])}" y2="${f(P(W, i)[1])}" class="of-grid"/>`;
+    g += poly(ring(hx, hy, 1.15), 'of-rug') + poly(ring(hx, hy, .7), 'of-rug in');
     const order = AGENTI.slice().sort((a, b) => (OF_POS[a.k][1] - OF_POS[b.k][1]) || (OF_POS[a.k][0] - OF_POS[b.k][0]));
-    let pills = '';
+    // linee di collegamento con il cervello (sotto i mobili)
     order.forEach(a => {
-      const [x, y] = OF_POS[a.k], w = 1.7, d = 1, r = tRep(a.k)[0], on = !!r, st = on ? r.stato : 'off', cx = x + w / 2;
-      g += `<g class="of-d st-${st} ${a.k === sel ? 'on' : ''}" data-tm="${a.k}">`
+      const [x, y] = OF_POS[a.k], r = tRep(a.k)[0], st = r ? r.stato : 'off', [sx, sy] = P(hx, hy), [ex, ey] = P(x + .85, y + 2.0);
+      g += `<path d="M${f(sx)} ${f(sy)} Q${f((sx + ex) / 2)} ${f((sy + ey) / 2 - 18)} ${f(ex)} ${f(ey)}" class="of-link st-${st}"/>`;
+    });
+    let pills = '', idx = 0;
+    order.forEach(a => {
+      const [x, y] = OF_POS[a.k], w = 1.7, d = 1, r = tRep(a.k)[0], on = !!r, st = on ? r.stato : 'off', cx = x + w / 2, [pc, hc] = OF_LOOK[a.k];
+      const [sx0, sy0] = P(cx - .35, y + .32, .76), [mx, my] = P(cx, y + .32, 1.2);
+      g += `<g class="of-d st-${st} ${a.k === sel ? 'on' : ''}" data-tm="${a.k}" style="--pc:${pc};--hc:${hc};animation-delay:${idx++ * 110}ms">`
+        + poly([P(x - .1, y - .05), P(x + w + .25, y - .05), P(x + w + .2, y + d + .25), P(x - .05, y + d + .25)], 'of-shadow')
         + poly([P(x - .15, y - .1), P(x + w + .15, y - .1), P(x + w + .15, y + d + 1.05), P(x - .15, y + d + 1.05)], 'of-pad')
         + box(x + .05, y + .1, .07, d - .2, .55, 0, 'of-leg') + box(x + w - .12, y + .1, .07, d - .2, .55, 0, 'of-leg')
         + box(x, y, w, d, .07, .55) + box(cx - .09, y + .22, .18, .1, .1, .62, 'of-dk')
         + box(cx - .4, y + .26, .8, .06, .52, .72, 'of-dk')
-        + poly([P(cx - .35, y + .32, .76), P(cx + .35, y + .32, .76), P(cx + .35, y + .32, 1.19), P(cx - .35, y + .32, 1.19)], 'of-scr')
+        + `<clipPath id="of-c-${a.k}"><rect width=".7" height=".43"/></clipPath><g transform="matrix(${A} ${B} 0 ${-H} ${f(sx0)} ${f(sy0)})"><rect width=".7" height=".43" class="of-scr"/>${on ? `<g clip-path="url(#of-c-${a.k})">${ofScreen(a.k)}</g>` : `<rect x=".08" y=".2" width=".54" height=".02" rx=".01" fill="#fff" opacity=".25"/>`}</g>`
         + box(cx - .25, y + d + .2, .5, .5, .07, .36, 'of-ch') + box(cx - .04, y + d + .38, .08, .14, .3, .06, 'of-dk');
-      if (on) { const [px, py] = P(cx, y + d + .45, .5); g += `<g transform="translate(${f(px)} ${f(py)})"><g class="of-p"><path d="M-10 0V-14a10 10 0 0 1 20 0V0z" class="of-body"/><circle cy="-30" r="8.5" class="of-head"/></g></g>`; }
+      if (on) {
+        const [px, py] = P(cx, y + d + .45, .5);
+        g += `<g transform="translate(${f(px)} ${f(py)})"><g class="of-p"><path d="M-11 0V-13a11 11 0 0 1 22 0V0z" class="of-body"/><rect x="-15" y="-15" width="6" height="13" rx="3" class="of-arm l"/><rect x="9" y="-15" width="6" height="13" rx="3" class="of-arm r"/><circle cy="-29" r="8.8" class="of-head"/><path d="M-8.8 -29a8.8 8.8 0 0 1 17.6 0z" class="of-hair" opacity=".25"/></g></g>`;
+        if (st === 'ok') g += [0, 1, 2].map(i => `<circle class="of-dot" style="animation-delay:${i * .9}s" cx="${f(mx + (i - 1) * 7)}" cy="${f(my - 14)}" r="2.2"/>`).join('');
+        else g += `<ellipse class="of-alert" cx="${f(mx)}" cy="${f(my + 6)}" rx="26" ry="14"/>`;
+      }
       g += '</g>';
       const [lx, ly] = P(cx, y + .3, 2.15);
-      pills += `<button type="button" class="of-pill st-${st} ${a.k === sel ? 'on' : ''}" data-tm="${a.k}" style="left:${f(lx / 6.4)}%;top:${f(ly / 4.2)}%"><i></i><b>${a.n}</b><small>${on ? esc(ago(r.data)) : 'Da attivare'}</small></button>`;
+      pills += `<button type="button" class="of-pill st-${st} ${a.k === sel ? 'on' : ''}" data-tm="${a.k}" style="left:${f(lx / 6.4)}%;top:${f(ly / 4.2)}%;animation-delay:${(idx * 110 + 250)}ms"><i></i><b>${a.n}</b><small>${on ? esc(ago(r.data)) : 'Da attivare'}</small></button>`;
     });
+    g += plant(.1, 5.4) + plant(6.7, .15)
+      + `<g class="of-brain"><ellipse cx="${f(ox)}" cy="${f(P(hx, hy)[1])}" rx="26" ry="13" class="of-halo"/><ellipse cx="${f(ox)}" cy="${f(P(hx, hy)[1])}" rx="26" ry="13" class="of-halo b"/><g class="of-orbf"><circle cx="${f(ox)}" cy="${f(oy)}" r="13" fill="url(#of-orb)"/><ellipse cx="${f(ox)}" cy="${f(oy)}" rx="21" ry="7" class="of-orbit"/></g></g>`;
     return `<div class="tm-of"><svg viewBox="0 0 640 420" role="img" aria-label="Ufficio del Team">${g}</svg>${pills}</div>`;
   }
   function vTeam() {
