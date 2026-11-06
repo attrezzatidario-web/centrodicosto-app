@@ -573,65 +573,14 @@ body > .burst { position: fixed; top: 40%; }
 @media (max-width: 1100px) { .tm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .tm-grid { grid-template-columns: 1fr 1fr; } .tm-a { padding: 10px; } }
 
-/* ---------- Team: ufficio isometrico ---------- */
-.tm-of { position: relative; max-width: 780px; margin: 0 auto 18px; aspect-ratio: 640 / 420; }
-.tm-of svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.tm-of .of-floor { fill: url(#of-fl); stroke: var(--line); stroke-width: 1.2; }
-.tm-of .of-wall { fill: var(--panel2); stroke: var(--line); stroke-width: 1; } .tm-of .of-wall.l { fill: color-mix(in srgb, var(--panel2) 70%, var(--line)); }
-.tm-of .of-strip { fill: var(--acc); opacity: .35; }
-.tm-of .of-grid { stroke: var(--line2); stroke-width: 1; }
-.tm-of .of-rug { fill: var(--accs); stroke: color-mix(in srgb, var(--acc) 25%, transparent); stroke-width: 1; } .tm-of .of-rug.in { fill: color-mix(in srgb, var(--acc) 10%, transparent); stroke: none; }
-.tm-of .of-w.t { fill: color-mix(in srgb, var(--warn) 22%, var(--panel)); } .tm-of .of-w.l { fill: color-mix(in srgb, var(--warn) 22%, var(--panel2)); } .tm-of .of-w.r { fill: color-mix(in srgb, var(--warn) 22%, var(--line)); }
-.tm-of .of-leg.t, .tm-of .of-leg.l, .tm-of .of-leg.r { fill: var(--mut); opacity: .55; }
-.tm-of .of-dk.t { fill: color-mix(in srgb, var(--ink) 30%, var(--panel)); } .tm-of .of-dk.l { fill: color-mix(in srgb, var(--ink) 45%, var(--panel)); } .tm-of .of-dk.r { fill: color-mix(in srgb, var(--ink) 38%, var(--panel)); }
-.tm-of .of-ch.t { fill: var(--ink2); } .tm-of .of-ch.l { fill: color-mix(in srgb, var(--ink2) 80%, var(--panel)); } .tm-of .of-ch.r { fill: color-mix(in srgb, var(--ink2) 65%, var(--panel)); }
-.tm-of .of-pot.t, .tm-of .of-pot.l, .tm-of .of-pot.r { fill: var(--mut); } .tm-of .of-pot.l { opacity: .8; } .tm-of .of-pot.r { opacity: .65; }
-.tm-of .of-leaf ellipse { fill: var(--ok); opacity: .8; transform-box: fill-box; transform-origin: bottom center; animation: ofSway 5s ease-in-out infinite; }
-.tm-of .of-shadow { fill: #000; opacity: .06; }
-.tm-of .of-scr { fill: var(--line); }
-.tm-of .st-ok .of-scr { fill: var(--ok); } .tm-of .st-warn .of-scr { fill: var(--warn); } .tm-of .st-bad .of-scr { fill: var(--bad); }
-.tm-of .of-d { cursor: pointer; animation: ofIn .7s var(--ease) both; transition: opacity .2s; }
-.tm-of .of-pad { fill: transparent; stroke: transparent; stroke-width: 1.5; transition: fill .2s, stroke .2s; }
-.tm-of .of-d:hover .of-pad { fill: var(--accs); }
-.tm-of .of-d.on .of-pad { fill: var(--accs); stroke: var(--acc); stroke-dasharray: 6 4; animation: ofDash 1.2s linear infinite; }
-.tm-of:has(.of-d.on) .of-d:not(.on):not(:hover) { opacity: .72; }
-.tm-of .of-body, .tm-of .of-arm { fill: var(--pc); } .tm-of .of-head, .tm-of .of-hair { fill: var(--hc); }
-.tm-of .of-p { animation: ofBob 3.6s ease-in-out infinite; }
-.tm-of .of-arm { transform-box: fill-box; transform-origin: top center; animation: ofType .45s ease-in-out infinite alternate; } .tm-of .of-arm.r { animation-delay: .22s; }
-.tm-of .st-bad .of-p { animation-duration: 1.2s; }
-.tm-of .of-link { fill: none; stroke: var(--line); stroke-width: 1.5; }
-.tm-of .of-link:not(.st-off) { stroke: var(--ok); stroke-dasharray: 4 7; stroke-linecap: round; animation: ofFlow 1.4s linear infinite; opacity: .6; }
-.tm-of .of-link.st-warn { stroke: var(--warn); } .tm-of .of-link.st-bad { stroke: var(--bad); }
-.tm-of .of-dot { fill: var(--ok); animation: ofRise 2.7s ease-out infinite; opacity: 0; }
-.tm-of .of-alert { fill: none; stroke: var(--warn); stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: ofPulse 1.8s ease-out infinite; }
-.tm-of .st-bad .of-alert { stroke: var(--bad); animation-duration: 1.1s; }
-.tm-of .of-halo { fill: none; stroke: var(--acc); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: ofPulse 3s ease-out infinite; } .tm-of .of-halo.b { animation-delay: 1.5s; }
-.tm-of .of-orbf { animation: ofFloat 4s ease-in-out infinite; } .tm-of .of-orbit { fill: none; stroke: #fff; stroke-width: 1.3; opacity: .8; transform-box: fill-box; transform-origin: center; animation: ofSpin 6s linear infinite; }
-.tm-of .of-ring { transform-box: fill-box; transform-origin: center; animation: ofPulse 2.2s ease-out infinite; }
-.tm-of .of-code { animation: ofCode 3.4s linear infinite; }
-.tm-of .of-sel { animation: ofSel 3.6s steps(1) infinite; }
-.tm-of .of-bar { transform-box: fill-box; transform-origin: bottom; animation: ofBar 2.4s ease-in-out infinite; }
-.tm-of .of-shp { transform-box: fill-box; transform-origin: center; animation: ofShp 3s ease-in-out infinite; }
-.tm-of .of-pill { position: absolute; transform: translate(-50%, -100%); display: grid; justify-items: center; gap: 1px; padding: 5px 11px 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--sh1); font: inherit; color: inherit; cursor: pointer; white-space: nowrap; transition: border-color .15s, box-shadow .15s; animation: ofPill .5s var(--spring) both; }
-.tm-of .of-pill b { font-size: 12.5px; } .tm-of .of-pill small { color: var(--mut); font-size: 11px; }
-.tm-of .of-pill i { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
-.tm-of .of-pill.st-ok i { background: var(--ok); } .tm-of .of-pill.st-warn i { background: var(--warn); } .tm-of .of-pill.st-bad i { background: var(--bad); }
-.tm-of .of-pill:hover { border-color: color-mix(in srgb, var(--acc) 35%, var(--line)); } .tm-of .of-pill.on { border-color: var(--acc); box-shadow: 0 0 0 3px var(--accs); }
-@keyframes ofIn { from { opacity: 0; transform: translateY(-18px); } }
-@keyframes ofPill { from { opacity: 0; margin-top: -8px; } }
-@keyframes ofBob { 50% { transform: translateY(-1.5px); } }
-@keyframes ofType { to { transform: rotate(-9deg); } }
-@keyframes ofSway { 50% { transform: rotate(3deg); } }
-@keyframes ofDash { to { stroke-dashoffset: -20; } }
-@keyframes ofFlow { to { stroke-dashoffset: -22; } }
-@keyframes ofRise { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: .9; } 100% { opacity: 0; transform: translateY(-26px); } }
-@keyframes ofPulse { 0% { opacity: .7; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.5); } }
-@keyframes ofFloat { 50% { transform: translateY(-5px); } }
-@keyframes ofSpin { to { transform: rotate(360deg); } }
-@keyframes ofCode { to { transform: translateY(-.56px); } }
-@keyframes ofSel { 0% { transform: translateY(0); } 33% { transform: translateY(.12px); } 66% { transform: translateY(.24px); } }
-@keyframes ofBar { 0%, 100% { transform: scaleY(.45); } 50% { transform: scaleY(1); } }
-@keyframes ofShp { 50% { transform: scale(.78) rotate(12deg); } }
-@media (prefers-reduced-motion: reduce) { .tm-of * { animation: none !important; } .tm-of .of-dot { opacity: .8; } }
-@media (max-width: 560px) { .tm-of .of-pill { display: none; } }
-@media (min-width: 561px) { .tm-grid { display: none; } }
+/* ---------- Team: ufficio 3D ---------- */
+.tm3d { max-width: 1000px; margin: 0 auto 18px; }
+.tm3d-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9.5; min-height: 300px; border-radius: var(--r); overflow: hidden; background: color-mix(in srgb, var(--panel) 60%, var(--bg)); border: 1px solid var(--line); box-shadow: var(--sh1); }
+.tm3d-wrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+.tm3d-pill { position: absolute; left: 0; top: 0; display: grid; justify-items: center; gap: 1px; padding: 5px 11px 6px; background: #fff; color: #0f1626; border: 1px solid rgba(15, 22, 38, .08); border-radius: 999px; box-shadow: 0 4px 14px -4px rgba(15, 22, 38, .3); font: inherit; cursor: pointer; white-space: nowrap; will-change: transform; transition: opacity .2s, box-shadow .15s; }
+.tm3d-pill b { font-size: 12.5px; } .tm3d-pill small { color: #6b7488; font-size: 11px; }
+.tm3d-pill i { position: absolute; top: 6px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #c9cfdb; }
+.tm3d-pill.st-ok i { background: var(--ok); } .tm3d-pill.st-warn i { background: var(--warn); } .tm3d-pill.st-bad i { background: var(--bad); }
+.tm3d-pill.on { box-shadow: 0 0 0 3px var(--accs), 0 4px 14px -4px rgba(15, 22, 38, .3); }
+.tm3d-all { position: absolute; right: 12px; bottom: 12px; z-index: 2; height: 32px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 600 12.5px var(--font); cursor: pointer; box-shadow: var(--sh1); }
+@media (max-width: 560px) { .tm3d-wrap { aspect-ratio: 4 / 5; } .tm3d-pill small { display: none; } .tm3d-pill { padding: 4px 9px; } }
