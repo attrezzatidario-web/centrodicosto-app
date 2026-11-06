@@ -478,6 +478,38 @@
     if (view === 'team') render(); else badges();
   }
   const tRep = k => ((T && T.report) || []).filter(r => r && r.agente === k).sort((a, b) => String(b.data).localeCompare(String(a.data)));
+  // Ufficio: scena isometrica con una scrivania per agente. Scrivania occupata = ha già un report; vuota = da attivare.
+  const OF_POS = { guardiano: [0.5, 0.5], informatico: [2.8, 0.5], commerciale: [5.1, 0.5], marketing: [0.6, 3.7], grafico: [3.7, 3.7] };
+  function tmOffice(sel) {
+    const A = 44, B = 25.4, H = 46, OX = 276, OY = 74, W = 7.2, D = 6, f = n => Math.round(n * 10) / 10;
+    const P = (x, y, z = 0) => [OX + (x - y) * A, OY + (x + y) * B - z * H];
+    const pts = a => a.map(q => f(q[0]) + ',' + f(q[1])).join(' ');
+    const poly = (a, cls, st = '') => `<polygon points="${pts(a)}" class="${cls}"${st ? ` style="${st}"` : ''}/>`;
+    const box = (x, y, w, d, h, z0, c = 'of-w') => poly([P(x, y + d, z0 + h), P(x + w, y + d, z0 + h), P(x + w, y, z0 + h), P(x, y, z0 + h)], c + ' t')
+      + poly([P(x, y + d, z0), P(x + w, y + d, z0), P(x + w, y + d, z0 + h), P(x, y + d, z0 + h)], c + ' l')
+      + poly([P(x + w, y + d, z0), P(x + w, y, z0), P(x + w, y, z0 + h), P(x + w, y + d, z0 + h)], c + ' r');
+    let g = poly([P(0, 0), P(W, 0), P(W, D), P(0, D)], 'of-floor')
+      + poly([P(0, 0), P(W, 0), P(W, 0, 2), P(0, 0, 2)], 'of-wall') + poly([P(0, 0), P(0, D), P(0, D, 2), P(0, 0, 2)], 'of-wall l');
+    for (let i = 1; i < W; i++) g += `<line x1="${f(P(i, 0)[0])}" y1="${f(P(i, 0)[1])}" x2="${f(P(i, D)[0])}" y2="${f(P(i, D)[1])}" class="of-grid"/>`;
+    for (let i = 1; i < D; i++) g += `<line x1="${f(P(0, i)[0])}" y1="${f(P(0, i)[1])}" x2="${f(P(W, i)[0])}" y2="${f(P(W, i)[1])}" class="of-grid"/>`;
+    const order = AGENTI.slice().sort((a, b) => (OF_POS[a.k][1] - OF_POS[b.k][1]) || (OF_POS[a.k][0] - OF_POS[b.k][0]));
+    let pills = '';
+    order.forEach(a => {
+      const [x, y] = OF_POS[a.k], w = 1.7, d = 1, r = tRep(a.k)[0], on = !!r, st = on ? r.stato : 'off', cx = x + w / 2;
+      g += `<g class="of-d st-${st} ${a.k === sel ? 'on' : ''}" data-tm="${a.k}">`
+        + poly([P(x - .15, y - .1), P(x + w + .15, y - .1), P(x + w + .15, y + d + 1.05), P(x - .15, y + d + 1.05)], 'of-pad')
+        + box(x + .05, y + .1, .07, d - .2, .55, 0, 'of-leg') + box(x + w - .12, y + .1, .07, d - .2, .55, 0, 'of-leg')
+        + box(x, y, w, d, .07, .55) + box(cx - .09, y + .22, .18, .1, .1, .62, 'of-dk')
+        + box(cx - .4, y + .26, .8, .06, .52, .72, 'of-dk')
+        + poly([P(cx - .35, y + .32, .76), P(cx + .35, y + .32, .76), P(cx + .35, y + .32, 1.19), P(cx - .35, y + .32, 1.19)], 'of-scr')
+        + box(cx - .25, y + d + .2, .5, .5, .07, .36, 'of-ch') + box(cx - .04, y + d + .38, .08, .14, .3, .06, 'of-dk');
+      if (on) { const [px, py] = P(cx, y + d + .45, .5); g += `<g transform="translate(${f(px)} ${f(py)})"><g class="of-p"><path d="M-10 0V-14a10 10 0 0 1 20 0V0z" class="of-body"/><circle cy="-30" r="8.5" class="of-head"/></g></g>`; }
+      g += '</g>';
+      const [lx, ly] = P(cx, y + .3, 2.15);
+      pills += `<button type="button" class="of-pill st-${st} ${a.k === sel ? 'on' : ''}" data-tm="${a.k}" style="left:${f(lx / 6.4)}%;top:${f(ly / 4.2)}%"><i></i><b>${a.n}</b><small>${on ? esc(ago(r.data)) : 'Da attivare'}</small></button>`;
+    });
+    return `<div class="tm-of"><svg viewBox="0 0 640 420" role="img" aria-label="Ufficio del Team">${g}</svg>${pills}</div>`;
+  }
   function vTeam() {
     if (!T) { loadTeam(); return `<div class="card"><p class="muted small pad">Carico i report…</p></div>`; }
     const agent = AGENTI.find(a => a.k === tSel) || AGENTI[0], L = tRep(agent.k), last = L[0];
@@ -497,7 +529,7 @@
           <p class="muted small tm-when">${esc(when(last.data))}${last.durata ? ` · ${last.durata} s` : ''}</p>${voci}</div>${storia}`
       : `<div class="card">${empty(`${agent.n}: da attivare`, esc(agent.r) + '. Chiedi a Claude di attivarlo: qui vedrai i suoi report.')}</div>`;
     return `${tErr ? `<div class="card flat tm-err"><b>Report non disponibili.</b> <span class="muted small">${esc(tErr)}</span></div>` : ''}
-      <div class="tm-grid">${cards}</div>
+      ${tmOffice(agent.k)}<div class="tm-grid">${cards}</div>
       <div class="tm-head"><div><h3>${agent.n}</h3><p class="muted small">${esc(agent.r)}</p></div><button class="btn sm ghost" type="button" data-act="tmreload">Aggiorna</button></div>
       ${main}
       <p class="muted small foot">Gli agenti lavorano su Claude, non sul tuo server: non rallentano il gestionale. Leggono solo la demo e i file del sito, mai i dati dei clienti.</p>`;
