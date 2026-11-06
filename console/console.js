@@ -521,11 +521,13 @@
     const box = $('#tm3d'); if (!box) return;
     try {
       if (!window.THREE) await tmLoad('../lib-three.min.js?v=160');
-      if (!window.TM3D) await tmLoad('team3d.js?v=2');
+      if (!window.TM3D) await tmLoad('team3d.js?v=4');
       if (!TM3D.ok()) throw 0;
       TM3D.onPick = k => { tFocus = k; if (k) tSel = k; render(); };
       const b2 = $('#tm3d'); if (!b2) return;
-      TM3D.show(b2, { sel: tFocus, agents: AGENTI.map(a => { const r = tRep(a.k)[0]; return { k: a.k, n: a.n, on: !!r, st: r ? r.stato : 'off', ago: r ? esc(ago(r.data)) : '' }; }) });
+      const ag = AGENTI.map(a => { const r = tRep(a.k)[0]; return { k: a.k, n: a.n, on: !!r, st: r ? r.stato : 'off', ago: r ? esc(ago(r.data)) : '' }; }), n = x => ag.filter(a => a.st === x).length, h = new Date().getHours(), nome = String((me && me.nome) || 'Dario').split(' ')[0];
+      const bits = []; if (n('ok')) bits.push(`${n('ok')} ${n('ok') === 1 ? 'agente ha finito' : 'agenti hanno finito'}`); if (n('warn') + n('bad')) bits.push(`${n('warn') + n('bad')} ${n('warn') + n('bad') === 1 ? 'ha trovato qualcosa' : 'hanno trovato qualcosa'}`); if (n('off')) bits.push(`${n('off')} ${n('off') === 1 ? 'deve ancora partire' : 'devono ancora partire'}`);
+      TM3D.show(b2, { sel: tFocus, agents: ag, stats: { ok: n('ok'), warn: n('warn'), bad: n('bad'), off: n('off') }, head: { t: `${h < 13 ? 'Buongiorno' : h < 18 ? 'Buon pomeriggio' : 'Buonasera'}, ${esc(nome)}`, s: esc(bits.join(' · ')) } });
     } catch { const x = $('#tm3d'); if (x) x.remove(); }
   }
   function vTeam() {
@@ -536,7 +538,7 @@
       const r = tRep(a.k)[0], on = !!r, st = on ? r.stato : 'off';
       return `<button type="button" class="tm-a ${a.k === agent.k ? 'on' : ''} ${on ? '' : 'off'}" data-tm="${a.k}">
         <span class="tm-ic st-${st}"><svg viewBox="0 0 24 24">${a.ic}</svg></span>
-        <span class="tm-t"><b>${a.n}</b><small>${on ? esc(ago(r.data)) : 'Da attivare'}</small></span>
+        <span class="tm-t"><b>${a.n}</b><small>${on ? esc(r.titolo || ST_T[r.stato] || '') : 'Da attivare'}</small></span>
         <i class="tm-dot st-${st}" title="${on ? ST_T[st] || '' : 'Da attivare'}"></i></button>`;
     }).join('');
     const voci = last ? `<ul class="tm-v">${(last.voci || []).map(v => `<li class="st-${esc(v.stato)}"><i></i><div><b>${esc(v.testo)}</b>${v.dettaglio ? `<small>${esc(v.dettaglio)}</small>` : ''}</div></li>`).join('')}</ul>` : '';
