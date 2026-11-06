@@ -191,6 +191,7 @@
       ['tecfi', 'Tecfi', 'Fissaggi, viti, bulloneria, rivetti, punte, sigillanti e schiume.', ['717 prodotti, 6.469 codici'], ['sez.preventivi']],
       ['vorpa', 'Vorpa', 'Ancoranti chimici e meccanici, tasselli, barre filettate, schiume e fissaggi.', ['332 prodotti, 1.901 codici'], ['sez.preventivi']],
       ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
+      ['qbricksys', 'Qbrick System', 'Cassette portautensili, organizer, cassettiere, carrelli, valigie e set Qbrick System (linee ONE, PRO, PRIME, TWO, Red Ultra HD, Black).', ['185 prodotti'], ['sez.preventivi']],
       ['flex', 'FLEX', 'Elettroutensili FLEX (a batteria e a filo): levigatrici, lucidatrici, smerigliatrici, accessori e sistema di stoccaggio.', ['1.092 prodotti'], ['sez.preventivi']],
       ['globe', 'Globe', 'Abrasivi Globe Abrasives (dischi da taglio, lamellari, flessibili, finitura, diamantati, frese, spazzole, DPI). Foto dalle pagine del catalogo, nella cartella img/.', ['158 prodotti'], ['sez.preventivi']],
       ['hikoki', 'HiKOKI', 'Elettroutensili HiKOKI Power Tools (a batteria, a filo, pneumatici), batterie e accessori.', ['2.146 prodotti'], ['sez.preventivi']],
