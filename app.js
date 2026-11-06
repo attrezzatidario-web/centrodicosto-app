@@ -3717,7 +3717,7 @@
       <div id="pv-gres"></div>`;
     pvGStatus(); pvGRes();
     if (pvGQ) pvGLoadAll();
-    const gi = $('#pv-gq'); if (gi) { gi.addEventListener('focus', () => { pvGLoadAll(); pvGStatus(); }, { once: true }); gi.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pvGRemember(gi.value); if (matchMedia('(max-width: 899px)').matches) gi.blur(); } }); if (!pvGQ && matchMedia('(min-width: 900px)').matches) setTimeout(() => { if (document.activeElement === document.body || !document.activeElement) gi.focus(); }, 60); }
+    const gi = $('#pv-gq'); if (gi) { gi.addEventListener('focus', () => { pvGStatus(); }, { once: true }); gi.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pvGRemember(gi.value); if (matchMedia('(max-width: 899px)').matches) gi.blur(); } }); if (!pvGQ && matchMedia('(min-width: 900px)').matches) setTimeout(() => { if (document.activeElement === document.body || !document.activeElement) gi.focus(); }, 60); }
   }
   // v162+: ordine e visibilità dei fornitori (Config «pv:ordine» = { o: [chiavi in ordine], h: [chiavi nascoste] }), uguale su tutti i dispositivi
   let pvEditSup = false;
@@ -10186,7 +10186,7 @@
     document.addEventListener('input', e => {
       const el = e.target;
       if (el.id === 'pv-rq' && pvR) { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvR.q = el.value; pvReplRes(); }, 180); return; }
-      if (el.id === 'pv-gq') { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvGQ = el.value; pvGSup = ''; pvGCat = ''; pvGLimit = 60; if (pvGQ.trim()) pvGLoadAll(); pvGStatus(); pvGRes(); }, 200); return; }
+      if (el.id === 'pv-gq') { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvGQ = el.value; pvGSup = ''; pvGCat = ''; pvGLimit = 60; if (pvGQ.trim().length >= 3) pvGLoadAll(); pvGStatus(); pvGRes(); }, 200); return; }
       if (el.id === 'pv-gsort') { pvGSort = el.value; pvGRes(); return; }
       if (el.id === 'pv-gmin' || el.id === 'pv-gmax') { clearTimeout(pvGDeb); const id = el.id; pvGDeb = setTimeout(() => { if (id === 'pv-gmin') pvGMin = el.value; else pvGMax = el.value; pvGLimit = 60; pvGRes(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(n.value.length, n.value.length); } catch {} } }, 450); return; }
       if (el.id === 'pv-q') { clearTimeout(pvDeb); pvDeb = setTimeout(() => { const was = !!(pvQ || pvGroup); pvQ = el.value; pvLimit = 48; if (!$('#pv-res') || (!pvQ && !pvGroup) !== !was) { renderPv(); const i2 = $('#pv-q'); if (i2) { i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); } } else pvCatRes(); }, 180); return; }
