@@ -259,7 +259,7 @@
   /* ================= v95: settore di attività, moduli e nomi ================= */
   const SET = window.CDC_SETTORI || { list: [], moduli: [], sempre: [], piani: {}, get: () => null };
   const SET_DEF = { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', sede: ['Piazzale', 'Piazzali'], acq: 'Attrezzatura', mod: {}, cat: null };
-  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti', 'notespese'];
+  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti', 'notespese', 'preventivi'];
   /* v127: permessi per sezione — un dipendente vede solo le sezioni che il titolare gli ha dato ('r' vede, 'w' modifica) */
   const isDip = () => !!(me && !DEMO && me.ruolo === 'dipendente');
   const isOwnerU = () => !!(DEMO || !me || me.admin || me.ruolo === 'utente');
@@ -692,7 +692,7 @@
     if (view === 'lyreco') lyAnim = true;
     if (view === 'amazon') amAnim = true;
     if (view === 'piazzali') pzAnim = true;
-    if (view === 'preventivi') { pvAnim = true; if (prevView !== 'preventivi') { pvTab = 'cat'; pvSup = 'payper'; pvAll = true; pvFromAll = false; pvItem = ''; pvGroup = ''; pvQ = ''; pvCl = ''; pvEdit = ''; } if (pvGoto) { pvTab = 'prev'; pvEdit = pvGoto; pvItem = ''; pvGoto = ''; } }
+    if (view === 'preventivi') { pvAnim = true; if (prevView !== 'preventivi') { pvTab = 'cat'; pvSup = pvDef(); pvAll = true; pvFromAll = false; pvItem = ''; pvGroup = ''; pvQ = ''; pvCl = ''; pvEdit = ''; } if (pvGoto) { pvTab = 'prev'; pvEdit = pvGoto; pvItem = ''; pvGoto = ''; } }
     $$('.view').forEach(v => (v.hidden = v.dataset.v !== view));
     const navV = ['movimenti', 'articoli'].includes(view) ? 'attrezzatura' : view;
     $$('.nav a').forEach(x => x.classList.toggle('active', x.dataset.view === navV));
@@ -3589,8 +3589,9 @@
   async function renderPv() {
     if (pvCats.mag) pvCats.mag = pvMagCat();
     if (pvCats.srv) pvCats.srv = pvSrvCat();
-    { const sb = $('.pv-brand [data-pvsup="srv"]'); if (sb) sb.hidden = !SRV().length; if (pvSup === 'srv' && !SRV().length) pvSup = 'payper'; }
-    { const mb = $('.pv-brand [data-pvsup="mag"]'); if (mb) mb.hidden = !pvMagOk(); if (pvSup === 'mag' && !pvMagOk()) pvSup = 'payper'; }
+    { const sb = $('.pv-brand [data-pvsup="srv"]'); if (sb) sb.hidden = !SRV().length; if (pvSup === 'srv' && !SRV().length) pvSup = pvDef(); }
+    { const mb = $('.pv-brand [data-pvsup="mag"]'); if (mb) mb.hidden = !pvMagOk(); if (pvSup === 'mag' && !pvMagOk()) pvSup = pvDef(); }
+    if (!pvAll && !pvGSups().includes(pvSup)) pvSup = pvDef();
     pvApplyBar();
     const gAll = pvAll && pvTab === 'cat' && !pvItem; document.body.classList.toggle('pv-all', gAll);
     sub(gAll ? 'Tutti i fornitori · ricerca e confronto' : `${PV_SUP[pvSup].n} · catalogo e preventivi`);
@@ -3651,7 +3652,10 @@
   const pvGK = it => it._kg || (it._kg = pvGDeacc(it.k + ' ' + amNorm(it.mod || '')));
   const pvGStem = w => { w = pvGDeacc(amNorm(w)); if (w.length > 4 && /^[A-Z]+$/.test(w)) { const t = w.replace(/[AEIOU]+$/, ''); return t.length >= 4 ? t : w.slice(0, -1); } return w; };
   const pvGAlts = w => { const s = pvGStem(w), g = PV_GSYN.find(l => l.some(x => s.startsWith(x) || x.startsWith(s) && s.length >= 4)); return g ? [s, ...g] : [s]; };
-  const pvGSups = () => Object.keys(PV_SUP).filter(s => PV_SUP[s].file && (s !== 'mag' || pvMagOk()) && (s !== 'srv' || SRV().length > 0));
+  // v212: il proprietario sceglie dalla Console quali fornitori vede il cliente (Config «pvfor» = lista di chiavi; assente = tutti)
+  const pvAllow = s => { if (s === 'mag' || s === 'srv') return true; const l = cfg('pvfor'); return !Array.isArray(l) || l.includes(s); };
+  const pvGSups = () => Object.keys(PV_SUP).filter(s => PV_SUP[s].file && pvAllow(s) && (s !== 'mag' || pvMagOk()) && (s !== 'srv' || SRV().length > 0));
+  const pvDef = () => pvGSups()[0] || 'payper';
   const pvGReady = () => pvGSups().filter(s => pvCats[s]);
   const pvGKey = (sup, id) => sup + '|' + id;
   const pvGRecent = () => { try { const v = JSON.parse(localStorage.getItem('cdc_pvgq') || '[]'); return Array.isArray(v) ? v.slice(0, 6) : []; } catch { return []; } };
@@ -3763,6 +3767,7 @@
     $$('.pv-brand [data-pvsup]').forEach(b => {
       const s = b.dataset.pvsup; if (s === 'all') { b.style.order = -1; return; }
       const k = L.indexOf(s); b.style.order = k < 0 ? 999 : k;
+      if (!pvAllow(s)) { b.hidden = true; return; }
       if (s === 'srv' || s === 'mag') b.hidden = b.hidden || C.h.includes(s); else b.hidden = C.h.includes(s);
     });
   }

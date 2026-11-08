@@ -294,7 +294,7 @@
   }
   function drawerCli(w) {
     const s = stOf(w), U = usersOf(w.codice), P = paysOf(w.codice).sort((a, b) => String(b.data).localeCompare(String(a.data))), tot = P.reduce((a, p) => a + p.importo, 0), cli = w.tipo === 'cliente';
-    const tabs = [['riepilogo', 'Riepilogo'], ...(w.tipo !== 'demo' ? [['sezioni', 'Sezioni']] : []), ['utenti', `Utenti <em>${U.length}</em>`], ...(cli ? [['pagamenti', `Pagamenti <em>${P.length}</em>`]] : []), ['attivita', 'Attività']];
+    const tabs = [['riepilogo', 'Riepilogo'], ...(w.tipo !== 'demo' ? [['sezioni', 'Sezioni']] : []), ['utenti', `Utenti <em>${U.length}${w.maxUt ? '/' + w.maxUt : ''}</em>`], ...(cli ? [['pagamenti', `Pagamenti <em>${P.length}</em>`]] : []), ['attivita', 'Attività']];
     if (!tabs.some(t => t[0] === dTab)) dTab = 'riepilogo';
     const d = daysTo(w.scadenza);
     let body = '';
@@ -318,7 +318,7 @@
         <div class="dz"><div><b>${w.stato === 'attivo' ? 'Sospendi il gestionale' : 'Riattiva il gestionale'}</b><span>${w.stato === 'attivo' ? 'I suoi utenti non possono entrare finché non lo riattivi. I dati restano.' : 'Gli utenti possono di nuovo entrare.'}</span></div><button class="btn ${w.stato === 'attivo' ? 'warn' : ''}" type="button" data-act="wsstato">${w.stato === 'attivo' ? 'Sospendi' : 'Riattiva'}</button></div>
         <div class="dz"><div><b>Elimina il cliente</b><span>Lo togli dalla Console. ${w.url ? 'Il suo Foglio Google resta nel tuo Drive.' : ''}</span></div><button class="btn danger" type="button" data-act="wsdel">Elimina</button></div></div>` : ''}`;
     if (dTab === 'sezioni') body = modPanel(w);
-    if (dTab === 'utenti') body = `<div class="dw-list">${U.map(u => usrRow(u)).join('') || '<p class="muted pad">Nessun utente in questo gestionale.</p>'}</div>${w.tipo !== 'demo' ? `<button class="btn" type="button" data-act="useradd" data-ws="${esc(w.codice)}">${ico('plus')} Aggiungi un utente</button>` : ''}`;
+    if (dTab === 'utenti') body = `<div class="dw-list">${U.map(u => usrRow(u)).join('') || '<p class="muted pad">Nessun utente in questo gestionale.</p>'}</div>${w.tipo !== 'demo' ? (w.maxUt && U.filter(u => u.stato !== 'attesa').length >= w.maxUt ? `<p class="muted pad">Limite raggiunto: ${w.maxUt} utenti su ${w.maxUt}. Per aggiungerne un altro devi toglierne uno.</p>` : `<button class="btn" type="button" data-act="useradd" data-ws="${esc(w.codice)}">${ico('plus')} Aggiungi un utente</button>`) : ''}`;
     if (dTab === 'pagamenti') body = `<div class="pay-h"><div><span>Incassato</span><b data-n="${tot}" data-f="eur">${eur(tot)}</b></div><button class="btn primary" type="button" data-act="pay" data-ws="${esc(w.codice)}">${ico('plus')} Registra pagamento</button></div>${P.length ? `<div class="pays">${P.map(payRow).join('')}</div>` : '<p class="muted pad">Nessun pagamento registrato per questo cliente.</p>'}`;
     if (dTab === 'attivita') body = `<div class="card flat">${timeline((D.registro || []).filter(r => r.ws === w.codice).slice(0, 60))}</div>`;
     return `<header class="dw-h" style="--c:${SC[secOf(w).id] || SC.altro}">
@@ -336,13 +336,29 @@
     const s = secOf(w), cur = modState(w);
     return `<p class="muted">Accendi o spegni le sezioni del gestionale di ${esc(w.nome)}. La modifica vale per tutti i suoi utenti; per limitare una persona sola usa i permessi nella scheda dell'utente.</p>
       <div class="always"><span>Sempre incluse</span>${(SET.sempre || []).map(x => `<em>${esc(x === 'Acquisti' ? (s.acq || x) : x)}</em>`).join('')}</div>
-      <div class="mods">${SET.moduli.filter(m => !m.only || m.only === s.id).map((m, i) => `<label class="mod" style="--i:${i}"><span class="mod-t"><b>${esc(m.t(s))}</b><small>${esc(m.d(s))}</small></span><input type="checkbox" class="sw" data-mod="${m.k}"${cur[m.k] ? ' checked' : ''}></label>`).join('')}</div>`;
+      <div class="mods">${SET.moduli.filter(m => !m.only || m.only === s.id).map((m, i) => `<label class="mod" style="--i:${i}"><span class="mod-t"><b>${esc(m.t(s))}</b><small>${esc(m.d(s))}</small></span><input type="checkbox" class="sw" data-mod="${m.k}"${cur[m.k] ? ' checked' : ''}></label>${m.forn ? `<div class="pvf-wrap" data-pvwrap>${cur[m.k] ? pvForBox(info.pvfor) : ''}</div>` : ''}`).join('')}</div>`;
   }
   function modState(w) {
     const s = secOf(w), o = {}, saved = (wsInfo[w.codice] || {}).moduli || {};
     SET.moduli.forEach(m => { if (m.only && m.only !== s.id) return; o[m.k] = m.k in saved ? !!saved[m.k] : m.k in (s.mod || {}) ? !!s.mod[m.k] : true; });
     if (o.interni && !o.magazzino) o.interni = false; // i documenti interni servono il magazzino
     return o;
+  }
+  /* fornitori dei Preventivi concessi al cliente: null = tutti, altrimenti elenco di chiavi */
+  const FORN = SET.forn || [];
+  function pvForBox(list) {
+    const all = !Array.isArray(list), on = new Set(all ? FORN.map(f => f.k) : list);
+    return `<div class="pvf"><div class="pvf-h"><span><b>Fornitori che può usare</b><small class="pvf-n">${all ? 'Tutti' : on.size + ' su ' + FORN.length}</small></span><span class="pvf-a"><button type="button" class="link" data-pvfall="1">Tutti</button><button type="button" class="link" data-pvfall="0">Nessuno</button></span></div><input class="pvf-q" type="search" placeholder="Cerca fornitore" aria-label="Cerca fornitore" autocomplete="off"><div class="pvf-g">${FORN.map(f => `<label class="pvf-c"><input type="checkbox" data-pvk="${esc(f.k)}"${on.has(f.k) ? ' checked' : ''}><img src="../logo-${esc(f.k)}.svg" alt="" loading="lazy" width="28" height="28"><span>${esc(f.n)}</span></label>`).join('')}</div></div>`;
+  }
+  function pvfRead(box) { const ks = $$('[data-pvk]', box), on = ks.filter(x => x.checked).map(x => x.dataset.pvk); const n = $('.pvf-n', box); if (n) n.textContent = on.length === ks.length ? 'Tutti' : on.length + ' su ' + ks.length; return on.length === ks.length ? null : on; }
+  document.addEventListener('click', e => { const b = e.target.closest('[data-pvfall]'); if (!b) return; const box = b.closest('.pvf'); $$('[data-pvk]', box).forEach(x => { x.checked = b.dataset.pvfall === '1'; }); const f = $('[data-pvk]', box); if (f) f.dispatchEvent(new Event('change', { bubbles: true })); });
+  document.addEventListener('input', e => { if (!e.target.matches('.pvf-q')) return; const q = e.target.value.trim().toLowerCase(), box = e.target.closest('.pvf'); $$('.pvf-c', box).forEach(l => { l.hidden = !!q && !l.textContent.toLowerCase().includes(q); }); });
+  let pvfT = null;
+  function pvfChange(inp) {
+    const w = wsOf(drawerId); if (!w) return;
+    const box = inp.closest('.pvf'), list = pvfRead(box), info = wsInfo[w.codice] || (wsInfo[w.codice] = {});
+    info.pvfor = list;
+    clearTimeout(pvfT); pvfT = setTimeout(async () => { syncState('busy'); try { const r = await post('adminWsSet', { codice: w.codice, set: { pvfor: list } }); if (r && r.users) D = r; syncState('ok'); toast('Fornitori aggiornati', 'ok'); } catch (e) { syncState('err'); if (!(e instanceof AuthError)) toast(e.message, 'bad'); } }, 600);
   }
   let modT = null;
   function modChange(inp) {
@@ -352,6 +368,7 @@
     if (inp.dataset.mod === 'vendite' && inp.checked && !cur.clienti) { cur.clienti = true; const c = $('[data-mod="clienti"]'); if (c) c.checked = true; toast('Accesa anche «Clienti»: serve per DDT e fatture'); }
     if (inp.dataset.mod === 'interni' && inp.checked && !cur.magazzino) { cur.magazzino = true; const g = $('[data-mod="magazzino"]'); if (g) g.checked = true; toast('Accesa anche «Magazzino»: serve per i documenti interni'); }
     if (inp.dataset.mod === 'magazzino' && !inp.checked && cur.interni) { cur.interni = false; const g = $('[data-mod="interni"]'); if (g) g.checked = false; }
+    if (inp.dataset.mod === 'preventivi') { const wr = $('[data-pvwrap]'); if (wr) wr.innerHTML = cur.preventivi ? pvForBox(info.pvfor) : ''; }
     info.moduli = cur;
     clearTimeout(modT); modT = setTimeout(async () => { syncState('busy'); try { const r = await post('adminWsSet', { codice: w.codice, set: { moduli: cur } }); if (r && r.users) D = r; syncState('ok'); toast('Sezioni aggiornate', 'ok'); } catch (e) { syncState('err'); if (!(e instanceof AuthError)) toast(e.message, 'bad'); } }, 600);
   }
@@ -701,7 +718,7 @@
     const v = n => String(form.elements[n] ? form.elements[n].value : '').trim();
     const drawMods = () => {
       const s = SET.get(st.settore || 'altro'); if (!st.mod) { st.mod = {}; SET.moduli.forEach(m => { if (m.only && m.only !== s.id) return; st.mod[m.k] = m.k in (s.mod || {}) ? !!s.mod[m.k] : true; }); }
-      $('#wz-mods', c).innerHTML = `<div class="always"><span>Sempre incluse</span>${(SET.sempre || []).map(x => `<em>${esc(x === 'Acquisti' ? s.acq || x : x)}</em>`).join('')}</div><div class="mods compact">${SET.moduli.filter(m => !m.only || m.only === s.id).map(m => `<label class="mod"><span class="mod-t"><b>${esc(m.t(s))}</b><small>${esc(m.d(s))}</small></span><input type="checkbox" class="sw" data-wzmod="${m.k}"${st.mod[m.k] ? ' checked' : ''}></label>`).join('')}</div>`;
+      $('#wz-mods', c).innerHTML = `<div class="always"><span>Sempre incluse</span>${(SET.sempre || []).map(x => `<em>${esc(x === 'Acquisti' ? s.acq || x : x)}</em>`).join('')}</div><div class="mods compact">${SET.moduli.filter(m => !m.only || m.only === s.id).map(m => `<label class="mod"><span class="mod-t"><b>${esc(m.t(s))}</b><small>${esc(m.d(s))}</small></span><input type="checkbox" class="sw" data-wzmod="${m.k}"${st.mod[m.k] ? ' checked' : ''}></label>${m.forn && st.mod[m.k] ? pvForBox(st.pvfor) : ''}`).join('')}</div>`;
     };
     const recap = () => { const s = SET.get(st.settore || 'altro'), on = Object.entries(st.mod || {}).filter(x => x[1]).length; $('#wz-recap', c).innerHTML = `<span class="tile" style="--c:${SC[s.id]}"><svg viewBox="0 0 24 24">${s.ic}</svg></span><div><b>${esc(v('azienda'))}</b><small>${esc(s.n)} · piano ${esc(PIANI[st.piano])}${v('canone') ? ' · ' + eur(v('canone')) + '/anno' : ''} · ${on} sezioni facoltative${v('scadenza') ? ' · fino al ' + esc(dIt(v('scadenza'))) : ''}</small></div>`; };
     const go = n => {
@@ -727,7 +744,8 @@
       const li = e.target.closest('.wz-steps li'); if (li) { const n = Number(li.dataset.s); if (n < st.step) go(n); else { for (let i = st.step; i < n; i++) if (!check(i)) return; go(n); } }
     });
     c.addEventListener('change', e => {
-      if (e.target.dataset.wzmod) { st.mod[e.target.dataset.wzmod] = e.target.checked; if (e.target.dataset.wzmod === 'vendite' && e.target.checked && !st.mod.clienti) { st.mod.clienti = true; drawMods(); } }
+      if (e.target.dataset.pvk) { st.pvfor = pvfRead(e.target.closest('.pvf')); return; }
+      if (e.target.dataset.wzmod) { st.mod[e.target.dataset.wzmod] = e.target.checked; if (e.target.dataset.wzmod === 'preventivi') drawMods(); if (e.target.dataset.wzmod === 'vendite' && e.target.checked && !st.mod.clienti) { st.mod.clienti = true; drawMods(); } }
       if (e.target.name === 'piano') { st.piano = e.target.value; if (st.piano === 'pro') { Object.keys(st.mod || {}).forEach(k => { st.mod[k] = true; }); drawMods(); } }
     });
     form.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); $('#wz-next', c).click(); } });
@@ -735,7 +753,7 @@
     $('#wz-next', c).onclick = async () => {
       if (!check(st.step)) return;
       if (st.step < STEPS.length - 1) return go(st.step + 1);
-      const o = { azienda: v('azienda'), citta: v('citta'), piva: v('piva').replace(/\s|^IT/gi, ''), note: v('note'), settore: st.settore, piano: st.piano, canone: Number(v('canone')) || 0, scadenza: v('scadenza'), moduli: st.mod, nome: v('nome'), telefono: v('telefono'), email: v('email'), invia: form.elements.invia.checked };
+      const o = { azienda: v('azienda'), citta: v('citta'), piva: v('piva').replace(/\s|^IT/gi, ''), note: v('note'), settore: st.settore, piano: st.piano, canone: Number(v('canone')) || 0, scadenza: v('scadenza'), moduli: st.mod, pvfor: st.mod.preventivi === false ? null : (st.pvfor || null), nome: v('nome'), telefono: v('telefono'), email: v('email'), invia: form.elements.invia.checked };
       building(c, o);
       try {
         const r = await post('adminNewClient', o);
@@ -921,7 +939,7 @@
     document.addEventListener('input', e => {
       if (e.target.id === 'f-q') { F.q = e.target.value; clearTimeout(e.target._t); const p = e.target.selectionStart; e.target._t = setTimeout(() => { render(); const x = $('#f-q'); if (x) { x.focus(); try { x.setSelectionRange(p, p); } catch {} } }, 160); }
     });
-    document.addEventListener('change', e => { if (e.target.matches('[data-mod]') && e.target.closest('#drawer')) modChange(e.target); });
+    document.addEventListener('change', e => { if (e.target.matches('[data-mod]') && e.target.closest('#drawer')) modChange(e.target); if (e.target.matches('[data-pvk]') && e.target.closest('#drawer')) pvfChange(e.target); });
     document.addEventListener('submit', async e => {
       const f = e.target;
       if (f.id === 'm-form') { e.preventDefault(); if (!mOk) return; const fd = new FormData(f), ok = $('#m-ok'); if (ok) ok.disabled = true; try { const r = await mOk(fd); if (r === true) { const m = $('#modal'); m._res = null; closeModal(); } } finally { if (ok) ok.disabled = false; } return; }
@@ -970,7 +988,7 @@
       if (k === 'stclose') { const c = stressRun && stressRun.end; closeModal(); if (c) stressRun = null; return; }
       if (k === 'stopen') { const c = stressRun && stressRun.codice; closeModal(); stressRun = null; if (c) return openWs(c); return; }
       if (k === 'pay') return payForm(a.dataset.ws || (drawerKind === 'cli' ? drawerId : ''));
-      if (k === 'useradd') return userAdd(a.dataset.ws || '');
+      if (k === 'useradd') { const w2 = wsOf(a.dataset.ws || ''); if (w2 && w2.maxUt && (D.users || []).filter(u => u.ws === w2.codice && u.stato !== 'attesa').length >= w2.maxUt) { toast(`Limite di ${w2.maxUt} utenti raggiunto`, 'bad'); return; } return userAdd(a.dataset.ws || ''); }
       if (k === 'creds') return credsReset(em);
       if (k === 'open' && w) return openWs(w.codice);
       if (k === 'wsinfo' && w) { delete wsInfo[w.codice]; refreshDrawer(); return loadWsInfo(w.codice); }

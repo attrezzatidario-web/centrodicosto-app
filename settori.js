@@ -187,6 +187,7 @@
     { k: 'amazon', t: () => 'Amazon Business', d: () => 'Ordini e articoli Amazon ripartiti per sede, con controlli sull\'IVA' },
     { k: 'lyreco', t: () => 'Lyreco', d: () => 'Fatture Lyreco riga per riga: cancelleria, pulizia e consumabili' },
     { k: 'incassi', t: () => 'Incassi e ricavi', d: () => 'Chiusure di cassa e incassi giornalieri: con le fatture ai clienti danno ricavi e utile in Dashboard' },
+    { k: 'preventivi', t: () => 'Preventivi e cataloghi', d: () => 'Preventivi per i clienti con i cataloghi dei fornitori: tu scegli quali fornitori può usare', forn: true },
     { k: 'clienti', t: () => 'Clienti', d: () => 'Anagrafica dei clienti con dati fiscali, fatturato e documenti' },
     { k: 'fornitori', t: () => 'Fornitori', d: () => 'Anagrafica dei fornitori con spesa, fatture da pagare e cataloghi' },
     { k: 'magazzino', t: () => 'Magazzino', d: () => 'Articoli, giacenze, carichi e scarichi, avviso sotto scorta' },
@@ -197,11 +198,14 @@
     { k: 'torental', t: () => 'Torental', d: () => 'Listino, ordini e clienti Torental', only: 'veicoli' },
     { k: 'fischer', t: () => 'Fischer', d: () => 'Ordini del fornitore Fischer (PDF o zip): letti, controllati e divisi per piazzale, con consegne (DDT), scadenze e spunta «fatturato» al piazzale', only: 'veicoli' }
   ];
-  const SEMPRE = ['Dashboard', 'Acquisti', 'Fatture fornitori', 'Preventivi e catalogo fornitori'];
+  const SEMPRE = ['Dashboard', 'Acquisti', 'Fatture fornitori'];
+  // fornitori del catalogo Preventivi (stesse chiavi di PV_SUP in app.js): il proprietario sceglie quali vede ogni cliente
+  const FORNITORI = [['payper', 'Payper'], ['jrc', 'JRC'], ['dewalt', 'DeWalt'], ['stanley', 'Stanley'], ['usag', 'USAG'], ['milwaukee', 'Milwaukee'], ['cofra', 'Cofra'], ['portwest', 'Portwest'], ['ffg', 'FFG'], ['benman', 'Benman'], ['hugo', 'Hugo'], ['sola', 'Sola'], ['activegear', 'Active Gear'], ['maxilia', 'Maxilia'], ['promit', 'Promit'], ['lavor', 'Lavor'], ['propac', 'Propac'], ['kerakoll', 'Kerakoll'], ['telwin', 'Telwin'], ['bihui', 'Bihui'], ['fischer', 'Fischer'], ['electraline', 'Electraline'], ['vibac', 'Vibac'], ['krino', 'Krino'], ['qbrick', 'Qbrick Regular'], ['bullvit', 'Bull-Vit'], ['gierre', 'Gierre Scale'], ['akifix', 'Akifix'], ['cmt', 'CMT Orange Tools'], ['ambrovit', 'Ambrovit'], ['mustad', 'Mustad'], ['dueci', 'Duecì Grafica'], ['prodyver', 'Prodyver'], ['fermec', 'Fermec'], ['tecfi', 'Tecfi'], ['vorpa', 'Vorpa'], ['neri', 'Neri Safety'], ['1aid', '1AID'], ['facal', 'Facal Scale'], ['bluemaster', 'Bluemaster'], ['cenigomma', 'Cenigomma'], ['svelt', 'Svelt'], ['centroreti', 'Centro Reti'], ['valex', 'Valex'], ['elepacking', 'Elepacking'], ['barbero', 'Barbero'], ['italfeltri', 'Italfeltri'], ['kemipol', 'Kemipol'], ['mark', 'Mark Compressors'], ['ariex', 'Ariex'], ['rurmec', 'Rurmec'], ['scar', 'SCAR'], ['tesa', 'tesa'], ['stayer', 'Stayer'], ['tyrolit', 'Tyrolit'], ['upower', 'U-Power'], ['ingco', 'INGCO'], ['hikoki', 'HiKOKI'], ['globe', 'Globe'], ['flex', 'FLEX'], ['qbricksys', 'Qbrick System'], ['kapro', 'Kapro'], ['ryobi', 'Ryobi']].map(([k, n]) => ({ k, n }));
+
   const PIANI = { prova: 'Prova gratuita', base: 'Base', pro: 'Pro' };
 
   window.CDC_SETTORI = {
-    list: L, moduli: MODULI, sempre: SEMPRE, piani: PIANI,
+    list: L, moduli: MODULI, sempre: SEMPRE, piani: PIANI, forn: FORNITORI, maxUt: 5,
     get: id => L.find(s => s.id === id) || L.find(s => s.id === 'altro')
   };
 })();
