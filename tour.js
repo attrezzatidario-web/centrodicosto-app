@@ -428,7 +428,6 @@ ${faq()}
           el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; el.style.setProperty('--ry', (x * amp * 2).toFixed(2) + 'deg'); el.style.setProperty('--rx', (-y * amp * 2).toFixed(2) + 'deg'); el.classList.add('hot'); });
           el.addEventListener('pointerleave', () => { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); el.classList.remove('hot'); });
         });
-        $$('.tr-btn.glow, .tr-btn.white', root).forEach(b => { b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); b.style.translate = ((e.clientX - r.left - r.width / 2) * .14).toFixed(1) + 'px ' + ((e.clientY - r.top - r.height / 2) * .22).toFixed(1) + 'px'; }); b.addEventListener('pointerleave', () => { b.style.translate = ''; }); });
       }
       let raf = 0; const par = () => { raf = 0; root && root.style.setProperty('--sy', sc.scrollTop); };
       sc.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(par); }, { passive: true });

@@ -748,3 +748,5 @@ svg.il { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 900px) { .tr-dm { min-height: 0; padding-top: 72px !important; padding-bottom: 72px !important; } .tr-dm-in { grid-template-columns: 1fr; gap: 44px; } .tr-dm-s .sx-win { transform: none; } .tr-dm-f.f1 { left: -6px; } .tr-dm-f.f2 { right: -6px; } .tr-btn.xl { width: 100%; height: 58px; } }
 @media (prefers-reduced-motion: reduce) { .rv { transform: none; } .t3 { transform: none !important; } .tr-dm-f, .tr-dm-s .sx-win, .tr-dm-bg i, .tr-dm h2 em { animation: none; } .tr-dm-s .sx-win { transform: none; } .th-bg i, .tr-dm-bg i { translate: none; } }
 @media (max-width: 640px) { .tr-bar .tr-btn.sm.tr-login { display: inline-flex; } .tr-bar-r { margin-left: auto; } }
+
+.tr-btn:hover, .tr-btn.glow:hover, .tr-btn.white:hover, .tr-btn.xl:hover { transform: none; translate: none; }
