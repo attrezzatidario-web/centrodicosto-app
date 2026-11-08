@@ -25,6 +25,7 @@
   const ASS = { ferie: 'Ferie', permesso: 'Permesso', malattia: 'Malattia', altro: 'Altra assenza' };
   const AST = { attesa: ['wait', 'In attesa'], approvata: ['ok', 'Approvata'], rifiutata: ['no', 'Rifiutata'], comunicata: ['info', 'Comunicata'] };
   const IC = { go: '<path d="M5 12h12M13 6l6 6-6 6"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>', pause: '<path d="M9 6v12M15 6v12"/>', plus: '<path d="M12 5v14M5 12h14"/>', out: '<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>', key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>', grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/>', pin: '<path d="M12 21s-7-5.6-7-11.2A7 7 0 0 1 19 9.8C19 15.4 12 21 12 21z"/><circle cx="12" cy="10" r="2.6"/>', check: '<path d="M5 12l5 5L20 7"/>', fuel: '<path d="M5 20V5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v15M4 20h11M5 10h9M14 8l3 2v7a1.5 1.5 0 0 0 3 0V9l-2-3"/>' };
+  IC.card = '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/>'; IC.cash = '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/>'; IC.cam = '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'; IC.rec = '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>';
   const svg = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC[k] || ''}</svg>`;
 
   let url = LS.get('cdc_url', '') || SCRIPT_URL; if (url === 'local') url = SCRIPT_URL;
@@ -48,7 +49,7 @@
     if (!window.CDC_DEMO) { await loadJs('../settori.js?v=129'); await loadJs('../demo.js?v=129'); }
     D0 = window.CDC_DEMO(LS.get('cdc_demo_set', '') || 'veicoli');
     const extra = LS.get('cdc_pz_demo', { p: [], a: [], del: [] });
-    const g0 = (D0.gasolio || [])[0]; D0.mezzi = g0 ? [{ targa: g0.targa, nome: g0.uso || '' }] : []; D0.rif = [];
+    const g0 = (D0.gasolio || [])[0]; D0.mezzi = g0 ? [{ targa: g0.targa, nome: g0.uso || '' }] : []; D0.rif = []; D0.nsMine = (D0.spese || []).filter(x => x.dip === (D0.dipendenti[0] || {}).id);
     D0.presenze.push(...extra.p.filter(p => p.dip === 'dpd1')); D0.assenze.push(...extra.a); D0.assenze = D0.assenze.filter(a => !extra.del.includes(a.id));
   }
   const demoSave = (k, v) => { const x = LS.get('cdc_pz_demo', { p: [], a: [], del: [] }); x[k].push(v); LS.set('cdc_pz_demo', x); };
@@ -57,7 +58,7 @@
     const d = D0.dipendenti[0], n = new Date(), oggi = ymd(n), from = addD(oggi, -70);
     const P = D0.presenze.filter(p => p.dip === d.id && p.data >= from), T = P.filter(p => p.data === oggi).sort((a, b) => String(a.ora).localeCompare(String(b.ora))), last = T.length ? T[T.length - 1].tipo : '';
     return { dip: { id: d.id, nome: d.nome, cognome: d.cognome, mansione: d.mansione, sede: d.sede, ore: d.ore, ferie: d.ferie, permessi: d.permessi, assunzione: d.assunzione }, oggi, ora: `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`, stato: last, next: NEXT[last] || ['in'],
-      mezzi: D0.mezzi, rif: D0.rif.slice(0, 6), presenze: P, assenze: D0.assenze.filter(a => a.dip === d.id), set: D0.config.pzSet || {}, azienda: (D0.config.azienda && D0.config.azienda.nome) || 'Azienda demo', user: me };
+      mezzi: D0.mezzi, rif: D0.rif.slice(0, 6), presenze: P, assenze: D0.assenze.filter(a => a.dip === d.id), set: D0.config.pzSet || {}, ns: (() => { const me0 = d.id, car = (D0.carte || []).filter(c => c.dip === me0 && c.stato !== 'bloccata'), fo = (D0.fondi || []).filter(f => f.dip === me0), sp = D0.nsMine || []; return { attivo: !!(car.length || fo.length), carte: car.map(c => ({ id: c.id, nome: c.nome, ultime4: c.ultime4, tipo: c.tipo, colore: c.colore })), contanti: fo.length ? fo.reduce((t, f) => t + Number(f.importo || 0), 0) - sp.filter(x => x.metodo === 'contanti' && x.stato !== 'rifiutata').reduce((t, x) => t + x.importo, 0) : null, spese: sp, cat: ['Carburante', 'Pasti e trasferte', 'Materiale e attrezzatura', 'Pedaggi e parcheggi', 'Altro'], centri: [] }; })(), azienda: (D0.config.azienda && D0.config.azienda.nome) || 'Azienda demo', user: me };
   }
   async function call(action, extra = {}) {
     if (!DEMO) return post(action, extra);
@@ -66,6 +67,8 @@
     if (action === 'pzTimbra') { const m = demoMe(); if (!m.next.includes(extra.tipo)) throw new Error('Timbratura non valida in questo momento'); const p = { id: 'dz' + Date.now(), dip: d.id, data: m.oggi, ora: m.ora, tipo: extra.tipo, fonte: 'app', nota: '' }; D0.presenze.push(p); demoSave('p', p); return Object.assign(demoMe(), { fatto: p }); }
     if (action === 'pzRichiesta') { const a = { id: 'dza' + Date.now(), dip: d.id, tipo: extra.tipo, dal: extra.dal, al: extra.al, ore: extra.tipo === 'permesso' ? Number(extra.ore) || 0 : '', motivo: extra.motivo || '', stato: extra.tipo === 'malattia' ? 'comunicata' : 'attesa', risposta: '', creato: new Date().toISOString(), deciso: '' }; D0.assenze.push(a); demoSave('a', a); return demoMe(); }
     if (action === 'pzRifornimento') { D0.rif.unshift({ id: 'dr' + Date.now(), data: demoMe().oggi, targa: extra.targa, litri: Number(String(extra.litri).replace(',', '.')) || 0, km: Number(extra.km) || 0 }); return demoMe(); }
+    if (action === 'pzSpesa') { const c = (D0.carte || []).find(x => String(x.id) === String(extra.carta)); D0.nsMine.unshift({ id: 'dsp' + Date.now(), data: extra.data, dip: d.id, importo: Number(String(extra.importo).replace(',', '.')) || 0, esercente: extra.esercente, categoria: extra.categoria, centro: extra.centro, descrizione: extra.descrizione, metodo: extra.metodo, carta: extra.metodo === 'carta' ? extra.carta : '', foto: extra.foto ? 'demo' : '', stato: 'inviata', risposta: '', creato: new Date().toISOString() }); return demoMe(); }
+    if (action === 'pzSpesaDel') { D0.nsMine = D0.nsMine.filter(x => x.id !== extra.id); return demoMe(); }
     if (action === 'pzAnnulla') { D0.assenze = D0.assenze.filter(a => a.id !== extra.id); demoSave('del', extra.id); return demoMe(); }
     return demoMe();
   }
@@ -105,6 +108,8 @@
     $('#pz-org').textContent = [m.azienda, m.dip.mansione].filter(Boolean).join(' · ');
     $('#pz-av').textContent = (String(m.dip.nome || '?')[0] + String(m.dip.cognome || '')[0]).toUpperCase();
     const n = m.assenze.filter(a => a.stato === 'attesa').length; $('#pz-badge').hidden = !n; $('#pz-badge').textContent = n;
+    const nsOn = !!(m.ns && m.ns.attivo); const nt = $('.pz-tabs [data-tab=spese]'); if (nt) nt.hidden = !nsOn; if (!nsOn && tab === 'spese') tab = 'oggi';
+    const np = nsOn ? (m.ns.spese || []).filter(x => x.stato === 'inviata').length : 0; const nb = $('#pz-nsb'); if (nb) { nb.hidden = !np; nb.textContent = np; }
     $('#pz-demo').hidden = !DEMO;
     if (!DEMO && !m.stale && me) LS.set('cdc_pz_cache', { u: me.email, m });
   }
@@ -119,7 +124,7 @@
   const syncing = on => { const t = $('.pz-top'); if (t) t.classList.toggle('sync', !!on); };
   function render() {
     $$('.pz-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-    $('#pz-main').innerHTML = tab === 'storico' ? vStorico() : tab === 'richieste' ? vRichieste() : vOggi();
+    $('#pz-main').innerHTML = tab === 'storico' ? vStorico() : tab === 'richieste' ? vRichieste() : tab === 'spese' ? vSpese() : vOggi();
     tick();
   }
   function vOggi() {
@@ -260,6 +265,48 @@
       });
     };
   }
+
+  /* ---------- nota spese ---------- */
+  const ns = () => (M && M.ns) || {};
+  const eur = v => Number(v || 0).toLocaleString('it-IT', { style: 'currency', currency: 'EUR' });
+  const NST = { inviata: ['wait', 'Da approvare'], approvata: ['ok', 'Approvata'], rifiutata: ['no', 'Rifiutata'] };
+  function vSpese() {
+    const N = ns(), L = (N.spese || []).slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.creato).localeCompare(String(a.creato)));
+    const mk = today().slice(0, 7), tm = L.filter(x => x.stato !== 'rifiutata' && String(x.data).slice(0, 7) === mk).reduce((t, x) => t + Number(x.importo || 0), 0);
+    const car = N.carte || [], cash = N.contanti;
+    return `<div class="pz-nsw">${car.map((c, i) => `<div class="pz-cc c-${esc(c.colore || 'blu')}" style="--i:${i}"><span class="pz-cc-t"><b>${esc(c.nome || 'Carta')}</b><i></i></span><span class="pz-cc-n">•••• ${esc(c.ultime4 || '')}</span><small>${esc(({ credito: 'Credito', debito: 'Debito', prepagata: 'Prepagata' })[c.tipo] || 'Carta aziendale')}</small></div>`).join('')}${cash != null ? `<div class="pz-cc c-cash" style="--i:${car.length}"><span class="pz-cc-t"><b>Contanti</b>${svg('cash')}</span><span class="pz-cc-n" id="pz-cash">${eur(cash)}</span><small>a tua disposizione</small></div>` : ''}</div>
+      <div class="pz-tiles"><div><span>Spese del mese</span><b>${eur(tm)}</b><em>${L.filter(x => String(x.data).slice(0, 7) === mk).length} registrate</em></div><div><span>Da approvare</span><b>${L.filter(x => x.stato === 'inviata').length}</b><em>${eur(L.filter(x => x.stato === 'inviata').reduce((t, x) => t + Number(x.importo || 0), 0))}</em></div></div>
+      <button type="button" class="pz-btn primary wide" data-spesa="new">${svg('plus')}Registra una spesa</button>
+      <section class="pz-card"><div class="pz-ch"><h3>Le tue spese</h3></div>${L.length ? L.slice(0, 60).map(x => { const st = NST[x.stato] || NST.inviata; return `<div class="pz-req pz-sp"><div><b>${esc(x.esercente || x.categoria || 'Spesa')}</b><small>${esc(dIt(x.data))} · ${x.metodo === 'carta' ? 'Carta' : 'Contanti'}${x.categoria ? ' · ' + esc(x.categoria) : ''}${x.foto ? ' · scontrino ✓' : ''}</small>${x.stato === 'rifiutata' && x.risposta ? `<small class="pz-risp">${esc(x.risposta)}</small>` : ''}</div><b class="pz-spa">${eur(x.importo)}</b><span class="pz-st ${st[0]}">${st[1]}</span>${x.stato === 'inviata' ? `<button type="button" class="pz-btn sm" data-spdel="${esc(x.id)}">Annulla</button>` : ''}</div>`; }).join('') : '<p class="pz-sub" style="padding:10px 0">Nessuna spesa registrata. Tocca «Registra una spesa» e fotografa lo scontrino.</p>'}</section>`;
+  }
+  const toJpeg = f => new Promise((ok, ko) => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(im.src); ok(c.toDataURL('image/jpeg', .75)); }; im.onerror = () => ko(new Error('Foto non leggibile')); im.src = URL.createObjectURL(f); });
+  function spesaForm() {
+    const N = ns(), car = N.carte || [], cash = N.contanti, cats = N.cat || [], centri = N.centri || [];
+    if (!car.length && cash == null) return;
+    let photo = '';
+    sheet('Registra una spesa', `<form id="pz-sf" class="pz-form">
+      <label class="pz-f"><span>Importo €</span><input name="importo" inputmode="decimal" required placeholder="0,00" class="pz-amt"></label>
+      <div class="pz-f"><span>Pagata con</span><div class="pz-mseg" id="pz-sm">${car.map(c => `<button type="button" data-m="carta:${esc(c.id)}">${svg('card')}${esc(c.nome || 'Carta')} ••${esc(c.ultime4 || '')}</button>`).join('')}${cash != null ? `<button type="button" data-m="contanti:">${svg('cash')}Contanti</button>` : ''}</div></div>
+      <label class="pz-f"><span>Negozio / fornitore</span><input name="esercente" maxlength="80" placeholder="Es. distributore, ferramenta"></label>
+      <div class="pz-row"><label class="pz-f"><span>Data</span><input type="date" name="data" value="${today()}" max="${today()}" required></label><label class="pz-f"><span>Categoria</span><select name="categoria"><option value="">—</option>${cats.map(c => `<option>${esc(c)}</option>`).join('')}</select></label></div>
+      <label class="pz-f"><span>Magazzino / sede</span>${centri.length ? `<select name="centro"><option value="">—</option>${centri.map(c => `<option>${esc(c)}</option>`).join('')}</select>` : '<input name="centro" maxlength="60" placeholder="facoltativo">'}</label>
+      <label class="pz-f"><span>Note (facoltativo)</span><input name="descrizione" maxlength="200"></label>
+      <div class="pz-f"><span>Scontrino, fattura o ricevuta</span><button type="button" class="pz-ph" id="pz-ph">${svg('cam')}<b>Fotografa o carica</b><small>consigliato</small></button></div>
+      <p class="pz-err" id="pz-serr"></p><button type="submit" class="pz-btn primary wide">Invia la spesa</button></form>`);
+    const f = $('#pz-sf'), seg = $('#pz-sm'); let sel = seg.querySelector('button');
+    const pick = b => { sel = b; seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); }; pick(sel);
+    seg.onclick = e => { const b = e.target.closest('button'); if (b) pick(b); };
+    $('#pz-ph').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.onchange = async () => { if (!i.files[0]) return; try { photo = await toJpeg(i.files[0]); $('#pz-ph').innerHTML = `<img src="${photo}" alt=""><b>Foto pronta</b><small>tocca per cambiarla</small>`; $('#pz-ph').classList.add('has'); } catch (er) { $('#pz-serr').textContent = er.message; } }; i.click(); };
+    f.onsubmit = async ev => {
+      ev.preventDefault(); $('#pz-serr').textContent = '';
+      const imp = Number(String(f.importo.value).replace(',', '.')); if (!(imp > 0)) return void ($('#pz-serr').textContent = 'Controlla l\'importo');
+      const [metodo, carta] = sel.dataset.m.split(':');
+      await busyB(f.querySelector('[type=submit]'), 'Invio…', async () => {
+        try { setM(await call('pzSpesa', { importo: f.importo.value, metodo, carta, esercente: f.esercente.value.trim(), data: f.data.value, categoria: f.categoria.value, centro: f.centro.value.trim(), descrizione: f.descrizione.value.trim(), foto: photo ? photo.split(',')[1] : '' })); closeSheet(); render(); toast('Spesa inviata', true); }
+        catch (e) { if (e instanceof AuthErr) return toLogin(e.message); $('#pz-serr').textContent = netErr(e); }
+      });
+    };
+  }
   function menu() {
     const gest = me && (me.ruolo !== 'dipendente' || Object.values(me.sezioni || {}).some(Boolean));
     sheet(`${me && me.nome || ''}`, `<p class="pz-sub" style="margin-top:-6px">${esc(me && me.email || '')}</p><div class="pz-menu">
@@ -336,6 +383,8 @@
     const mn = t.closest('[data-mon]'); if (mn && !mn.disabled) { const [y, m] = mon.split('-').map(Number); mon = ymd(new Date(y, m - 1 + Number(mn.dataset.mon), 1)).slice(0, 7); render(); return; }
     const rq = t.closest('[data-req]'); if (rq) return reqForm(rq.dataset.req);
     if (t.closest('[data-rif]')) return rifForm();
+    if (t.closest('[data-spesa]')) return spesaForm();
+    const sd = t.closest('[data-spdel]'); if (sd) { if (!confirm('Annullare questa spesa?')) return; busyB(sd, '…', async () => { try { setM(await call('pzSpesaDel', { id: sd.dataset.spdel })); render(); toast('Spesa annullata', true); } catch (er) { if (er instanceof AuthErr) return toLogin(er.message); toast(netErr(er)); } }); return; }
     const an = t.closest('[data-annulla]'); if (an) { if (!confirm('Annullare questa richiesta?')) return; busyB(an, '…', async () => { try { setM(await call('pzAnnulla', { id: an.dataset.annulla })); render(); toast('Richiesta annullata', true); } catch (er) { toast(netErr(er)); } }); return; }
     if (t.closest('#pz-menu')) return menu();
     if (t.closest('[data-retry]')) { $('#pz-main').innerHTML = '<div class="pz-loading"><div class="pz-spin"></div></div>'; return refresh(); }

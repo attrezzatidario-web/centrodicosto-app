@@ -193,6 +193,7 @@
     { k: 'interni', t: () => 'Documenti interni', d: () => 'Scarichi non fiscali e trasferimenti tra magazzini o ad altre aziende, con numerazione propria, centro di costo e PDF' },
     { k: 'vendite', t: () => 'DDT e fatture ai clienti', d: () => 'DDT durante il mese e fatture di fine mese, con PDF e file XML per lo SdI' },
     { k: 'dipendenti', t: () => 'Dipendenti e presenze', d: () => 'Anagrafica del personale, timbrature dall\'app Presenze, ferie, permessi, scadenze e accessi con permessi per sezione' },
+    { k: 'notespese', t: () => 'Nota spese', d: () => 'Carte aziendali e contanti assegnati al personale, spese registrate dall\'app Presenze con foto dello scontrino, approvazione e controllo dell\'estratto conto', },
     { k: 'torental', t: () => 'Torental', d: () => 'Listino, ordini e clienti Torental', only: 'veicoli' },
     { k: 'fischer', t: () => 'Fischer', d: () => 'Ordini del fornitore Fischer (PDF o zip): letti, controllati e divisi per piazzale, con consegne (DDT), scadenze e spunta «fatturato» al piazzale', only: 'veicoli' }
   ];

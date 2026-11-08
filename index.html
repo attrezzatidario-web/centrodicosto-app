@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=152">
-  <link rel="stylesheet" href="cdc.css?v=202">
+  <link rel="stylesheet" href="cdc.css?v=204">
 </head>
 <body>
   <div id="splash" class="spx" aria-hidden="true">
@@ -145,6 +145,7 @@
       <a href="#amazon" data-view="amazon"><svg viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/><path d="M9 14c1.8 1.2 4.2 1.2 6 0"/></svg><span>Amazon</span></a>
       <a href="#preventivi" data-view="preventivi" class="nv-d"><svg viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Preventivi</span></a>
       <a href="#dipendenti" data-view="dipendenti"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5.5 5"/></svg><span><span class="lbl-d">Dipendenti</span><span class="lbl-m">Personale</span></span></a>
+      <a href="#notespese" data-view="notespese"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></svg><span><span class="lbl-d">Nota spese</span><span class="lbl-m">Spese</span></span></a>
       <a href="#analisi" data-view="analisi"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Analisi</span></a>
       <a href="#impostazioni" data-view="impostazioni" class="nv-d"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span><span class="lbl-d">Impostazioni</span><span class="lbl-m">Opzioni</span></span></a>
       <button type="button" id="nav-more" class="nv-m" aria-label="Tutte le sezioni"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg><span>Altro</span></button>
@@ -390,6 +391,7 @@
       <section id="v-interni" class="view" data-v="interni" hidden><div id="xi-body"></div></section>
 
       <section id="v-dipendenti" class="view" data-v="dipendenti" hidden><div id="dp-body"></div></section>
+      <section id="v-notespese" class="view" data-v="notespese" hidden><div id="ns-body"></div></section>
       <section id="v-analisi" class="view" data-v="analisi" hidden><div id="an-body"></div></section>
       <section id="v-impostazioni" class="view" data-v="impostazioni" hidden>
         <div class="st-wrap">
@@ -530,9 +532,9 @@
 
   <div id="toast" class="toast" hidden></div>
   <script src="gls-geo.js?v=2"></script>
-  <script src="settori.js?v=203"></script>
+  <script src="settori.js?v=204"></script>
   <script src="auth-fx.js?v=1"></script>
-  <script src="app.js?v=203"></script>
+  <script src="app.js?v=204"></script>
   <script src="motion.js?v=152"></script>
 </body>
 </html>

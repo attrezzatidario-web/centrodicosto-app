@@ -13,7 +13,7 @@
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const EASE = 'cubic-bezier(.2, .8, .2, 1)', SPRING = 'cubic-bezier(.34, 1.4, .5, 1)';
   // sezioni con animazioni proprie (cc-anim, ovAnim…): qui solo titolo, menu e piccoli ritocchi
-  const OWN = new Set(['home', 'attrezzatura', 'movimenti', 'articoli', 'fatture', 'piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'preventivi']);
+  const OWN = new Set(['home', 'attrezzatura', 'movimenti', 'articoli', 'fatture', 'piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'preventivi', 'notespese']);
   const anim = (el, kf, o) => { try { return el.animate(kf, { fill: 'backwards', easing: EASE, ...o }); } catch { return null; } };
   const inView = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
 

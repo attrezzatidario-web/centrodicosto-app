@@ -186,7 +186,7 @@
   const budget = () => cfg('budget') || {};
 
   /* ================= Sync ================= */
-  const KEY = { Movimenti: 'movimenti', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyfatture', Amazon: 'amazon', AmazonArticoli: 'amazonart', Clienti: 'clienti', Articoli: 'articoli', MagMov: 'magmov', DDT: 'ddt', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'docforn', Dipendenti: 'dipendenti', Presenze: 'presenze', Assenze: 'assenze' };
+  const KEY = { Movimenti: 'movimenti', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyfatture', Amazon: 'amazon', AmazonArticoli: 'amazonart', Clienti: 'clienti', Articoli: 'articoli', MagMov: 'magmov', DDT: 'ddt', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'docforn', Dipendenti: 'dipendenti', Presenze: 'presenze', Assenze: 'assenze', Carte: 'carte', Fondi: 'fondi', Spese: 'spese', Estratti: 'estratti' };
   function applyLocal(op) {
     if (op.sheet === 'Config') {
       if (op.action === 'delete') delete db.config[op.id];
@@ -259,7 +259,7 @@
   /* ================= v95: settore di attività, moduli e nomi ================= */
   const SET = window.CDC_SETTORI || { list: [], moduli: [], sempre: [], piani: {}, get: () => null };
   const SET_DEF = { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', sede: ['Piazzale', 'Piazzali'], acq: 'Attrezzatura', mod: {}, cat: null };
-  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti'];
+  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti', 'notespese'];
   /* v127: permessi per sezione — un dipendente vede solo le sezioni che il titolare gli ha dato ('r' vede, 'w' modifica) */
   const isDip = () => !!(me && !DEMO && me.ruolo === 'dipendente');
   const isOwnerU = () => !!(DEMO || !me || me.admin || me.ruolo === 'utente');
@@ -271,7 +271,7 @@
     if (me.ruolo === 'lettura') return 'r';
     return 'w';
   }
-  const SHEET_SEC = { Movimenti: 'attrezzatura', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyreco', Amazon: 'amazon', AmazonArticoli: 'amazon', Clienti: 'clienti', Articoli: 'magazzino', MagMov: 'magazzino', DDT: 'vendite', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'fornitori', Dipendenti: 'dipendenti', Presenze: 'dipendenti', Assenze: 'dipendenti' };
+  const SHEET_SEC = { Movimenti: 'attrezzatura', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyreco', Amazon: 'amazon', AmazonArticoli: 'amazon', Clienti: 'clienti', Articoli: 'magazzino', MagMov: 'magazzino', DDT: 'vendite', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'fornitori', Dipendenti: 'dipendenti', Presenze: 'dipendenti', Assenze: 'dipendenti', Carte: 'notespese', Fondi: 'notespese', Spese: 'notespese', Estratti: 'notespese' };
   const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fif?:|^fiFatt$/.test(k) ? 'fischer' : 'impostazioni'; };
   const opSec = op => op.sheet === 'Config' ? cfgSec(op.row ? op.row.chiave : op.id) : (SHEET_SEC[op.sheet] || 'impostazioni');
   const AREA_MOD = { gls: 'gls', gas: 'gasolio', ly: 'lyreco', am: 'amazon' };
@@ -282,6 +282,7 @@
   function modOn(k) {
     if (!MOD_K.includes(k)) return true;
     if (!modAvail(k)) return false;
+    if (k === 'notespese' && !modOn('dipendenti')) return false; // servono i dipendenti
     if (k === 'interni' && !modOn('magazzino')) return false; // i documenti interni vivono sul magazzino
     const c = cfg('moduli');
     if (c && typeof c === 'object' && k in c && !c[k]) return false;
@@ -610,7 +611,7 @@
       const j = await post('all', since ? { since } : {});
       let changed = true;
       if (j.data && j.data.delta) changed = mergeDelta(j.data, j.v);
-      else db = { movimenti: j.data.movimenti || [], config: j.data.config || {}, ai: !!j.data.ai, aik: j.data.aiKeys || { gemini: !!j.data.ai }, aiFirst: j.data.aiFirst || 'gemini', v: j.v, gls: j.data.gls || (j.v >= 'cdc-1.1' ? [] : db.gls || []), gasolio: j.data.gasolio || (j.v >= 'cdc-1.2' ? [] : db.gasolio || []), pdf: j.data.pdf || [], fatture: j.data.fatture || (j.v >= 'cdc-1.4' ? [] : db.fatture || []), lyreco: j.data.lyreco || (j.v >= 'cdc-1.6' ? [] : db.lyreco || []), lyfatture: j.data.lyfatture || (j.v >= 'cdc-1.6' ? [] : db.lyfatture || []), amazon: j.data.amazon || (j.v >= 'cdc-1.7' ? [] : db.amazon || []), amazonart: j.data.amazonart || (j.v >= 'cdc-1.7' ? [] : db.amazonart || []) , clienti: j.data.clienti || [], articoli: j.data.articoli || [], magmov: j.data.magmov || [], ddt: j.data.ddt || [], vendite: j.data.vendite || [], incassi: j.data.incassi || [], fornitori: j.data.fornitori || [], dipendenti: j.data.dipendenti || [], presenze: j.data.presenze || [], assenze: j.data.assenze || [], staff: j.data.staff || [], fullT: j.data.t ? Date.now() : 0 };
+      else db = { movimenti: j.data.movimenti || [], config: j.data.config || {}, ai: !!j.data.ai, aik: j.data.aiKeys || { gemini: !!j.data.ai }, aiFirst: j.data.aiFirst || 'gemini', v: j.v, gls: j.data.gls || (j.v >= 'cdc-1.1' ? [] : db.gls || []), gasolio: j.data.gasolio || (j.v >= 'cdc-1.2' ? [] : db.gasolio || []), pdf: j.data.pdf || [], fatture: j.data.fatture || (j.v >= 'cdc-1.4' ? [] : db.fatture || []), lyreco: j.data.lyreco || (j.v >= 'cdc-1.6' ? [] : db.lyreco || []), lyfatture: j.data.lyfatture || (j.v >= 'cdc-1.6' ? [] : db.lyfatture || []), amazon: j.data.amazon || (j.v >= 'cdc-1.7' ? [] : db.amazon || []), amazonart: j.data.amazonart || (j.v >= 'cdc-1.7' ? [] : db.amazonart || []) , clienti: j.data.clienti || [], articoli: j.data.articoli || [], magmov: j.data.magmov || [], ddt: j.data.ddt || [], vendite: j.data.vendite || [], incassi: j.data.incassi || [], fornitori: j.data.fornitori || [], dipendenti: j.data.dipendenti || [], presenze: j.data.presenze || [], assenze: j.data.assenze || [], carte: j.data.carte || [], fondi: j.data.fondi || [], spese: j.data.spese || [], estratti: j.data.estratti || [], staff: j.data.staff || [], fullT: j.data.t ? Date.now() : 0 };
       db.syncT = j.data.t || 0;
       if (j.data.user) applyMe(j.data.user);
       pulledAt = Date.now(); online = true;
@@ -667,7 +668,7 @@
   const rowsSoc = () => soc ? db.movimenti.filter(r => (r.societa || 'Soluzione Veicolare') === soc) : db.movimenti;
 
   /* ================= Router ================= */
-  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', fischer: 'Fischer', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti' };
+  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', fischer: 'Fischer', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti', notespese: 'Nota spese' };
   let prevView = '', gKeep = false;
   function go() {
     prevView = view;
@@ -696,8 +697,8 @@
     $$('.sub-tabs a').forEach(x => x.classList.toggle('on', x.dataset.st === view));
     $('#title').textContent = ['attrezzatura', 'movimenti', 'articoli'].includes(view) ? (settore().acq || 'Acquisti') : TITLES[view];
     { const at = $('#add-top span'), acqV = ['attrezzatura', 'movimenti', 'articoli'].includes(view); if (at) at.textContent = acqV ? 'Registra DDT o fattura' : view === 'gasolio' ? 'Nuovo rifornimento' : view === 'fatture' ? 'Nuova fattura' : 'Nuovo movimento'; }
-    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon';
-    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
+    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti', 'notespese'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon';
+    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti', 'notespese'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
     if (view !== 'movimenti') { sel.clear(); selMode = false; $('#selbar').hidden = true; document.body.classList.remove('has-sel'); }
     render();
     window.scrollTo(0, 0);
@@ -727,7 +728,7 @@
   function render() {
     applySettore();
     ivaUI();
-    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, fischer: renderFi, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip }[view];
+    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, fischer: renderFi, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip, notespese: renderNs }[view];
     fn && fn();
   }
   const sub = t => { $('#subtitle').textContent = t || ''; };
@@ -776,7 +777,7 @@
   }
 
   /* v127: Dipendenti e presenze (dipendenti.js, caricato quando serve) */
-  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'fischer', 'analisi', 'dipendenti', 'impostazioni'];
+  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'fischer', 'analisi', 'dipendenti', 'notespese', 'impostazioni'];
   const secTitle = k => k === 'piazzali' ? (settore().sede || [, 'Sedi'])[1] : k === 'attrezzatura' ? (settore().acq || 'Acquisti') : k === 'impostazioni' ? 'Impostazioni dell\'azienda' : TITLES[k];
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
@@ -788,6 +789,18 @@
       me: () => me, DEMO: () => DEMO, online: () => !DEMO && !isLocal() && navigator.onLine, isOwner: () => isOwnerU(), secPerm,
       sections: () => PERM_SEC.filter(k => !MOD_K.includes(k) || (modAvail(k) && (() => { const c = cfg('moduli'), d = settore().mod || {}; return c && typeof c === 'object' && k in c ? !!c[k] : k in d ? !!d[k] : true; })())).map(k => ({ k, t: secTitle(k) })),
       goGas: name => anOpen('gasolio', null, name)
+    });
+  }
+
+  /* v204: Nota spese — carte aziendali, contanti, spese dei dipendenti ed estratto conto (notespese.js, caricato quando serve) */
+  async function renderNs() {
+    const el = $('#ns-body'); if (!el) return;
+    if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.37') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare carte, contanti e note spese serve lo script versione cdc-5.37 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
+    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=204'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
+    if (!window.CDC_NS) return; // un altro caricamento è già in corso
+    window.CDC_NS.render(el, {
+      db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, centri, openSheet, closeSheet, loadXlsx, docView, countTo,
+      orgName: () => ORG.n, me: () => me, DEMO: () => DEMO, isOwner: () => isOwnerU(), secPerm, online: () => !DEMO && !isLocal() && navigator.onLine, isLocal
     });
   }
 
@@ -1373,6 +1386,7 @@
     if (!DEMO) return toast(me && me.admin ? 'Le sezioni si cambiano dalla Console' : 'Le sezioni le imposta l\'amministratore');
     const c = { ...(cfg('moduli') || {}) }; c[k] = !modOn(k);
     if (k === 'vendite' && c[k]) c.clienti = true; // i documenti ai clienti hanno bisogno dell'anagrafica
+    if (k === 'notespese' && c[k]) c.dipendenti = true; // la nota spese si appoggia ai dipendenti
     if (k === 'interni' && c[k]) c.magazzino = true; // i documenti interni muovono il magazzino
     setConfig('moduli', c);
     const m = SET.moduli.find(x => x.k === k); toast(`${m ? m.t(settore()) : k} ${c[k] ? 'accesa' : 'spenta'}`);

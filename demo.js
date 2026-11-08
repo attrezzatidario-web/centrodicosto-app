@@ -360,6 +360,31 @@
     // oggi: Elena non ha ancora timbrato
     const td = ds(now); for (let k = presenze.length - 1; k >= 0; k--) if (presenze[k].data === td && presenze[k].dip === 'dpd7') presenze.splice(k, 1);
     D.config.pzSet = { giorni: 5, geo: false };
+    // nota spese: carte, contanti, spese e un estratto conto già in parte riconciliato
+    const carte = [
+      { id: 'dca1', nome: 'Visa aziendale', tipo: 'credito', ultime4: '4821', banca: 'Banca demo', titolare: 'Azienda demo', dip: 'dpd1', plafond: 1500, centro: '', stato: 'attiva', scadenza: '09/28', colore: 'blu', note: '', creato: ds(daysAgo(120)) },
+      { id: 'dca2', nome: 'Carta carburante', tipo: 'prepagata', ultime4: '0377', banca: 'Banca demo', titolare: 'Azienda demo', dip: 'dpd2', plafond: 800, centro: '', stato: 'attiva', scadenza: '03/27', colore: 'arancio', note: '', creato: ds(daysAgo(120)) },
+      { id: 'dca3', nome: 'Mastercard riserva', tipo: 'debito', ultime4: '9150', banca: 'Banca demo', titolare: 'Azienda demo', dip: '', plafond: 0, centro: '', stato: 'attiva', scadenza: '12/27', colore: 'nero', note: '', creato: ds(daysAgo(90)) }];
+    const fondi = [
+      { id: 'dfo1', data: ds(daysAgo(40)), dip: 'dpd1', importo: 300, tipo: 'consegna', note: 'Cassa piccole spese', chi: '', creato: ds(daysAgo(40)) },
+      { id: 'dfo2', data: ds(daysAgo(12)), dip: 'dpd1', importo: 200, tipo: 'consegna', note: 'Trasferta', chi: '', creato: ds(daysAgo(12)) },
+      { id: 'dfo3', data: ds(daysAgo(25)), dip: 'dpd3', importo: 150, tipo: 'consegna', note: 'Anticipo materiali', chi: '', creato: ds(daysAgo(25)) }];
+    const ES = [['Distributore Q8', 'Carburante', 58.4], ['Ristorante Da Gino', 'Pasti e trasferte', 42], ['Ferramenta Rossi', 'Materiale e attrezzatura', 36.9], ['Autostrade per l\'Italia', 'Pedaggi e parcheggi', 14.2], ['Cartoleria Centrale', 'Cancelleria e ufficio', 23.5], ['Distributore Eni', 'Carburante', 64.8], ['Bar Stazione', 'Pasti e trasferte', 9.6], ['Brico Center', 'Materiale e attrezzatura', 112.3], ['Parcheggio Centro', 'Pedaggi e parcheggi', 6], ['Officina Verdi', 'Ricambi e manutenzione', 185]];
+    const spese = [], estratti = [];
+    ES.concat(ES.map(x => [x[0], x[1], Math.round(x[2] * 1.1 * 100) / 100])).forEach((x, k) => {
+      const g = 4 + k * 2, d = ds(daysAgo(g)), card = k % 3 === 2 ? 'dca2' : 'dca1', dip = card === 'dca2' ? 'dpd2' : 'dpd1', cash = k % 4 === 3;
+      const sp = { id: 'dsp' + k, data: d, dip: cash ? 'dpd1' : dip, importo: x[2], esercente: x[0], categoria: x[1], descrizione: '', centro: '', metodo: cash ? 'contanti' : 'carta', carta: cash ? '' : card, foto: k % 5 === 4 ? '' : 'demo', stato: g < 6 ? 'inviata' : 'approvata', risposta: '', estratto: '', chi: '', creato: d + 'T10:00:00', deciso: g < 6 ? '' : d + 'T16:00:00' };
+      spese.push(sp);
+      if (!cash && card === 'dca1' && g >= 4) {
+        if (k === 6) return; // spesa non presente nell'estratto
+        const e = { id: 'des' + k, carta: card, lotto: 'dlt1', data: d, descrizione: x[0].toUpperCase() + ' ' + (1000 + k * 37), importo: x[2], spesa: '', stato: '', note: 'estratto-demo.csv', creato: d };
+        if (k % 5 !== 1) { e.spesa = sp.id; e.stato = 'abbinata'; sp.estratto = e.id; }
+        estratti.push(e);
+      }
+    });
+    estratti.push({ id: 'desX1', carta: 'dca1', lotto: 'dlt1', data: ds(daysAgo(9)), descrizione: 'AMAZON EU SARL 4471', importo: 89.9, spesa: '', stato: '', note: 'estratto-demo.csv', creato: ds(daysAgo(9)) },
+      { id: 'desX2', carta: 'dca1', lotto: 'dlt1', data: ds(daysAgo(15)), descrizione: 'CANONE CARTA', importo: 2.5, spesa: '', stato: 'ignorata', note: 'estratto-demo.csv', creato: ds(daysAgo(15)) });
+    Object.assign(D, { carte, fondi, spese, estratti });
     Object.assign(D, { dipendenti, presenze, assenze });
   }
   window.CDC_DEMO = id => addSales(PROF[id] ? sector(id) : vei(), PROF[id] ? id : 'veicoli');
