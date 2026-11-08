@@ -57,7 +57,7 @@
   function demoMe() {
     const d = D0.dipendenti[0], n = new Date(), oggi = ymd(n), from = addD(oggi, -70);
     const P = D0.presenze.filter(p => p.dip === d.id && p.data >= from), T = P.filter(p => p.data === oggi).sort((a, b) => String(a.ora).localeCompare(String(b.ora))), last = T.length ? T[T.length - 1].tipo : '';
-    return { dip: { id: d.id, nome: d.nome, cognome: d.cognome, mansione: d.mansione, sede: d.sede, ore: d.ore, ferie: d.ferie, permessi: d.permessi, assunzione: d.assunzione }, oggi, ora: `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`, stato: last, next: NEXT[last] || ['in'],
+    return { dip: { id: d.id, nome: d.nome, cognome: d.cognome, mansione: d.mansione, sede: d.sede, ore: d.ore, ferie: d.ferie, permessi: d.permessi, assunzione: d.assunzione, foto: d.foto || '' }, oggi, ora: `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`, stato: last, next: NEXT[last] || ['in'],
       mezzi: D0.mezzi, rif: D0.rif.slice(0, 6), presenze: P, assenze: D0.assenze.filter(a => a.dip === d.id), set: D0.config.pzSet || {}, ns: (() => { const me0 = d.id, car = (D0.carte || []).filter(c => c.dip === me0 && c.stato !== 'bloccata'), fo = (D0.fondi || []).filter(f => f.dip === me0), sp = D0.nsMine || []; return { attivo: !!(car.length || fo.length), carte: car.map(c => ({ id: c.id, nome: c.nome, ultime4: c.ultime4, tipo: c.tipo, colore: c.colore })), contanti: fo.length ? fo.reduce((t, f) => t + Number(f.importo || 0), 0) - sp.filter(x => x.metodo === 'contanti' && x.stato !== 'rifiutata').reduce((t, x) => t + x.importo, 0) : null, spese: sp, cat: ['Carburante', 'Pasti e trasferte', 'Materiale e attrezzatura', 'Pedaggi e parcheggi', 'Altro'], centri: [] }; })(), azienda: (D0.config.azienda && D0.config.azienda.nome) || 'Azienda demo', user: me };
   }
   async function call(action, extra = {}) {
@@ -68,6 +68,7 @@
     if (action === 'pzRichiesta') { const a = { id: 'dza' + Date.now(), dip: d.id, tipo: extra.tipo, dal: extra.dal, al: extra.al, ore: extra.tipo === 'permesso' ? Number(extra.ore) || 0 : '', motivo: extra.motivo || '', stato: extra.tipo === 'malattia' ? 'comunicata' : 'attesa', risposta: '', creato: new Date().toISOString(), deciso: '' }; D0.assenze.push(a); demoSave('a', a); return demoMe(); }
     if (action === 'pzRifornimento') { D0.rif.unshift({ id: 'dr' + Date.now(), data: demoMe().oggi, targa: extra.targa, litri: Number(String(extra.litri).replace(',', '.')) || 0, km: Number(extra.km) || 0 }); return demoMe(); }
     if (action === 'pzSpesa') { const c = (D0.carte || []).find(x => String(x.id) === String(extra.carta)); D0.nsMine.unshift({ id: 'dsp' + Date.now(), data: extra.data, dip: d.id, importo: Number(String(extra.importo).replace(',', '.')) || 0, esercente: extra.esercente, categoria: extra.categoria, centro: extra.centro, descrizione: extra.descrizione, metodo: extra.metodo, carta: extra.metodo === 'carta' ? extra.carta : '', foto: extra.foto ? 'demo' : '', stato: 'inviata', risposta: '', creato: new Date().toISOString() }); return demoMe(); }
+    if (action === 'pzFoto') { d.foto = extra.foto || ''; return demoMe(); }
     if (action === 'pzSpesaDel') { D0.nsMine = D0.nsMine.filter(x => x.id !== extra.id); return demoMe(); }
     if (action === 'pzAnnulla') { D0.assenze = D0.assenze.filter(a => a.id !== extra.id); demoSave('del', extra.id); return demoMe(); }
     return demoMe();
@@ -106,7 +107,7 @@
     if (!mon) mon = m.oggi.slice(0, 7);
     $('#pz-name').textContent = `${m.dip.nome || ''} ${m.dip.cognome || ''}`.trim();
     $('#pz-org').textContent = [m.azienda, m.dip.mansione].filter(Boolean).join(' · ');
-    $('#pz-av').textContent = (String(m.dip.nome || '?')[0] + String(m.dip.cognome || '')[0]).toUpperCase();
+    { const av = $('#pz-av'), ini = (String(m.dip.nome || '?')[0] + String(m.dip.cognome || '')[0]).toUpperCase(); if (m.dip.foto) { let im = av.querySelector('img'); if (!im) { av.textContent = ''; im = new Image(); im.alt = ''; av.appendChild(im); } if (im.src !== m.dip.foto) im.src = m.dip.foto; } else av.textContent = ini; }
     const n = m.assenze.filter(a => a.stato === 'attesa').length; $('#pz-badge').hidden = !n; $('#pz-badge').textContent = n;
     const nsOn = !!(m.ns && m.ns.attivo); const nt = $('.pz-tabs [data-tab=spese]'); if (nt) nt.hidden = !nsOn; if (!nsOn && tab === 'spese') tab = 'oggi';
     const np = nsOn ? (m.ns.spese || []).filter(x => x.stato === 'inviata').length : 0; const nb = $('#pz-nsb'); if (nb) { nb.hidden = !np; nb.textContent = np; }
@@ -338,7 +339,15 @@
       else toast(netErr(e));
     } finally { syncing(false); }
   }
+  // foto profilo: il dipendente tocca il suo cerchio in alto e sceglie una foto (ritaglio quadrato 128 px)
+  const toAvatar = f => new Promise((ok, ko) => { const im = new Image(), u = URL.createObjectURL(f); im.onload = () => { URL.revokeObjectURL(u); const s = Math.min(im.width, im.height), c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 128, 128); x.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 128, 128); ok(c.toDataURL('image/jpeg', 0.8)); }; im.onerror = () => { URL.revokeObjectURL(u); ko(new Error('Immagine non valida')); }; im.src = u; });
+  function avatarInit() {
+    const av = $('#pz-av'); if (!av || av._ph) return; av._ph = 1; av.setAttribute('role', 'button'); av.tabIndex = 0; av.title = 'Cambia la foto del profilo'; av.setAttribute('aria-label', 'Cambia la foto del profilo');
+    const pick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.onchange = async () => { if (!i.files[0]) return; try { setM(await call('pzFoto', { foto: await toAvatar(i.files[0]) })); toast('Foto aggiornata', true); } catch (e) { toast(e.message || 'Non riesco a salvare la foto'); } }; i.click(); };
+    av.addEventListener('click', pick); av.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  }
   async function start() {
+    avatarInit();
     if (me && me.mustPw && !DEMO) { show('pz-pwset'); return; }
     show('pz-app'); $('.pz-tabs').hidden = false;
     if (DEMO || !fromCache()) $('#pz-main').innerHTML = '<div class="pz-loading"><div class="pz-spin"></div></div>';

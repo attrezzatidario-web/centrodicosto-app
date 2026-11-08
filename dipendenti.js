@@ -25,12 +25,14 @@
   const nameOf = d => `${d.nome || ''} ${d.cognome || ''}`.trim() || 'Senza nome';
   const ini = d => (String(d.nome || '?')[0] + String(d.cognome || '')[0] || '').toUpperCase();
   const COL = ['#3362ab', '#1baf7a', '#eb6834', '#8b5cf6', '#0e9fb4', '#d55181', '#c98500', '#64748b'];
+  const av = (d, c = '') => `<span class="dp-av${c ? ' ' + c : ''}" style="--c:${colOf(d)}">${d.foto ? `<img src="${esc(d.foto)}" alt="">` : esc(ini(d))}</span>`;
   const colOf = d => d.colore || COL[[...String(d.id)].reduce((s, c) => s + c.charCodeAt(0), 0) % COL.length];
   const TIPI = { in: 'Entrata', pausa: 'Pausa', rientro: 'Rientro', out: 'Uscita' };
   const ASS = { ferie: ['Ferie', 'F'], permesso: ['Permesso', 'P'], malattia: ['Malattia', 'M'], altro: ['Altra assenza', 'A'] };
   const AST = { attesa: ['soon', 'Da approvare'], approvata: ['paid', 'Approvata'], rifiutata: ['late', 'Rifiutata'], comunicata: ['', 'Comunicata'] };
   const CONTR = ['Tempo indeterminato', 'Tempo determinato', 'Apprendistato', 'Part-time', 'Stagionale', 'Intermittente', 'Collaborazione', 'Tirocinio / stage'];
   const IC = {
+    cam: '<path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/>',
     users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5.5 5"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17v.5"/>', back: '<path d="M15 18l-6-6 6-6"/>', plus: '<path d="M12 5v14M5 12h14"/>', go: '<path d="M9 6l6 6-6 6"/>',
@@ -154,7 +156,7 @@
       <div class="seg dp-fs">${[['attivi', 'Attivi'], ['cessati', 'Cessati'], ['tutti', 'Tutti']].map(([k, l]) => `<button type="button" data-dp="fst:${k}" class="${S.fst === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
       <div class="dp-tw"><table class="dp-t dp-pt"><thead><tr><th>Dipendente</th><th>Sede</th><th>Contratto</th><th>Oggi</th><th class="r">Ore ${MESI[new Date().getMonth()]}</th><th>Accesso</th><th></th></tr></thead><tbody>
       ${L.map(d => { const n = now(d), m = month(d, mk), u = staffOf(d), sc = scad(d).filter(x => x.g <= 30); return `<tr data-dp="open:${esc(d.id)}">
-        <td><div class="dp-who"><span class="dp-av" style="--c:${colOf(d)}">${esc(ini(d))}</span><span><b>${esc(nameOf(d))}</b><small>${esc([d.mansione, d.reparto].filter(Boolean).join(' · ') || '—')}</small></span></div></td>
+        <td><div class="dp-who">${av(d, '')}<span><b>${esc(nameOf(d))}</b><small>${esc([d.mansione, d.reparto].filter(Boolean).join(' · ') || '—')}</small></span></div></td>
         <td>${esc(d.sede || '—')}</td>
         <td><span class="dp-c2">${esc(d.contratto || '—')}${d.fine ? `<small>fino al ${esc(C.dIt(d.fine))}</small>` : ''}</span></td>
         <td>${d.stato === 'cessato' ? '<span class="chip">Cessato</span>' : `<span class="chip ${n.c}">${esc(n.t)}</span>`}${sc.length ? `<span class="dp-warn" title="${esc(sc.map(x => x.l + ' ' + scadTxt(x.g)).join(' · '))}">${svg('alert')}</span>` : ''}</td>
@@ -185,7 +187,7 @@
       const ticks = [6, 8, 10, 12, 14, 16, 18, 20, 22];
       return `<div class="card dp-pc">${head}
         <div class="dp-tw"><table class="dp-t dp-day"><thead><tr><th>Dipendente</th><th>Entrata</th><th>Uscita</th><th class="r">Pausa</th><th class="r">Ore</th><th class="dp-axh"><div class="dp-ax">${ticks.map(h => `<span style="left:${((h * 60 - AXS) / (AXE - AXS) * 100).toFixed(2)}%">${h}</span>`).join('')}</div></th>${canW() ? '<th></th>' : ''}</tr></thead><tbody>
-        ${rows.map(({ d, w, a }) => `<tr><td><div class="dp-who"><span class="dp-av sm" style="--c:${colOf(d)}">${esc(ini(d))}</span><span><b>${esc(nameOf(d))}</b><small>${a ? esc(ASS[a.tipo][0]) : w.anom ? '<em class="dp-an">manca l\'uscita</em>' : w.L.length ? w.L.map(p => `${String(p.ora).slice(0, 5)} ${TIPI[p.tipo] ? TIPI[p.tipo].toLowerCase() : p.tipo}${p.fonte === 'manuale' ? '*' : ''}`).join(' · ') : workday(S.day) ? 'nessuna timbratura' : 'riposo'}</small></span></div></td>
+        ${rows.map(({ d, w, a }) => `<tr><td><div class="dp-who">${av(d, 'sm')}<span><b>${esc(nameOf(d))}</b><small>${a ? esc(ASS[a.tipo][0]) : w.anom ? '<em class="dp-an">manca l\'uscita</em>' : w.L.length ? w.L.map(p => `${String(p.ora).slice(0, 5)} ${TIPI[p.tipo] ? TIPI[p.tipo].toLowerCase() : p.tipo}${p.fonte === 'manuale' ? '*' : ''}`).join(' · ') : workday(S.day) ? 'nessuna timbratura' : 'riposo'}</small></span></div></td>
           <td class="num">${w.first ? String(w.first.ora).slice(0, 5) : '—'}</td><td class="num">${w.end ? String(w.end.ora).slice(0, 5) : w.open && !w.anom ? '<span class="chip paid">in corso</span>' : '—'}</td>
           <td class="r num">${w.pause ? hm(w.pause) : '—'}</td><td class="r num"><b>${w.min ? hm(w.min) : '—'}</b></td><td class="dp-axc">${a && !w.L.length ? `<div class="dp-bar2 abs"><span>${esc(ASS[a.tipo][0])}</span></div>` : bar(w)}</td>
           ${canW() ? `<td class="dp-go"><button type="button" class="btn sm" data-dp="fix:${esc(d.id)}:${S.day}">Correggi</button></td>` : ''}</tr>`).join('')}
@@ -194,7 +196,7 @@
     const [y, m] = S.mon.split('-').map(Number), last = new Date(y, m, 0).getDate(), Ms = A.map(d => ({ d, M: month(d, S.mon) }));
     return `<div class="card dp-pc">${head}
       <div class="dp-tw dp-mw"><table class="dp-t dp-mon"><thead><tr><th class="dp-stk">Dipendente</th><th class="r dp-mt">Ore</th><th class="r dp-mt">Gg</th><th class="r dp-mt dp-mt2">Straord.</th>${Array.from({ length: last }, (_, i) => { const day = `${S.mon}-${pad(i + 1)}`; return `<th class="c${workday(day) ? '' : ' we'}${day === today() ? ' td' : ''}"><span>${GG[parseD(day).getDay()][0].toUpperCase()}</span>${i + 1}</th>`; }).join('')}</tr></thead><tbody>
-      ${Ms.map(({ d, M }) => `<tr><td class="dp-stk"><div class="dp-who"><span class="dp-av sm" style="--c:${colOf(d)}">${esc(ini(d))}</span><span><b>${esc(nameOf(d))}</b>${M.an ? `<small class="dp-an">${M.an} ${M.an === 1 ? 'uscita mancante' : 'uscite mancanti'}</small>` : ''}</span></div></td><td class="r num dp-mt"><b>${hm(M.tot)}</b></td><td class="r num dp-mt">${M.gl}</td><td class="r num dp-mt dp-mt2">${M.extra >= 30 ? hm(M.extra) : '—'}</td>
+      ${Ms.map(({ d, M }) => `<tr><td class="dp-stk"><div class="dp-who">${av(d, 'sm')}<span><b>${esc(nameOf(d))}</b>${M.an ? `<small class="dp-an">${M.an} ${M.an === 1 ? 'uscita mancante' : 'uscite mancanti'}</small>` : ''}</span></div></td><td class="r num dp-mt"><b>${hm(M.tot)}</b></td><td class="r num dp-mt">${M.gl}</td><td class="r num dp-mt dp-mt2">${M.extra >= 30 ? hm(M.extra) : '—'}</td>
         ${M.days.map(x => `<td class="c${workday(x.day) ? '' : ' we'}${x.day === today() ? ' td' : ''}${x.w.anom ? ' an' : ''}${canW() ? ' ed' : ''}"${canW() ? ` data-dp="fix:${esc(d.id)}:${x.day}"` : ''} title="${esc(C.dIt(x.day))}${x.w.min ? ' · ' + hm(x.w.min) : ''}${x.a ? ' · ' + ASS[x.a.tipo][0] : ''}">${x.w.min ? `<b>${hDec(x.w.min)}</b>` : x.a ? `<em class="dp-al ${x.a.tipo}">${ASS[x.a.tipo][1]}</em>` : x.w.anom ? '<em class="dp-al an">!</em>' : ''}</td>`).join('')}</tr>`).join('')}
       </tbody></table></div>
       <div class="dp-leg"><span><em class="dp-al ferie">F</em>Ferie</span><span><em class="dp-al permesso">P</em>Permesso</span><span><em class="dp-al malattia">M</em>Malattia</span><span><em class="dp-al an">!</em>Uscita mancante</span><span>Ore in decimali · straordinari oltre ${hDec(A.length ? dailyMin(A[0]) : 480)} h al giorno</span></div></div>`;
@@ -203,7 +205,7 @@
   // ---- Ferie e permessi ----
   function reqRow(a, opts = {}) {
     const d = dipOf(a.dip) || {}, st = AST[a.stato] || AST.attesa, gg = a.tipo === 'permesso' && N(a.ore) ? `${C.fmtNum(N(a.ore), 1).replace(/,0$/, '')} ore` : `${workDays(a.dal, a.al || a.dal)} ${workDays(a.dal, a.al || a.dal) === 1 ? 'giorno' : 'giorni'}`;
-    return `<div class="dp-req"><span class="dp-av sm" style="--c:${colOf(d)}">${esc(ini(d))}</span><div class="dp-rq"><b>${opts.noName ? '' : esc(nameOf(d)) + ' · '}${esc(ASS[a.tipo] ? ASS[a.tipo][0] : a.tipo)}</b><small>${a.dal === (a.al || a.dal) ? esc(dLong(a.dal)) : `dal ${esc(C.dIt(a.dal))} al ${esc(C.dIt(a.al))}`} · ${gg}${a.motivo ? ' · «' + esc(a.motivo) + '»' : ''}${a.risposta ? ' · risposta: ' + esc(a.risposta) : ''}</small></div>
+    return `<div class="dp-req">${av(d, 'sm')}<div class="dp-rq"><b>${opts.noName ? '' : esc(nameOf(d)) + ' · '}${esc(ASS[a.tipo] ? ASS[a.tipo][0] : a.tipo)}</b><small>${a.dal === (a.al || a.dal) ? esc(dLong(a.dal)) : `dal ${esc(C.dIt(a.dal))} al ${esc(C.dIt(a.al))}`} · ${gg}${a.motivo ? ' · «' + esc(a.motivo) + '»' : ''}${a.risposta ? ' · risposta: ' + esc(a.risposta) : ''}</small></div>
       <span class="chip ${st[0]}">${st[1]}</span>${canW() ? (a.stato === 'attesa' ? `<span class="dp-ra"><button type="button" class="btn sm dp-ok" data-dp="dec:${esc(a.id)}:approvata">${svg('check')}Approva</button><button type="button" class="btn sm" data-dp="dec:${esc(a.id)}:rifiutata">Rifiuta</button></span>` : `<span class="dp-ra"><button type="button" class="btn sm ghost" data-dp="aedit:${esc(a.id)}">Modifica</button></span>`) : ''}</div>`;
   }
   function tabFerie() {
@@ -215,7 +217,7 @@
       <div class="card"><div class="card-h"><h3>Prossime assenze</h3></div>${F.length ? F.map(a => reqRow(a)).join('') : '<div class="empty">Nessuna assenza in programma</div>'}</div></div>
       <div class="card"><div class="card-h"><h3>Saldo ${y}</h3><span class="muted small">ferie in giorni lavorativi · permessi in ore · spettanti in proporzione all'assunzione</span></div>
       <div class="dp-tw"><table class="dp-t"><thead><tr><th>Dipendente</th><th class="r">Ferie spettanti</th><th class="r">Godute</th><th class="r">In attesa</th><th class="r">Residue</th><th class="r">Permessi residui</th><th class="r">Malattia</th></tr></thead><tbody>
-      ${active().sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'it')).map(d => { const s = saldo(d, y); return `<tr data-dp="open:${esc(d.id)}:ferie"><td><div class="dp-who"><span class="dp-av sm" style="--c:${colOf(d)}">${esc(ini(d))}</span><b>${esc(nameOf(d))}</b></div></td><td class="r num">${C.fmtNum(s.fs, 1).replace(/,0$/, '')}</td><td class="r num">${s.fg}</td><td class="r num">${s.fa || '—'}</td><td class="r num"><b class="${s.fr < 0 ? 'dp-neg' : ''}">${C.fmtNum(s.fr, 1).replace(/,0$/, '')}</b></td><td class="r num">${C.fmtNum(s.pr, 1).replace(/,0$/, '')} h</td><td class="r num">${s.mg ? s.mg + ' gg' : '—'}</td></tr>`; }).join('')}
+      ${active().sort((a, b) => nameOf(a).localeCompare(nameOf(b), 'it')).map(d => { const s = saldo(d, y); return `<tr data-dp="open:${esc(d.id)}:ferie"><td><div class="dp-who">${av(d, 'sm')}<b>${esc(nameOf(d))}</b></div></td><td class="r num">${C.fmtNum(s.fs, 1).replace(/,0$/, '')}</td><td class="r num">${s.fg}</td><td class="r num">${s.fa || '—'}</td><td class="r num"><b class="${s.fr < 0 ? 'dp-neg' : ''}">${C.fmtNum(s.fr, 1).replace(/,0$/, '')}</b></td><td class="r num">${C.fmtNum(s.pr, 1).replace(/,0$/, '')} h</td><td class="r num">${s.mg ? s.mg + ' gg' : '—'}</td></tr>`; }).join('')}
       </tbody></table></div></div>
       ${R.length ? `<div class="card"><div class="card-h"><h3>Storico</h3></div>${R.map(a => reqRow(a)).join('')}</div>` : ''}`;
   }
@@ -224,7 +226,7 @@
   function tabScad() {
     const L = active().flatMap(d => scad(d).map(x => ({ ...x, dd: d }))).sort((a, b) => a.g - b.g);
     return `<div class="card"><div class="card-h"><h3>Scadenze del personale</h3><span class="muted small">fine contratto, visite mediche, corsi di sicurezza</span></div>
-      ${L.length ? L.map(x => `<button type="button" class="dp-sc" data-dp="open:${esc(x.dd.id)}:anag"><span class="dp-av sm" style="--c:${colOf(x.dd)}">${esc(ini(x.dd))}</span><span class="dp-rq"><b>${esc(x.l)} · ${esc(nameOf(x.dd))}</b><small>${esc(C.dIt(x.d))}</small></span><span class="chip ${scadCls(x.g)}">${esc(scadTxt(x.g))}</span>${svg('go', 'dp-gi')}</button>`).join('') : '<div class="empty">Nessuna scadenza registrata: aggiungi le date nella scheda di ogni dipendente</div>'}</div>`;
+      ${L.length ? L.map(x => `<button type="button" class="dp-sc" data-dp="open:${esc(x.dd.id)}:anag">${av(x.dd, 'sm')}<span class="dp-rq"><b>${esc(x.l)} · ${esc(nameOf(x.dd))}</b><small>${esc(C.dIt(x.d))}</small></span><span class="chip ${scadCls(x.g)}">${esc(scadTxt(x.g))}</span>${svg('go', 'dp-gi')}</button>`).join('') : '<div class="empty">Nessuna scadenza registrata: aggiungi le date nella scheda di ogni dipendente</div>'}</div>`;
   }
 
   /* ---------- scheda del dipendente ---------- */
@@ -235,8 +237,8 @@
     const n = nw ? null : now(d);
     const body = S.dtab === 'anag' ? anag(d, nw) : S.dtab === 'pres' ? dPres(d) : S.dtab === 'ferie' ? dFerie(d) : S.dtab === 'acc' ? acc(d) : riep(d);
     return `<div class="dp-dh"><button type="button" class="btn sm" data-dp="back">${svg('back')}Dipendenti</button></div>
-      <div class="card dp-hero"><span class="dp-av lg" style="--c:${nw ? '#94a3b8' : colOf(d)}">${nw ? svg('plus') : esc(ini(d))}</span><div class="dp-ht"><h2>${nw ? 'Nuovo dipendente' : esc(nameOf(d))}</h2><p>${nw ? 'Compila i dati e salva: poi potrai dargli l\'accesso al gestionale e all\'app Presenze' : esc([d.mansione, d.reparto, d.sede].filter(Boolean).join(' · ') || 'Mansione non indicata')}</p>
-        ${nw ? '' : `<div class="dp-hc">${d.stato === 'cessato' ? '<span class="chip">Cessato</span>' : `<span class="chip ${n.c}">${esc(n.t)}</span>`}${d.contratto ? `<span class="chip">${esc(d.contratto)}</span>` : ''}${staffOf(d) ? `<span class="chip paid">${svg('key')}Accesso attivo</span>` : ''}</div>`}</div>
+      <div class="card dp-hero">${nw ? `<span class="dp-av lg" style="--c:#94a3b8">${svg('plus')}</span>` : `<button type="button" class="dp-avb" data-dp="foto:${esc(d.id)}"${canW() ? '' : ' disabled'} aria-label="${canW() ? 'Cambia la foto profilo' : 'Foto profilo'}">${av(d, 'lg')}${canW() ? `<i class="dp-cam">${svg('cam')}</i>` : ''}</button>`}<div class="dp-ht"><h2>${nw ? 'Nuovo dipendente' : esc(nameOf(d))}</h2><p>${nw ? 'Compila i dati e salva: poi potrai dargli l\'accesso al gestionale e all\'app Presenze' : esc([d.mansione, d.reparto, d.sede].filter(Boolean).join(' · ') || 'Mansione non indicata')}</p>
+        ${nw ? '' : `<div class="dp-hc">${d.stato === 'cessato' ? '<span class="chip">Cessato</span>' : `<span class="chip ${n.c}">${esc(n.t)}</span>`}${d.contratto ? `<span class="chip">${esc(d.contratto)}</span>` : ''}${staffOf(d) ? `<span class="chip paid">${svg('key')}Accesso attivo</span>` : ''}${d.foto && canW() ? `<button type="button" class="dp-rm" data-dp="fotodel:${esc(d.id)}">Rimuovi foto</button>` : ''}</div>`}</div>
         ${!nw && canW() ? `<div class="dp-ha"><button type="button" class="btn sm" data-dp="fix:${esc(d.id)}:${today()}">${svg('clock')}Timbratura a mano</button><button type="button" class="btn sm dp-del" data-dp="del:${esc(d.id)}" title="Elimina dipendente">${svg('trash')}<span class="dp-hm">Elimina</span></button></div>` : ''}</div>
       ${T.length > 1 ? `<div class="seg dp-tabs dp-dt" role="tablist">${T.map(([k, l]) => `<button type="button" role="tab" data-dp="dtab:${k}" class="${S.dtab === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
       ${body}`;
@@ -420,6 +422,14 @@ else{l.onclick=e=>{const d=e.target.closest('[data-i]');if(d){const p=P[+d.datas
   }
 
   /* ---------- eventi ---------- */
+  // foto profilo: ritaglio quadrato 128 px, JPEG leggero salvato nella scheda (si vede in tutte le liste e nell'app Presenze)
+  const toAvatar = f => new Promise((ok, ko) => { const im = new Image(), u = URL.createObjectURL(f); im.onload = () => { URL.revokeObjectURL(u); const s = Math.min(im.width, im.height), c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 128, 128); x.drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 128, 128); ok(c.toDataURL('image/jpeg', 0.8)); }; im.onerror = () => { URL.revokeObjectURL(u); ko(new Error('Immagine non valida')); }; im.src = u; });
+  function fotoPick(id) {
+    const d = dipOf(id); if (!d || !canW()) return;
+    const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
+    i.onchange = async () => { if (!i.files[0]) return; try { const foto = await toAvatar(i.files[0]); C.write([{ action: 'upsert', sheet: 'Dipendenti', row: { ...dipOf(id), foto } }]); C.toast('Foto aggiornata'); render(root, C); } catch (e) { C.toast(e.message || 'Non riesco a leggere la foto'); } };
+    i.click();
+  }
   function bind(el) {
     const re = () => render(el, C);
     el.addEventListener('click', async ev => {
@@ -448,6 +458,8 @@ else{l.onclick=e=>{const d=e.target.closest('[data-i]');if(d){const p=P[+d.datas
       else if (k === 'credok') { S.creds = null; re(); }
       else if (k === 'del') delDip(a1 || S.det);
       else if (k === 'gas') { C.goGas(String((dipOf(a1) || {}).cognome || '')); }
+      else if (k === 'foto') fotoPick(a1);
+      else if (k === 'fotodel') { const d0 = dipOf(a1); if (d0) { C.write([{ action: 'upsert', sheet: 'Dipendenti', row: { ...d0, foto: '' } }]); C.toast('Foto rimossa'); re(); } }
       else if (k === 'asave') accSave();
       else if (k === 'apw') accPw();
       else if (k === 'asus') accSus();

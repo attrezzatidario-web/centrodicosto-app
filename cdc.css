@@ -4120,3 +4120,44 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 @media (max-width: 700px) { .ns-sp { flex-wrap: wrap; row-gap: 6px; } .ns-sp .ns-me { display: none; } .ns-sp > .ns-sp-m { flex-basis: calc(100% - 140px); } .ns-sp .ns-ac { margin-left: auto; } }
 .ns-bk.lg { position: relative; background: #fff; overflow: hidden; padding: 0; min-width: 26px; width: 26px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); } .ns-bk.lg b { opacity: 0; } .ns-bk.lg img { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); object-fit: contain; }
 .ns-me .ns-bk.lg { width: 22px; min-width: 22px; } .ns-bi .ns-bk.lg { box-shadow: 0 0 0 1px var(--line); }
+
+/* v213: menu laterale personalizzabile (PC) */
+.nav .nv-top { display: none; }
+@media (min-width: 900px) {
+  .nav .brand { order: 0; } .nav a[data-view] { order: var(--nvo, 10); } .nav .nv-m { order: 99998; } .nav .nav-foot { order: 99999; }
+  .nav a.nv-off { display: none; }
+  .nv-editing .nav a.nv-off:not([hidden]) { display: flex; opacity: .5; }
+  .nav a[data-view] { position: relative; }
+  .nav .nv-ctl { display: none; margin-left: auto; align-items: center; gap: 2px; }
+  .nv-editing .nav .nv-ctl { display: inline-flex; }
+  .nv-editing .nav a[data-view] .badge { display: none; }
+  .nav .nv-b { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); display: inline-grid; place-items: center; cursor: pointer; }
+  .nav .nv-b[hidden] { display: none; }
+  .nav .nv-b:hover { background: var(--surface); color: var(--ink); }
+  .nav .nv-b svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav .nv-grip { cursor: grab; touch-action: none; } .nav .nv-grip svg { fill: currentColor; stroke: none; }
+  .nav .nv-grip:active { cursor: grabbing; }
+  .nav .nv-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .nav a.nv-drag { background: var(--accent-soft); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); z-index: 2; }
+  .nav a[data-view] { transition: background .15s, opacity .15s; }
+  .nav .nv-top { display: block; order: 1; margin: -14px 0 10px; }
+  .nv-ed { display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 8px 10px; border: 0; border-radius: 10px; background: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; }
+  .nv-ed:hover { background: var(--bg); color: var(--ink); }
+  .nv-ed svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nv-edbar { display: grid; gap: 8px; margin: 0 0 4px; padding: 0 4px; font-size: 12.5px; color: var(--muted); }
+  .nv-edbar > div { display: flex; align-items: center; justify-content: space-between; }
+  .nv-edbar .link { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; cursor: pointer; }
+}
+@media (prefers-reduced-motion: reduce) { .nav a[data-view] { transition: none; } }
+
+/* v213: foto profilo dei dipendenti */
+.dp-av { overflow: hidden; } .dp-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dp-avb { position: relative; display: inline-grid; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; flex: none; }
+.dp-avb:disabled { cursor: default; }
+.dp-avb .dp-av.lg { width: 72px; height: 72px; font-size: 24px; }
+.dp-cam { position: absolute; right: -2px; bottom: -2px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; border: 2px solid var(--surface, #fff); transition: transform .15s; }
+.dp-cam svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.dp-avb:hover .dp-cam { transform: scale(1.08); }
+.dp-avb:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dp-rm { background: none; border: 0; padding: 0 4px; color: var(--muted); font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.dp-rm:hover { color: var(--ink); }

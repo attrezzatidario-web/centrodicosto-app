@@ -307,6 +307,7 @@
     document.body.dataset.settore = s.id;
     lexSet(s);
     dockApply();
+    navApply();
     return true;
   }
   /* nomi del settore: «piazzale» diventa locale, cantiere, deposito…; «attrezzatura» diventa acquisti.
@@ -732,6 +733,7 @@
   }
   function render() {
     applySettore();
+    if (!navEd) navApply(); // la Config del menu può arrivare con una sincronizzazione successiva
     ivaUI();
     const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, fischer: renderFi, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip, notespese: renderNs }[view];
     fn && fn();
@@ -787,7 +789,8 @@
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.0') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare dipendenti, timbrature e ferie serve lo script versione cdc-5.0 o successiva: senza aggiornamento i dipendenti inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_DIP) { el.innerHTML = '<div class="card"><div class="empty">Carico i dipendenti…</div></div>'; try { await loadLib('dipendenti.js?v=145'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'dipendenti') return; }
+    if (!window.CDC_DIP) { el.innerHTML = '<div class="card"><div class="empty">Carico i dipendenti…</div></div>'; try { await loadLib('dipendenti.js?v=146'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'dipendenti') return; }
+    if (!window.CDC_DIP) return; // un'altra chiamata sta ancora caricando la sezione
     window.CDC_DIP.render(el, {
       db: () => db, write, api, applyLocal: ops => { applyMany(ops); save(); render(); }, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, setConfig, centri,
       openSheet, closeSheet, loadXlsx, loadPdf, logoPng, loadFonts, orgName: () => ORG.n, sedeWord: () => (settore().sede || ['Sede'])[0],
@@ -3570,6 +3573,51 @@
   const DOCK_DEF = ['home', 'preventivi', 'attrezzatura', 'fatture'];
   const dockSecs = () => $$('.nav a[data-view]').filter(a => !a.hidden).map(a => ({ v: a.dataset.view, a, t: (a.querySelector('.lbl-d') || a.querySelector('span') || a).textContent.trim(), m: (a.querySelector('.lbl-m') || a.querySelector('.lbl-d') || a.querySelector('span') || a).textContent.trim(), ic: (a.querySelector('svg') || {}).outerHTML || '' }));
   const dockGet = () => { let d = null; try { d = JSON.parse(localStorage.getItem('cdc_dock') || 'null'); } catch {} const ok = dockSecs().map(x => x.v); d = Array.isArray(d) ? d.filter(v => ok.includes(v)) : []; return d.length === 4 ? d : DOCK_DEF.filter(v => ok.includes(v)); };
+  /* v213: menu laterale personalizzabile (solo PC): ordine e voci nascoste, uguali per tutto il gestionale.
+     Config «nav:ordine» = { o: [viste in ordine], h: [viste nascoste] } */
+  let navEd = false;
+  const navCfg = () => { const c = cfg('nav:ordine'); return { o: Array.isArray(c && c.o) ? c.o : [], h: Array.isArray(c && c.h) ? c.h : [] }; };
+  const navLinks = () => $$('.nav a[data-view]');
+  const navOrd = () => navLinks().sort((x, y) => (+x.style.getPropertyValue('--nvo') || 0) - (+y.style.getPropertyValue('--nvo') || 0));
+  function navApply(o, h) {
+    const C = o ? { o, h } : navCfg(), L = navLinks();
+    const rank = v => { const k = C.o.indexOf(v); return k < 0 ? 1000 + L.findIndex(x => x.dataset.view === v) : k; };
+    L.forEach(x => { const v = x.dataset.view; x.style.setProperty('--nvo', 10 + rank(v)); x.classList.toggle('nv-off', C.h.includes(v) && v !== 'impostazioni'); });
+    const eb = $('#nav-edit'); if (eb) eb.hidden = !isOwnerU() || isDip();
+  }
+  const navSave = () => { const o = navOrd().map(x => x.dataset.view), h = navLinks().filter(x => x.classList.contains('nv-off')).map(x => x.dataset.view); setConfig('nav:ordine', { o, h }); };
+  const NV_I = { grip: '<svg viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/></svg>', on: '<svg viewBox="0 0 24 24"><path d="M2.5 12C3.5 10 7 6 12 6s8.5 4 9.5 6c-1 2-4.5 6-9.5 6s-8.5-4-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg>', off: '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.2A9.9 9.9 0 0 1 12 6c5 0 8.5 4 9.5 6a14 14 0 0 1-2.6 3.4M6.5 7.6C4.4 9 3 11 2.5 12c1 2 4.5 6 9.5 6 1.4 0 2.7-.3 3.8-.8"/></svg>' };
+  function navEdit(on) {
+    navEd = on; document.body.classList.toggle('nv-editing', on);
+    $$('.nav .nv-ctl').forEach(x => x.remove());
+    const eb = $('#nav-edit'), bar = $('#nav-edbar'); if (eb) eb.style.display = on ? 'none' : ''; if (bar) bar.hidden = !on;
+    if (!on) return;
+    navLinks().forEach(x => { const v = x.dataset.view, t = (x.querySelector('.lbl-d') || x.querySelector('span') || x).textContent.trim(), off = x.classList.contains('nv-off');
+      x.insertAdjacentHTML('beforeend', `<span class="nv-ctl"><button type="button" class="nv-b nv-eye" data-nveye="${v}" aria-label="${off ? 'Mostra' : 'Nascondi'} ${esc(t)}" aria-pressed="${off}"${v === 'impostazioni' ? ' hidden' : ''}>${off ? NV_I.off : NV_I.on}</button><button type="button" class="nv-b nv-grip" data-nvgrip="${v}" aria-label="Sposta ${esc(t)}: trascina, oppure usa le frecce su e giù" title="Trascina per spostare">${NV_I.grip}</button></span>`); });
+  }
+  function navMove(a, y, dir) { // sposta la voce: a una posizione sotto il puntatore (y) oppure di una (dir)
+    const V = navOrd().filter(x => x.offsetParent !== null), slots = V.map(x => +x.style.getPropertyValue('--nvo')), rest = V.filter(x => x !== a);
+    let at = dir ? Math.max(0, Math.min(rest.length, V.indexOf(a) + dir)) : rest.findIndex(x => y < x.getBoundingClientRect().top + x.offsetHeight / 2); if (!dir && at < 0) at = rest.length;
+    rest.splice(at, 0, a); rest.forEach((x, i) => x.style.setProperty('--nvo', slots[i]));
+  }
+  document.addEventListener('click', e => {
+    if (navEd && e.target.closest('.nav a[data-view]')) { e.preventDefault(); e.stopPropagation(); const eye = e.target.closest('[data-nveye]'); if (eye) { const a = eye.closest('a'), off = !a.classList.contains('nv-off'); a.classList.toggle('nv-off', off); eye.innerHTML = off ? NV_I.off : NV_I.on; eye.setAttribute('aria-pressed', off); navSave(); } return; }
+    const t = e.target.closest('#nav-edit, #nav-eddone, #nav-edreset'); if (!t) return;
+    if (t.id === 'nav-edit') navEdit(true);
+    else if (t.id === 'nav-eddone') { navEdit(false); toast('Menu salvato'); }
+    else { setConfig('nav:ordine', { o: [], h: [] }); navApply([], []); navEdit(true); toast('Menu ripristinato'); }
+  }, true);
+  document.addEventListener('pointerdown', e => {
+    const g = e.target.closest('[data-nvgrip]'); if (!g || !navEd) return; e.preventDefault();
+    const a = g.closest('a'); a.classList.add('nv-drag'); try { g.setPointerCapture(e.pointerId); } catch {}
+    const mv = ev => navMove(a, ev.clientY, 0), up = () => { a.classList.remove('nv-drag'); g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); g.removeEventListener('pointercancel', up); navSave(); };
+    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+  });
+  document.addEventListener('keydown', e => {
+    if (navEd && e.key === 'Escape') { navEdit(false); return; }
+    const g = e.target.closest && e.target.closest('[data-nvgrip]'); if (!g || !navEd || !/^Arrow(Up|Down)$/.test(e.key)) return; e.preventDefault();
+    navMove(g.closest('a'), 0, e.key === 'ArrowUp' ? -1 : 1); navSave(); g.focus();
+  });
   function dockApply() {
     const d = dockGet(), cur = document.body.dataset.view || '';
     dockSecs().forEach(x => { const k = d.indexOf(x.v); x.a.classList.toggle('dk-on', k >= 0); x.a.style.setProperty('--dk', k >= 0 ? k : 9); });
