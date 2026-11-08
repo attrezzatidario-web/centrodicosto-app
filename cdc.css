@@ -4104,3 +4104,17 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .seg.ns-sg { display: flex; } .seg.ns-sg button { flex: 1; height: 36px; }
 #ns-body .seg.ns-tabs button { height: 34px; padding: 0 14px; display: inline-flex; align-items: center; }
 .ns-flt select { width: auto; min-width: 0; flex: 0 1 auto; } .ns-estb .ns-flt select { max-width: 260px; }
+/* nota spese: badge banca + pillola metodo */
+.ns-bk { --bk: #3362ab; --bki: #fff; display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; background: var(--bk); color: var(--bki); font-size: 10px; font-weight: 800; letter-spacing: .02em; flex: none; box-shadow: 0 0 0 1.5px rgba(255,255,255,.35); animation: nsPop .5s cubic-bezier(.34,1.4,.5,1) backwards; }
+.ns-bk b { font-weight: 800; }
+.ns-cc-nm { display: inline-flex; align-items: center; gap: 8px; min-width: 0; } .ns-cc-nm b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ns-bi { display: flex; align-items: center; gap: 8px; } .ns-bi input { flex: 1; min-width: 0; } .ns-bi .ns-bk { box-shadow: none; } #ns-bb:empty { display: none; }
+.ns-me { white-space: nowrap; align-self: center; flex: none; width: max-content; height: auto; flex-direction: row; } .ns-me .ns-bk { min-width: 20px; height: 20px; font-size: 9px; border-radius: 6px; box-shadow: none; }
+@media (max-width: 1100px) { .ns-sp { grid-template-columns: 36px minmax(0, 1fr) auto auto auto; } .ns-sp .ns-me em { display: none; } .ns-sp .ns-rc { display: none; } .ns-sp .ns-st { grid-column: auto; } }
+@media (max-width: 700px) { .ns-sp { grid-template-columns: 36px minmax(0, 1fr) auto; } .ns-sp .ns-me { display: none; } }
+
+.ns-bbw { display: contents; font-style: normal; } .ns-bi { display: flex; align-items: center; gap: 8px; } .ns-bi input { flex: 1; min-width: 0; width: 100%; }
+.ns-sp { display: flex !important; align-items: center; gap: 12px; flex-wrap: nowrap; } .ns-sp > .ns-sp-m { flex: 1 1 0; } .ns-sp > *:not(.ns-sp-m) { flex: none; } .ns-sp .ns-me { align-self: center; height: auto; }
+.ns-sp .ns-ac { min-width: 0; } .ns-sp .ns-ac:empty { display: none; }
+@media (max-width: 1100px) { .ns-sp .ns-me em { display: none; } .ns-sp .ns-rc { display: none; } }
+@media (max-width: 700px) { .ns-sp { flex-wrap: wrap; row-gap: 6px; } .ns-sp .ns-me { display: none; } .ns-sp > .ns-sp-m { flex-basis: calc(100% - 140px); } .ns-sp .ns-ac { margin-left: auto; } }
