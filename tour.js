@@ -315,7 +315,7 @@
     sxCtx = [s, cats, ex];
     root.innerHTML = `<div class="tr-scroll">
       <header class="tr-bar"><i class="tr-prog" id="tr-prog"></i><div class="tr-brand"><img src="logo.svg" alt="" width="30" height="30"><b>Centro di Costo</b></div>
-        <nav class="tr-nav"><a href="#tr-show" data-go>Come funziona</a><a href="#tr-phone" data-go>Telefono</a><a href="#tr-funz" data-go>Funzioni</a><a href="#tr-how" data-go>Su misura</a><a href="#tr-price" data-go>Prezzi</a><a href="#tr-faq" data-go>Domande</a></nav><div class="tr-bar-r"><a class="tr-btn ghost sm" href="${esc(mail)}">Contattami</a><button type="button" class="tr-x" data-tr="close" aria-label="Chiudi">✕</button></div></header>
+        <nav class="tr-nav">${opts.demo ? '' : '<a href="#tr-dm" data-go>Demo</a>'}<a href="#tr-show" data-go>Come funziona</a><a href="#tr-phone" data-go>Telefono</a><a href="#tr-funz" data-go>Funzioni</a><a href="#tr-how" data-go>Su misura</a><a href="#tr-price" data-go>Prezzi</a><a href="#tr-faq" data-go>Domande</a></nav><div class="tr-bar-r"><a class="tr-btn ghost sm" href="${esc(mail)}">Contattami</a>${opts.landing ? '<button type="button" class="tr-btn sm tr-login" data-tr="login"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H4M14 4h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Accedi</button>' : '<button type="button" class="tr-x" data-tr="close" aria-label="Chiudi">✕</button>'}</div></header>
 
       <section class="tr-hero">
         <div class="th-bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="grid"></i></div>
@@ -328,6 +328,17 @@
         </div>
         <div class="tr-hr">${heroScene(s, cats, ex)}</div>
       </section>
+
+      ${opts.demo ? '' : `<section class="tr-dm" id="tr-dm"><div class="tr-dm-bg" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="tr-dm-in rv"><div class="tr-dm-t"><span class="tr-eye"><i></i>Demo gratuita</span><h2>Provalo subito, <em>in un clic</em></h2>
+          <p>Apri il gestionale vero, con i dati di esempio della tua attività. Niente registrazione e niente da installare: clicca, esplora ogni sezione e torna quando vuoi.</p>
+          <button type="button" class="tr-btn glow xl" data-tr="demo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Apri la demo adesso</button>
+          <small class="tr-dm-n">Dati di esempio · nulla viene salvato</small>
+          <ul class="tr-dm-l"><li><b>Dashboard</b> con ricavi, costi e utile</li><li><b>Preventivi, fatture e magazzino</b> già pieni</li><li><b>Dipendenti e nota spese</b> da toccare con mano</li></ul></div>
+          <div class="tr-dm-s" data-tilt="9"><div class="sx-win"><div class="sx-top"><i></i><i></i><i></i><span>centrodicosto · Dashboard</span></div><div class="sx-app"><aside class="sx-side">${SHOW.map((x, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</aside><div class="sx-main">${showMock('dash', s, cats, ex)}</div></div></div>
+            <div class="tr-dm-f f1"><i>✓</i><span><b>Fattura registrata</b><small>14 righe · categorie assegnate</small></span></div>
+            <div class="tr-dm-f f2"><i class="in">▲</i><span><b>Incasso del giorno</b><small>+ € 1.240,00</small></span></div>
+            <div class="tr-dm-f f3"><i class="ai">✦</i><span><b>Spesa abbinata</b><small>estratto conto ✓</small></span></div></div></div></section>`}
 
       <section class="tr-sets"><div class="tr-setsc rv"><div class="tr-setsh"><h2>Scegli la tua attività</h2><p class="tr-sub">Nomi, sezioni e categorie si adattano da soli.</p></div>
         <div class="tr-chips">${S.list.map(x => `<button type="button" class="tr-chip${x.id === sel ? ' on' : ''}" data-trset="${x.id}"><svg viewBox="0 0 24 24">${x.ic}</svg>${esc(x.s || x.n)}</button>`).join('')}</div></div></section>
@@ -408,6 +419,20 @@ ${faq()}
     const scene = $('#tr-scene', root), hero = $('.tr-hero', root), prog = $('#tr-prog', root);
     if (hero && scene && matchMedia('(hover: hover)').matches && !reduced()) hero.onpointermove = e => { const r = hero.getBoundingClientRect(); scene.style.setProperty('--px', ((e.clientX - r.left) / r.width - .5).toFixed(3)); scene.style.setProperty('--py', ((e.clientY - r.top) / r.height - .5).toFixed(3)); };
     $$('.tr-f', root).forEach(f => { f.onpointermove = e => { const r = f.getBoundingClientRect(); f.style.setProperty('--mx', (e.clientX - r.left) + 'px'); f.style.setProperty('--my', (e.clientY - r.top) + 'px'); }; });
+    // v210: tridimensionalità — inclinazione con il puntatore, parallasse allo scroll, pulsanti magnetici
+    if (!reduced()) {
+      const fine = matchMedia('(hover: hover)').matches;
+      if (fine) {
+        $$('[data-tilt], .tr-f, .sx-win', root).forEach(el => {
+          const amp = el.dataset.tilt ? +el.dataset.tilt : el.classList.contains('tr-f') ? 6 : 4; if (!el.dataset.tilt) el.dataset.tilt = amp; el.classList.add('t3');
+          el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; el.style.setProperty('--ry', (x * amp * 2).toFixed(2) + 'deg'); el.style.setProperty('--rx', (-y * amp * 2).toFixed(2) + 'deg'); el.classList.add('hot'); });
+          el.addEventListener('pointerleave', () => { el.style.setProperty('--rx', '0deg'); el.style.setProperty('--ry', '0deg'); el.classList.remove('hot'); });
+        });
+        $$('.tr-btn.glow, .tr-btn.white', root).forEach(b => { b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); b.style.translate = ((e.clientX - r.left - r.width / 2) * .14).toFixed(1) + 'px ' + ((e.clientY - r.top - r.height / 2) * .22).toFixed(1) + 'px'; }); b.addEventListener('pointerleave', () => { b.style.translate = ''; }); });
+      }
+      let raf = 0; const par = () => { raf = 0; root && root.style.setProperty('--sy', sc.scrollTop); };
+      sc.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(par); }, { passive: true });
+    }
     if (prog) sc.onscroll = () => { prog.style.transform = `scaleX(${Math.min(1, sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight))})`; };
   }
   function onClick(e) {
@@ -419,6 +444,7 @@ ${faq()}
     if (!a) return;
     const k = a.dataset.tr;
     if (k === 'close') close();
+    if (k === 'login') { close(); setTimeout(() => { const em = document.querySelector('#setup input'); try { em && em.focus({ preventScroll: true }); } catch {} }, 320); }
     if (k === 'demo') { close(); opts.onDemo && opts.onDemo(); }
     if (k === 'req') { close(); opts.onRequest && opts.onRequest(sel); }
   }

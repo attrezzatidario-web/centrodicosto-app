@@ -390,9 +390,10 @@
     $('#sheet-form').classList.add('wide');
   }
   // v97: presentazione «Scopri cosa può fare» (tour.js + tour.css, caricati solo quando servono)
-  async function openTour() {
-    try { await loadLib('tour.js?v=203'); } catch { return demoInfo(); }
-    const go = () => window.CDC_TOUR ? window.CDC_TOUR.open({ v: 133, settore: me ? settoreId() : '', demo: DEMO, contatti: CONTATTI,
+  async function openTour(o) {
+    o = o || {};
+    try { await loadLib('tour.js?v=204'); } catch { return demoInfo(); }
+    const go = () => window.CDC_TOUR ? window.CDC_TOUR.open({ v: 135, landing: !!o.landing, settore: me ? settoreId() : '', demo: DEMO, contatti: CONTATTI,
       onDemo: () => demoStart(),
       onRequest: id => contactReq(id) }) : demoInfo();
     if (window.CDC_TOUR) go(); else setTimeout(go, 150);
@@ -462,6 +463,8 @@
   function showLogin(msg) {
     $('#app').hidden = true; $('#setup').hidden = false;
     authMsg(msg);
+    // pagina d'ingresso: chi non è entrato vede subito la presentazione, con «Accedi» in alto
+    if (!msg && !window.__trLanding && !/accedi/i.test(location.hash + location.search) && !$('.tr-scroll')) { window.__trLanding = 1; openTour({ landing: true }); }
   }
   const device = () => ((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '') + (matchMedia('(max-width: 640px)').matches ? ' · telefono' : '');
   async function authCall(action, body) {
