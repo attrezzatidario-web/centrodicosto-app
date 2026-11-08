@@ -4118,3 +4118,5 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .ns-sp .ns-ac { min-width: 0; } .ns-sp .ns-ac:empty { display: none; }
 @media (max-width: 1100px) { .ns-sp .ns-me em { display: none; } .ns-sp .ns-rc { display: none; } }
 @media (max-width: 700px) { .ns-sp { flex-wrap: wrap; row-gap: 6px; } .ns-sp .ns-me { display: none; } .ns-sp > .ns-sp-m { flex-basis: calc(100% - 140px); } .ns-sp .ns-ac { margin-left: auto; } }
+.ns-bk.lg { position: relative; background: #fff; overflow: hidden; padding: 0; min-width: 26px; width: 26px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); } .ns-bk.lg b { opacity: 0; } .ns-bk.lg img { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); object-fit: contain; }
+.ns-me .ns-bk.lg { width: 22px; min-width: 22px; } .ns-bi .ns-bk.lg { box-shadow: 0 0 0 1px var(--line); }
