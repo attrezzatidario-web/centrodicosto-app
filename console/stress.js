@@ -5,8 +5,9 @@
    e rilanciarlo non crea doppioni (upsert per id). */
 (() => {
   'use strict';
-  function gen() {
-    let seed = 990077;
+  function gen(o) {
+    const O = Object.assign({ name: 'TEST ESTREMO S.r.l.', short: 'Test Estremo', pre: 'TE', dom: 'test-estremo.example', seed: 990077, days: 1095, sedi: 12, forn: 250, cli: 1200, mov: 12000, fat: 1500, glsm: 35, glsn: [110, 170], mezzi: 16, lyfm: 35, lyfn: [6, 10], am: 1000, art: 2500, mmov: 2500, ddtn: 2000, cb: 500, dest: 400, fimm: 500, inc: 5, pv: 400, srv: 80, pvc: 150 }, o || {});
+    let seed = O.seed;
     const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
     const pick = a => a[Math.floor(rnd() * a.length)];
     const int = (a, b) => a + Math.floor(rnd() * (b - a + 1));
@@ -15,7 +16,7 @@
     const now = new Date(); now.setHours(12, 0, 0, 0);
     const ds = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const daysAgo = n => { const d = new Date(now); d.setDate(d.getDate() - n); return d; };
-    const DAYS = 1095; // 3 anni
+    const DAYS = O.days; // 3 anni
     let nid = 0; const id = p => p + (++nid).toString(36).padStart(5, '0');
     const wPick = (arr, w) => { const t = w.reduce((a, b) => a + b, 0); let r = rnd() * t; for (let i = 0; i < arr.length; i++) { r -= w[i]; if (r <= 0) return arr[i]; } return arr[arr.length - 1]; };
 
@@ -24,9 +25,9 @@
       ['Piazzale Torino', 'Piazzale', 'Torino', 'TO', '10143', [7.65, 45.075]], ['Magazzino Napoli', 'Magazzino', 'Napoli', 'NA', '80147', [14.32, 40.86]], ['Piazzale Verona', 'Piazzale', 'Verona', 'VR', '37135', [11.0, 45.41]],
       ['Piazzale Bari', 'Piazzale', 'Bari', 'BA', '70132', [16.84, 41.1]], ['Magazzino Firenze', 'Magazzino', 'Firenze', 'FI', '50127', [11.21, 43.8]], ['Piazzale Padova', 'Piazzale', 'Padova', 'PD', '35127', [11.92, 45.4]],
       ['Piazzale Pescara', 'Piazzale', 'Pescara', 'PE', '65129', [14.2, 42.45]], ['Magazzino Catania', 'Magazzino', 'Catania', 'CT', '95121', [15.07, 37.47]], ['Piazzale Genova', 'Piazzale', 'Genova', 'GE', '16152', [8.87, 44.42]]];
-    const SEDI = SD.map(([n, tipo, citta, prov, cap, geo], i) => ({ cod: 'TE' + pad(i + 1), n, tipo, ind: `Via dell'Industria ${10 + i * 7} – ${citta} (${prov})`, key: n.toUpperCase(), loc: `${citta.toUpperCase()}|${cap}`, citta, prov, geo }))
+    const SEDI = SD.slice(0, O.sedi).map(([n, tipo, citta, prov, cap, geo], i) => ({ cod: O.pre + pad(i + 1), n, tipo, ind: `Via dell'Industria ${10 + i * 7} – ${citta} (${prov})`, key: n.toUpperCase(), loc: `${citta.toUpperCase()}|${cap}`, citta, prov, geo }))
       .concat([{ cod: 'CDC99', n: 'Da attribuire', tipo: 'Sospeso', ind: 'Sede di consegna non indicata', key: '', loc: '', citta: '', prov: '', geo: null }]);
-    const REAL = SEDI.slice(0, -1), CENTRI = REAL.map(s => s.citta.toUpperCase()), W = [9, 7, 5, 5, 4, 3, 3, 3, 2, 2, 2, 2];
+    const REAL = SEDI.slice(0, -1), CENTRI = REAL.map(s => s.citta.toUpperCase()), W = [9, 7, 5, 5, 4, 3, 3, 3, 2, 2, 2, 2].slice(0, O.sedi);
 
     /* ---------- articoli (con varianti per avere centinaia di descrizioni diverse) ---------- */
     const BASE = [
@@ -71,20 +72,20 @@
 
     const brandF = [...new Set(ART.map(a => a[3]))];
     const fornNomi = brandF.map(b => b + ' Italia ' + pick(FX));
-    while (fornNomi.length < 250) fornNomi.push(uniq(() => pick(P1) + pick(P2) + ' ' + pick(FX)));
+    while (fornNomi.length < O.forn) fornNomi.push(uniq(() => pick(P1) + pick(P2) + ' ' + pick(FX)));
     const fornitori = fornNomi.map((nome, i) => { const c = pick(CIT); return { id: 'tf' + pad(i + 1, 4), nome, piva: piva(), cf: '', indirizzo: `Via ${pick(['Roma', 'Garibaldi', 'Mazzini', "dell'Industria", 'Tiburtina', 'Emilia', 'Appia'])} ${int(1, 300)}`, cap: c[2], citta: c[0], prov: c[1], email: `ordini@${slug(nome)}.example`, pec: rnd() < .4 ? `${slug(nome)}@pec.example` : '', tel: tel(), referente: pick(NOMI) + ' ' + pick(COGN), categoria: pick(['Utensili e attrezzature', 'DPI e sicurezza', 'Abbigliamento da lavoro', 'Imballaggio', 'Ricambi', 'Chimici e sigillanti', 'Trasporti e servizi', 'Ufficio e informatica']), pagamento: pick(PAG), iban: rnd() < .5 ? 'IT' + int(10, 99) + 'X' + int(1000000000, 9999999999) + int(10000000, 99999999) : '', note: '', creato: ds(daysAgo(int(400, DAYS))) }; });
     // brand → fornitore per gli acquisti
     const FB = {}; brandF.forEach((b, i) => { FB[b] = fornNomi[i]; });
 
     const clienti = [];
-    for (let i = 0; i < 1200; i++) {
+    for (let i = 0; i < O.cli; i++) {
       const c = pick(CIT), nome = uniq(() => rnd() < .55 ? `${pick(COGN)} ${pick(ATT)} ${pick(FX)}` : `${pick(ATT)} ${pick(P1)}${pick(P2)} ${pick(FX)}`);
       clienti.push({ id: 'tc' + pad(i + 1, 4), nome, piva: piva(), cf: '', indirizzo: `Via ${pick(['Roma', 'Garibaldi', 'Verdi', 'Cavour', 'Nazionale', 'del Lavoro', 'Prenestina'])} ${int(1, 250)}`, cap: c[2], citta: c[0], prov: c[1], nazione: 'IT', sdi: pick(SDI), pec: rnd() < .3 ? `${slug(nome)}@pec.example` : '', email: `amministrazione@${slug(nome)}.example`, tel: tel(), pagamento: pick(PAG), note: rnd() < .1 ? 'Cliente con consegne su appuntamento' : '', creato: ds(daysAgo(int(30, DAYS))) });
     }
 
     /* ---------- acquisti (Movimenti) ---------- */
     const movimenti = [];
-    for (let i = 0; i < 12000; i++) {
+    for (let i = 0; i < O.mov; i++) {
       const a = wPick(ART, AW), d = daysAgo(int(0, DAYS)), q = a[2] > 100 ? int(1, 3) : int(1, 40);
       movimenti.push({ id: id('tm'), data: ds(d), ndoc: 'DDT ' + int(1000, 99999), codice: 'ART' + int(10000, 99999), descrizione: a[0].toUpperCase(), um: a[1], quantita: q, prezzo: r2(a[2] * (0.88 + rnd() * 0.24)), iva: 0.22,
         centro: wPick(CENTRI, W), societa: '', categoria: cat(a[0]), fornitore: FB[a[3]] || a[3], note: rnd() < .03 ? 'Reso parziale' : '', creato: ds(d) });
@@ -92,7 +93,7 @@
 
     /* ---------- fatture fornitori ---------- */
     const fatture = [], FCATS = [...new Set(movimenti.map(r => r.categoria))];
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < O.fat; i++) {
       const d = daysAgo(int(1, DAYS)), imp = r2(80 + rnd() * rnd() * 9000), sc = new Date(d); sc.setDate(sc.getDate() + pick([0, 30, 60, 90]));
       const paid = ds(sc) < ds(now) ? rnd() < 0.9 : rnd() < 0.15;
       fatture.push({ id: id('tx'), fornitore: rnd() < .6 ? fornNomi[int(0, brandF.length - 1)] : pick(fornNomi), numero: `${int(1, 4999)}/${d.getFullYear()}`, data: ds(d), scadenza: ds(sc), imponibile: imp, imposta: r2(imp * 0.22), totale: r2(imp * 1.22), centro: wPick(CENTRI, W),
@@ -100,12 +101,12 @@
     }
 
     /* ---------- GLS ---------- */
-    const DEST = clienti.slice(0, 400);
+    const DEST = clienti.slice(0, O.dest);
     const REG = { RM: 'Lazio', LT: 'Lazio', FR: 'Lazio', MI: 'Lombardia', BS: 'Lombardia', NA: 'Campania', SA: 'Campania', TO: 'Piemonte', BO: 'Emilia-Romagna', RN: 'Emilia-Romagna', FI: 'Toscana', BA: 'Puglia', VR: 'Veneto', PD: 'Veneto', GE: 'Liguria', PA: 'Sicilia', CT: 'Sicilia', PE: 'Abruzzo', PG: 'Umbria', AN: 'Marche' };
     const gls = [];
-    for (let m = 35; m >= 0; m--) {
+    for (let m = O.glsm; m >= 0; m--) {
       const base = new Date(now.getFullYear(), now.getMonth() - m, 1), mese = `${base.getFullYear()}-${pad(base.getMonth() + 1)}`;
-      for (let i = 0, n = int(110, 170); i < n; i++) {
+      for (let i = 0, n = int(O.glsn[0], O.glsn[1]); i < n; i++) {
         const dd = pick(DEST), cI = wPick(REAL.map((s, k) => k), W), colli = int(1, 8), kg = r2(colli * (1.5 + rnd() * 14)), nolo = r2(6.5 + kg * 0.32), fuel = r2(nolo * 0.12), suppl = rnd() < 0.15 ? r2(3 + rnd() * 9) : 0;
         const day = new Date(base); day.setDate(int(1, 28)); if (day > now) continue;
         gls.push({ id: id('tg'), mese, data: ds(day), contratto: '1234', nsped: String(int(600000000, 699999999)), rif: 'ORD' + int(10000, 99999), destinatario: dd.nome, citta: dd.citta, prov: dd.prov, regione: REG[dd.prov] || '',
@@ -116,11 +117,11 @@
     /* ---------- carburante e mezzi ---------- */
     const MZ = ['Iveco Daily', 'Ford Transit', 'Fiat Ducato', 'Renault Master', 'Peugeot Boxer', 'Mercedes Sprinter', 'VW Crafter', 'Citroën Jumper'];
     const gasolio = [];
-    for (let k = 0; k < 16; k++) {
+    for (let k = 0; k < O.mezzi; k++) {
       const targa = `G${String.fromCharCode(65 + k % 26)}${int(100, 999)}${String.fromCharCode(65 + int(0, 25))}${String.fromCharCode(65 + int(0, 25))}`, mezzo = pick(MZ), op = pick(NOMI) + ' ' + pick(COGN), cen = CENTRI[k % CENTRI.length];
       let km = 20000 + k * 17000;
       for (let d = DAYS; d > 0; d -= int(5, 9)) { const lt = r2(40 + rnd() * 35); km += Math.round(lt * (10 + rnd() * 4));
-        gasolio.push({ id: id('tq'), data: ds(daysAgo(d)), targa, km, litri: rnd() < .01 ? -lt : lt, prezzo: r2(1.62 + rnd() * 0.22), proprietario: k < 12 ? 'Aziendale' : 'Noleggio', operatore: op, centro: cen, uso: mezzo, note: '' }); }
+        gasolio.push({ id: id('tq'), data: ds(daysAgo(d)), targa, km, litri: rnd() < .01 ? -lt : lt, prezzo: r2(1.62 + rnd() * 0.22), proprietario: k < Math.ceil(O.mezzi * .75) ? 'Aziendale' : 'Noleggio', operatore: op, centro: cen, uso: mezzo, note: '' }); }
     }
 
     /* ---------- Lyreco ---------- */
@@ -128,9 +129,9 @@
       ['Sacchi neri 110 L', 'Pulizia', 9.4], ['Raccoglitori ad anelli', 'Archiviazione', 2.3], ['Caffè in capsule (100)', 'Pausa caffè', 27], ['Bicchieri carta (conf. 50)', 'Pausa caffè', 3.1], ['Guanti monouso (conf. 100)', 'Igiene', 7.9],
       ['Post-it 76x76', 'Cancelleria', 1.9], ['Buste a sacco A4', 'Cancelleria', 6.4], ['Acqua naturale 0,5 L (24)', 'Pausa caffè', 5.6], ['Etichette adesive A4', 'Ufficio', 14.2], ['Batterie AA (conf. 24)', 'Informatica', 12.9]];
     const lyreco = [], lyfatture = [];
-    for (let m = 35; m >= 0; m--) for (let f = 0, nF = int(6, 10); f < nF; f++) {
+    for (let m = O.lyfm; m >= 0; m--) for (let f = 0, nF = int(O.lyfn[0], O.lyfn[1]); f < nF; f++) {
       const d = new Date(now.getFullYear(), now.getMonth() - m, int(2, 27)); if (d > now) continue;
-      const nf = String(int(2024, 2026)) + pad(36 - m, 2) + pad(f + 1, 2) + int(1000, 9999), nc = rnd() < .04; let tot = 0;
+      const nf = String(int(2024, 2026)) + pad(O.lyfm + 1 - m, 2) + pad(f + 1, 2) + int(1000, 9999), nc = rnd() < .04; let tot = 0;
       const noSede = rnd() < .12;
       for (let i = 0, n = int(4, 16); i < n; i++) { const a = pick(LYA), q = int(1, 12) * (nc ? -1 : 1), s = noSede ? SEDI[SEDI.length - 1] : wPick(REAL, W), imp = r2(a[2] * q); tot += imp;
         lyreco.push({ id: nf + '-' + (i + 1), fattura: nf, tipo: nc ? 'TD04' : 'TD01', data: ds(d), ddt: String(int(800000, 899999)), dataDdt: ds(d), ordine: 'OR' + int(10000, 99999), richiedente: pick(NOMI).charAt(0) + '. ' + pick(COGN), codice: String(int(100000, 999999)), descrizione: a[0].toUpperCase(), categoria: a[1], quantita: q, um: 'PZ', prezzo: a[2], importo: imp, iva: 22, sede: s.key, cdc: s.cod, note: '' }); }
@@ -142,30 +143,30 @@
       ['Termometro digitale', 'Varie', 9.9], ['Kit pronto soccorso', 'Sicurezza', 26.5], ['Tappetino ergonomico', 'Ufficio', 22], ['Monitor 24 pollici', 'Informatica', 119], ['Tastiera wireless', 'Informatica', 29.9], ['Hard disk esterno 2 TB', 'Informatica', 74.9],
       ['Cassetta portautensili', 'Organizzazione', 34.9], ['Lampada da tavolo LED', 'Ufficio', 27.5], ['Scaffale metallico 5 ripiani', 'Organizzazione', 59.9], ['Batterie ricaricabili AA (8)', 'Elettrico', 21.9], ['Router 4G', 'Informatica', 89], ['Stampante laser', 'Informatica', 159]];
     const amazon = [], amazonart = [];
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < O.am; i++) {
       const d = daysAgo(int(0, DAYS)), oid = `40${int(1, 9)}-${int(1000000, 9999999)}-${pad(i, 7)}`, s = wPick(REAL, W); let sub = 0, pz = 0; const n = int(1, 4);
       for (let k = 0; k < n; k++) { const a = pick(AMA), q = int(1, 4); sub += a[2] * q; pz += q;
         amazonart.push({ id: oid + '-' + k, ordine: oid, data: ds(d), quantita: q, descrizione: a[0], prezzo: a[2], importo: r2(a[2] * q), venditore: rnd() < .7 ? 'Amazon' : pick(['TecnoStore', 'Ufficio Facile', 'ElettroShop']), condizione: rnd() < .97 ? 'Nuovo' : 'Usato', spedito: ds(d), localita: s.citta.toUpperCase(), categoria: a[1] }); }
       const totale = r2(sub), imp = r2(totale / 1.22), est = rnd() < .1;
-      amazon.push({ id: oid, data: ds(d), articoli: n, pezzi: pz, venditore: 'Amazon', destinatario: 'Test Estremo S.r.l.', localita: s.citta.toUpperCase(), pagamento: rnd() < .8 ? 'Fattura mensile' : 'Carta aziendale', subtotale: totale, spedizione: 0, sconti: 0, imponibile: imp, iva: r2(totale - imp), totale, ivaTipo: est ? 'stimata' : 'fattura', cdc: s.cod, note: '', pdf: '' });
+      amazon.push({ id: oid, data: ds(d), articoli: n, pezzi: pz, venditore: 'Amazon', destinatario: O.short + ' S.r.l.', localita: s.citta.toUpperCase(), pagamento: rnd() < .8 ? 'Fattura mensile' : 'Carta aziendale', subtotale: totale, spedizione: 0, sconti: 0, imponibile: imp, iva: r2(totale - imp), totale, ivaTipo: est ? 'stimata' : 'fattura', cdc: s.cod, note: '', pdf: '' });
     }
 
     /* ---------- magazzino ---------- */
     const articoli = [];
-    for (let i = 0; i < 2500; i++) {
+    for (let i = 0; i < O.art; i++) {
       const a = ART[i % ART.length], v = Math.floor(i / ART.length), costo = r2(a[2] * (0.85 + rnd() * 0.3));
       const ean = '80' + String(int(10000000000, 99999999999)).slice(0, 11);
       articoli.push({ id: 'ta' + pad(i + 1, 5), codice: 'ART-' + pad(i + 1, 4), codForn: a[3].slice(0, 3).toUpperCase() + '-' + int(1000, 99999), descrizione: a[0] + (v ? ` · lotto ${v + 1}` : ''), um: a[1], categoria: cat(a[0]), fornitore: FB[a[3]] || a[3], costo, prezzo: r2(costo * (1.3 + rnd() * 0.6)), iva: 22, scorta: int(0, 40), barcode: ean, note: '', creato: ds(daysAgo(int(500, DAYS))) });
     }
     const magmov = [];
     articoli.forEach(a => magmov.push({ id: id('tk'), data: ds(daysAgo(DAYS)), articolo: a.id, tipo: 'carico', quantita: int(20, 400), costo: a.costo, causale: 'Giacenza iniziale', doc: '', note: '', creato: ds(daysAgo(DAYS)) }));
-    for (let i = 0; i < 2500; i++) { const a = pick(articoli), d = daysAgo(int(0, DAYS - 1));
+    for (let i = 0; i < O.mmov; i++) { const a = pick(articoli), d = daysAgo(int(0, DAYS - 1));
       magmov.push({ id: id('tk'), data: ds(d), articolo: a.id, tipo: 'carico', quantita: int(10, 200), costo: r2(a.costo * (0.95 + rnd() * .1)), causale: `DDT fornitore n. ${int(100, 9999)}`, doc: '', note: '', creato: ds(d) }); }
 
     /* ---------- DDT e fatture ai clienti ---------- */
-    const ddt = [], vendite = [], CB = clienti.slice(0, 500);
+    const ddt = [], vendite = [], CB = clienti.slice(0, O.cb);
     const nDdt = {}, nFv = {};
-    const days = Array.from({ length: 2000 }, () => int(0, DAYS)).sort((a, b) => b - a);
+    const days = Array.from({ length: O.ddtn }, () => int(0, DAYS)).sort((a, b) => b - a);
     days.forEach(g => {
       const d = daysAgo(g), y = String(d.getFullYear()), c = pick(CB), righe = [];
       for (let j = 0, n = int(2, 9); j < n; j++) { const a = pick(articoli); if (righe.some(l => l.art === a.id)) continue; righe.push({ art: a.id, c: a.codice, d: a.descrizione, um: a.um, q: int(1, 25), p: a.prezzo, sc: rnd() < .2 ? pick([5, 10]) : 0, iva: 22 }); }
@@ -185,13 +186,13 @@
         const f = { id: id('tv'), numero: String(nFv[yy]), anno: String(yy), data: last, tipo: 'TD24', cliente: cid, ddt: JSON.stringify(L.map(d => d.id)), righe: JSON.stringify(righe), imponibile: imp, imposta: iva, totale: r2(imp + iva), pagamento: c.pagamento, scadenza: ds(sc), stato: paid ? 'pagata' : 'emessa', pagata: paid ? ds(sc) : '', note: '', creato: last };
         vendite.push(f); L.forEach(d => { d.fattura = f.id; }); }); });
     // fatture immediate (TD01) senza DDT
-    for (let i = 0; i < 500; i++) { const d = daysAgo(int(0, DAYS)), yy = d.getFullYear(), c = pick(clienti), righe = [];
+    for (let i = 0; i < O.fimm; i++) { const d = daysAgo(int(0, DAYS)), yy = d.getFullYear(), c = pick(clienti), righe = [];
       for (let j = 0, n = int(1, 5); j < n; j++) { const a = pick(articoli); righe.push({ art: a.id, c: a.codice, d: a.descrizione, um: a.um, q: int(1, 10), p: a.prezzo, sc: 0, iva: 22 }); }
       const [imp, iva] = tot(righe), sc = new Date(d); sc.setDate(sc.getDate() + 30); nFv[yy] = (nFv[yy] || 0) + 1; const paid = ds(sc) < ds(now) ? rnd() < .9 : rnd() < .3;
       vendite.push({ id: id('tv'), numero: String(nFv[yy]), anno: String(yy), data: ds(d), tipo: 'TD01', cliente: c.id, ddt: '[]', righe: JSON.stringify(righe), imponibile: imp, imposta: iva, totale: r2(imp + iva), pagamento: c.pagamento, scadenza: ds(sc), stato: paid ? 'pagata' : 'emessa', pagata: paid ? ds(sc) : '', note: '', creato: ds(d) }); }
 
     /* ---------- incassi giornalieri (5 sedi) ---------- */
-    const incassi = [], CI = CENTRI.slice(0, 5), WI = [5, 3, 2, 2, 1];
+    const incassi = [], CI = CENTRI.slice(0, O.inc), WI = [5, 3, 2, 2, 1];
     for (let g = DAYS; g >= 0; g--) { const d = daysAgo(g), wd = d.getDay(); if (wd === 0) continue;
       CI.forEach((c, j) => { const v = r2((900 + rnd() * 1800) * WI[j] / 3 * (wd === 6 ? .5 : 1)), pos = r2(v * (.55 + rnd() * .3)), alt = rnd() < .05 ? r2(v * .1) : 0;
         incassi.push({ id: id('ti'), data: ds(d), sede: c, importo: r2(v + alt), contanti: r2(v - pos), pos, altro: alt, iva: 22, tipo: rnd() < .97 ? 'corrispettivi' : 'altro', note: '', creato: ds(d) }); }); }
@@ -199,14 +200,14 @@
     /* ---------- configurazione, preventivi, servizi ---------- */
     const cdcLink = {}; REAL.forEach((s, i) => { cdcLink['att|' + CENTRI[i]] = s.cod; cdcLink['gas|' + CENTRI[i]] = s.cod; cdcLink['gls|' + CENTRI[i]] = s.cod; });
     const budget = {}; CENTRI.forEach(c => { const v = movimenti.filter(r => r.centro === c && r.data >= ds(daysAgo(365))).reduce((t, r) => t + r.quantita * r.prezzo, 0); budget[c] = Math.round(v * (0.9 + rnd() * .3) / 1000) * 1000; });
-    const servizi = Array.from({ length: 80 }, (_, i) => ({ id: 'ts' + pad(i + 1, 3), cod: 'SRV-' + pad(i + 1, 3), d: pick(['Applicazione', 'Rimozione', 'Montaggio', 'Installazione', 'Manutenzione', 'Collaudo', 'Trasporto', 'Consulenza']) + ' ' + pick(['kit adesivi', 'scaffalatura', 'gancio traino', 'faro supplementare', 'pedana', 'portapacchi', 'impianto elettrico', 'cassone', 'sponda idraulica']) + (i >= 72 ? ' urgente' : ''), um: pick(['ORE', 'PZ', 'PZ', 'FORF']), p: r2(25 + rnd() * 380), costo: r2(10 + rnd() * 120), iva: 22, note: '' }));
-    const pvClienti = clienti.slice(0, 150).map(c => ({ id: 'pc' + c.id, nome: c.nome, ref: pick(NOMI) + ' ' + pick(COGN), email: c.email, tel: c.tel, ind: `${c.indirizzo}, ${c.citta}`, ric: rnd() < .25 ? pick([40, 60, 80, 100]) : '', note: '', dal: c.creato }));
+    const servizi = Array.from({ length: O.srv }, (_, i) => ({ id: 'ts' + pad(i + 1, 3), cod: 'SRV-' + pad(i + 1, 3), d: pick(['Applicazione', 'Rimozione', 'Montaggio', 'Installazione', 'Manutenzione', 'Collaudo', 'Trasporto', 'Consulenza']) + ' ' + pick(['kit adesivi', 'scaffalatura', 'gancio traino', 'faro supplementare', 'pedana', 'portapacchi', 'impianto elettrico', 'cassone', 'sponda idraulica']) + (i >= 72 ? ' urgente' : ''), um: pick(['ORE', 'PZ', 'PZ', 'FORF']), p: r2(25 + rnd() * 380), costo: r2(10 + rnd() * 120), iva: 22, note: '' }));
+    const pvClienti = clienti.slice(0, O.pvc).map(c => ({ id: 'pc' + c.id, nome: c.nome, ref: pick(NOMI) + ' ' + pick(COGN), email: c.email, tel: c.tel, ind: `${c.indirizzo}, ${c.citta}`, ric: rnd() < .25 ? pick([40, 60, 80, 100]) : '', note: '', dal: c.creato }));
     const config = {
-      azienda: { nome: 'TEST ESTREMO S.r.l.', citta: 'Roma (RM)', piva: '01234567890', cf: '01234567890', indirizzo: "Via dell'Industria 10", cap: '00156', regime: 'RF01', iban: 'IT60X0542811101000000123456', email: 'amministrazione@test-estremo.example', tel: '06 1234567' },
+      azienda: { nome: O.name, citta: 'Roma (RM)', piva: '01234567890', cf: '01234567890', indirizzo: "Via dell'Industria 10", cap: '00156', regime: 'RF01', iban: 'IT60X0542811101000000123456', email: 'amministrazione@' + O.dom, tel: '06 1234567' },
       centri: CENTRI, lyCdc: SEDI, ppRic: 2, budget, cdcLink, servizi, pvClienti, amLastImport: { data: ds(now), fino: ds(now) }
     };
     const COL = [['00000', 'BIANCO'], ['01000', 'GIALLO']], SZ = ['S', 'M', 'L', 'XL', 'XXL'], STATI = ['bozza', 'inviato', 'inviato', 'accettato', 'accettato', 'rifiutato'];
-    for (let i = 0; i < 400; i++) {
+    for (let i = 0; i < O.pv; i++) {
       const g = int(0, DAYS), d = daysAgo(g), y = d.getFullYear(), cli = pick(pvClienti), righe = [];
       for (let j = 0, n = int(1, 14); j < n; j++) { const [c, cn] = pick(COL), sz = SZ.slice(0, int(2, 5)), q = {}; sz.forEach(s => { q[s] = int(1, 30); });
         righe.push({ sup: 'payper', it: '000001', n: 'MIAMI+', cl: 'T-SHIRT', c, cn, sz, q, p: r2(5.5 + rnd() * 4), man: true, sc: rnd() < .2 ? 5 : 0 }); }
@@ -221,12 +222,14 @@
   }
 
   // tutte le operazioni in ordine fisso (Config prima, poi un foglio alla volta)
-  function ops() {
-    const D = gen(), L = [], parts = [];
+  function ops(o) {
+    const D = gen(o), L = [], parts = [];
     Object.entries(D.config).forEach(([chiave, v]) => L.push({ action: 'upsert', sheet: 'Config', row: { chiave, valore: JSON.stringify(v) } }));
     parts.push(['Impostazioni e preventivi', L.length]);
     Object.entries(D.sheets).forEach(([sh, rows]) => { rows.forEach(row => L.push({ action: 'upsert', sheet: sh, row })); parts.push([sh, rows.length]); });
     return { ops: L, parts };
   }
-  window.CDC_STRESS = { gen, ops, NAME: 'TEST ESTREMO' };
+  // gestionale DEMO per le presentazioni ai clienti: azienda inventata (ingrosso edile), dati credibili ma leggeri (~12.000 righe, circa 1 anno e mezzo)
+  const DEMO = { NAME: 'BIANCHI FORNITURE EDILI S.R.L.', EMAIL: 'demo@bianchiforniture.example', OPT: { name: 'Bianchi Forniture Edili S.r.l.', short: 'Bianchi Forniture', pre: 'BF', dom: 'bianchiforniture.example', seed: 424242, days: 540, sedi: 3, forn: 45, cli: 140, mov: 1800, fat: 260, glsm: 17, glsn: [40, 70], mezzi: 5, lyfm: 17, lyfn: [3, 5], am: 150, art: 220, mmov: 300, ddtn: 320, cb: 80, dest: 60, fimm: 80, inc: 3, pv: 40, srv: 30, pvc: 40 } };
+  window.CDC_STRESS = { gen, ops, NAME: 'TEST ESTREMO', DEMO };
 })();
