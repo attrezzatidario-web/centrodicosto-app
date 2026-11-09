@@ -196,6 +196,7 @@
       ['stellabianca', 'Stella Bianca', 'Punte multimateriali, foretti diamantati, portainserti e adattatori Stella Bianca (18 prodotti, 200 codici, con listino).', ['18 prodotti, 200 codici'], ['sez.preventivi']],
       ['doc', 'DOC', 'Pennarelli e kit per il ritocco del legno DOC (3 prodotti, 6 codici).', ['3 prodotti, 6 codici'], ['sez.preventivi']],
       ['cieffeplast', 'Cieffeplast', 'Fascette, tappi, clip e minuteria tecnica in plastica Cieffeplast (39 prodotti, 417 codici).', ['39 prodotti, 417 codici'], ['sez.preventivi']],
+      ['lyrecocat', 'Lyreco catalogo', 'Cancelleria, carta, toner e DPI Lyreco, dallo storico acquisti (108 prodotti, 188 codici).', ['108 prodotti, 188 codici'], ['sez.preventivi']],
       ['mobilplastic', 'Mobil Plastic', 'Articoli in plastica per casa, pulizia e professionale Mobil Plastic (304 prodotti, 713 codici).', ['304 prodotti, 713 codici'], ['sez.preventivi']],
       ['vbelectric', 'VB Electric', 'Spine, prese, prolunghe, avvolgicavi e quadri industriali e da cantiere VB Electric (272 prodotti, 1.789 codici).', ['272 prodotti, 1.789 codici'], ['sez.preventivi']],
       ['saintgobain', 'Saint-Gobain', 'Siliconi Saint-Gobain: multiuso e neutro in cartuccia (2 prodotti, 4 codici).', ['2 prodotti'], ['sez.preventivi']],

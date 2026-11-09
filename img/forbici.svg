@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600"><defs>
+<linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".4" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+<linearGradient id="glh" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".18"/><stop offset=".3" stop-color="#fff" stop-opacity=".35"/><stop offset=".55" stop-color="#fff" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+<linearGradient id="st" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbfcfd"/><stop offset=".45" stop-color="#c3c9d0"/><stop offset=".55" stop-color="#9aa2ab"/><stop offset="1" stop-color="#d7dce1"/></linearGradient>
+<linearGradient id="sth" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8d959e"/><stop offset=".35" stop-color="#f4f6f8"/><stop offset=".6" stop-color="#b9c0c8"/><stop offset="1" stop-color="#7d868f"/></linearGradient>
+<linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e9edf1"/></linearGradient>
+<linearGradient id="wood" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c79a62"/><stop offset=".5" stop-color="#ddb582"/><stop offset="1" stop-color="#b98a52"/></linearGradient>
+<linearGradient id="cork" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c9925a"/><stop offset="1" stop-color="#a8723f"/></linearGradient>
+<radialGradient id="sh" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+<pattern id="dots" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.1" fill="#7a4d24" opacity=".35"/><circle cx="6" cy="6" r=".9" fill="#e7b98a" opacity=".4"/></pattern>
+<pattern id="mesh" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M0 10 L10 0" stroke="#000" stroke-opacity=".12" stroke-width="1.2"/></pattern>
+<pattern id="bub" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r="5" fill="#fff" opacity=".35"/><circle cx="6.5" cy="6.5" r="1.6" fill="#fff" opacity=".6"/></pattern>
+</defs><rect width="600" height="600" fill="#ffffff"/><ellipse cx="300" cy="430" rx="220" ry="20" fill="url(#sh)"/><g transform="rotate(-10 300 300)"><path d="M300 300 L520 250 L522 262 L310 312Z" fill="url(#st)"/><path d="M300 300 L520 340 L516 352 L296 312Z" fill="url(#sth)"/>
+<circle cx="300" cy="306" r="8" fill="#555"/>
+<path d="M300 300 Q250 260 190 250 Q120 245 110 290 Q110 330 170 330 Q240 330 300 306Z" fill="#1f6fd1"/><ellipse cx="170" cy="290" rx="38" ry="22" fill="#fff"/>
+<path d="M300 310 Q250 350 190 370 Q130 385 120 350 Q120 320 170 315 Q240 305 300 312Z" fill="#154d92"/><ellipse cx="172" cy="347" rx="34" ry="18" fill="#fff"/></g></svg>
