@@ -4201,3 +4201,32 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
   .ns-g2 { gap: 12px; } .ns-box { padding: 14px; }
   .ns-row2 { grid-template-columns: 1fr; }
 }
+
+/* ---- v225 esportazione commercialista ---- */
+.ns-xh { margin: 0 0 14px; color: var(--muted, #667); font-size: 13.5px; line-height: 1.5; }
+.ns-xp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.ns-xp > div { background: var(--bg, #f4f5f7); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.ns-xp span { font-size: 11.5px; color: var(--muted, #667); } .ns-xp b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.ns-xp .warn b { color: #b45309; } .ns-xp small { grid-column: 1 / -1; color: var(--muted, #667); }
+
+/* v225 · panoramica Nota spese */
+.ns-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items: center; padding: 22px 24px; margin-bottom: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 9%, var(--card, #fff)), var(--card, #fff) 70%); border: 1px solid var(--line); }
+.ns-eyebrow { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.ns-big { display: block; font-size: 40px; letter-spacing: -.03em; line-height: 1.1; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+.ns-hero-s { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 13px; color: var(--muted); }
+.ns-delta { padding: 3px 10px; border-radius: 99px; background: var(--line); font-weight: 600; color: var(--ink); } .ns-delta.up { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); } .ns-delta.dn { background: color-mix(in srgb, var(--nsok, #1baf7a) 16%, transparent); color: var(--nsok, #1baf7a); }
+.ns-chip-w { border: 0; font: inherit; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--warn); color: #fff; cursor: pointer; }
+.ns-split { height: 10px; border-radius: 99px; background: var(--nsok, #1baf7a); overflow: hidden; } .ns-split i { display: block; height: 100%; width: var(--w); background: var(--accent); border-radius: 99px; animation: nsBar .9s cubic-bezier(.2,.8,.2,1) backwards .25s; }
+.ns-split-l { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 13px; color: var(--muted); } .ns-split-l span { display: grid; gap: 2px; } .ns-split-l b { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; } .ns-split-l em { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--accent); } .ns-split-l em.b { background: var(--nsok, #1baf7a); }
+.ns-ki { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); margin-bottom: 6px; } .ns-ki svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ns-k.warn .ns-ki { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.ns-kpis { margin-bottom: 14px; } .ns-g2 { margin-bottom: 14px; }
+.ns-cols { position: relative; } .ns-avg { position: absolute; left: 0; right: 0; bottom: calc((100% - 40px) * var(--r) + 40px); border-top: 1px dashed var(--muted); opacity: .45; pointer-events: none; }
+.ns-don { display: flex; align-items: center; gap: 22px; } .ns-ring2 { width: 150px; height: 150px; border-radius: 50%; flex: none; display: grid; place-items: center; } .ns-ring2 > div { width: 98px; height: 98px; border-radius: 50%; background: var(--card, #fff); display: grid; place-content: center; text-align: center; } .ns-ring2 b { font-size: 17px; font-variant-numeric: tabular-nums; } .ns-ring2 small { color: var(--muted); font-size: 11px; }
+.ns-leg { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; flex: 1; min-width: 0; } .ns-leg li { display: flex; align-items: center; gap: 8px; font-size: 13px; } .ns-leg em { width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex: none; } .ns-leg span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ns-leg b { font-variant-numeric: tabular-nums; }
+.ns-pp { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; margin-bottom: 12px; animation: nsUp .45s cubic-bezier(.2,.8,.2,1) backwards; animation-delay: calc(var(--i, 0) * 40ms); } .ns-pp .ns-br-t { margin-bottom: 5px; }
+.ns-lnk { border: 0; background: none; font: inherit; font-size: 12px; color: var(--accent); cursor: pointer; padding: 0; }
+.ns-recent { display: grid; }
+@media (max-width: 900px) { .ns-hero { grid-template-columns: 1fr; gap: 16px; } }
+@media (max-width: 700px) { .ns-hero { padding: 16px; } .ns-big { font-size: 32px; } .ns-don { flex-direction: column; align-items: stretch; } .ns-ring2 { align-self: center; } }
+.ns-split-l u { text-decoration: none; display: flex; align-items: center; }

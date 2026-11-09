@@ -108,27 +108,42 @@
 
   /* ---------- schede ---------- */
   function tabPano() {
-    const m = today().slice(0, 7), sm = SP().filter(s => inMon(s.data, m) && s.stato !== 'rifiutata'), pend = SP().filter(s => s.stato === 'inviata');
+    const m = today().slice(0, 7), pm = mShift(m, -1), mn = MESI[+m.slice(5) - 1], all = SP().filter(s => s.stato !== 'rifiutata');
+    const sm = all.filter(s => inMon(s.data, m)), pend = SP().filter(s => s.stato === 'inviata'), tot = spent(sm), prev = spent(all.filter(s => inMon(s.data, pm)));
     const cash = DIPS().reduce((t, d) => t + Math.max(0, saldo(d.id)), 0), al = alertsAll();
-    const six = [...Array(6)].map((_, i) => mShift(m, i - 5)), mv = six.map(k => ({ k, v: spent(SP().filter(s => inMon(s.data, k))) })), mx = Math.max(...mv.map(x => x.v), 1);
-    const byCat = groupSum(sm, s => s.categoria).slice(0, 6).map(x => ({ l: esc(x.k), v: x.v })), byP = groupSum(sm, s => nameOf(dipOf(s.dip))).slice(0, 6).map(x => ({ l: esc(x.k), v: x.v }));
-    const kp = (l, v, s, cls, go, n) => `<button type="button" class="ns-k card ${cls || ''}" style="--i:${n}" data-ns="go:${go}"><span>${l}</span><b data-nsc="${v}">${eur(v)}</b><small>${s}</small></button>`;
-    return `<div class="ns-kpis">
-      ${kp(`Spese di ${MESI[+m.slice(5) - 1]}`, spent(sm), `${sm.length} ${sm.length === 1 ? 'spesa' : 'spese'} · carte e contanti`, '', 'spese', 0)}
-      ${kp('Da approvare', spent(pend), `${pend.length} ${pend.length === 1 ? 'spesa' : 'spese'} in attesa`, pend.length ? 'warn' : '', 'spese', 1)}
-      ${kp('Contanti in giro', cash, `${DIPS().filter(d => saldo(d.id) > 0.005).length} persone con contanti`, '', 'contanti', 2)}
-      ${kp('Carte attive', CARTE().filter(c => c.stato !== 'bloccata').length, `${CARTE().filter(c => c.dip).length} assegnate`, '', 'carte', 3).replace(/<b data-nsc="(\d+)">[^<]*<\/b>/, '<b data-nsn="$1">$1</b>')}
+    const six = [...Array(6)].map((_, i) => mShift(m, i - 5)), mv = six.map(k => ({ k, v: spent(all.filter(s => inMon(s.data, k))) })), mx = Math.max(...mv.map(x => x.v), 1), avg = mv.reduce((t, x) => t + x.v, 0) / 6;
+    const dl = prev > 0 ? (tot - prev) / prev * 100 : null, dcls = dl === null ? '' : dl > 0.5 ? 'up' : dl < -0.5 ? 'dn' : '';
+    const cardT = spent(sm.filter(s => s.metodo === 'carta')), cashT = tot - cardT, pc = tot ? cardT / tot * 100 : 0;
+    const noRec = all.filter(s => !s.foto && inMon(s.data, m)).length;
+    const cat = groupSum(sm, s => s.categoria), top = cat.slice(0, 5), rest = cat.slice(5).reduce((t, x) => t + x.v, 0); if (rest > 0) top.push({ k: 'Altre', v: rest });
+    let acc = 0; const stops = top.map((x, i) => { const a = acc / (tot || 1) * 100; acc += x.v; return `${COL[i % COL.length]} ${a.toFixed(2)}% ${(acc / (tot || 1) * 100).toFixed(2)}%`; }).join(', ');
+    const byP = groupSum(sm, s => s.dip).slice(0, 6), maxP = Math.max(...byP.map(x => x.v), 1), recent = [...all].sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.creato).localeCompare(String(a.creato))).slice(0, 5);
+    const kp = (ic, l, v, sub, cls, go, n, num) => `<button type="button" class="ns-k card ${cls || ''}" style="--i:${n}" data-ns="go:${go}"><i class="ns-ki">${svg(ic)}</i><span>${l}</span><b ${num ? `data-nsn="${v}">${v}` : `data-nsc="${v}">${eur(v)}`}</b><small>${sub}</small></button>`;
+    return `<section class="card ns-hero" style="--i:0">
+      <div class="ns-hero-l"><span class="ns-eyebrow">Spese di ${esc(mn)} ${m.slice(0, 4)}</span><b class="ns-big" data-nsc="${tot}">${eur(tot)}</b>
+        <div class="ns-hero-s"><span class="ns-delta ${dcls}">${dl === null ? 'Nessun mese precedente' : `${dl > 0 ? '▲' : dl < 0 ? '▼' : '='} ${Math.abs(dl).toFixed(0)}% rispetto a ${esc(MESI[+pm.slice(5) - 1])}`}</span><span>${sm.length} ${sm.length === 1 ? 'spesa' : 'spese'}</span>${pend.length ? `<button type="button" class="ns-chip-w" data-ns="go:spese:inviata">${pend.length} da approvare</button>` : ''}</div></div>
+      <div class="ns-hero-r"><div class="ns-split"><i style="--w:${pc.toFixed(1)}%"></i></div>
+        <div class="ns-split-l"><span><u><em class="a"></em>Carte</u><b>${eur(cardT)}</b></span><span><u><em class="b"></em>Contanti</u><b>${eur(cashT)}</b></span></div></div></section>
+    <div class="ns-kpis">
+      ${kp('clip', 'Senza scontrino', noRec, 'spese del mese', noRec ? 'warn' : '', 'spese:nofoto', 1, 1)}
+      ${kp('doc', 'Da approvare', spent(pend), `${pend.length} ${pend.length === 1 ? 'spesa' : 'spese'} in attesa`, pend.length ? 'warn' : '', 'spese:inviata', 2)}
+      ${kp('cash', 'Contanti in giro', cash, `${DIPS().filter(d => saldo(d.id) > 0.005).length} persone con contanti`, '', 'contanti', 3)}
+      ${kp('card', 'Carte attive', CARTE().filter(c => c.stato !== 'bloccata').length, `${CARTE().filter(c => c.dip).length} assegnate`, '', 'carte', 4, 1)}
     </div>
     <div class="ns-g2">
-      <section class="card ns-box" style="--i:4"><div class="ns-bh"><h3>Ultimi sei mesi</h3><span>spese registrate</span></div>
-        <div class="ns-cols">${mv.map((x, i) => `<div class="ns-col${x.k === m ? ' cur' : ''}" style="--i:${i}" title="${esc(mLbl(x.k))}: ${esc(eur(x.v))}"><div class="ns-col-b"><i style="--h:${(x.v / mx * 100).toFixed(1)}%"></i></div><b>${x.v ? eur(x.v).replace(/,\d\d/, '') : '—'}</b><span>${MESI[+x.k.slice(5) - 1].slice(0, 3)}</span></div>`).join('')}</div></section>
-      <section class="card ns-box" style="--i:5"><div class="ns-bh"><h3>Da controllare</h3><span>${al.length ? al.length : 'tutto a posto'}</span></div>
+      <section class="card ns-box" style="--i:5"><div class="ns-bh"><h3>Ultimi sei mesi</h3><span>media ${esc(eur(avg).replace(/,\d\d/, ''))} al mese</span></div>
+        <div class="ns-cols"><u class="ns-avg" style="--r:${(avg / mx).toFixed(3)}"></u>${mv.map((x, i) => `<div class="ns-col${x.k === m ? ' cur' : ''}" style="--i:${i}" title="${esc(mLbl(x.k))}: ${esc(eur(x.v))}"><div class="ns-col-b"><i style="--h:${(x.v / mx * 100).toFixed(1)}%"></i></div><b>${x.v ? eur(x.v).replace(/,\d\d/, '') : '—'}</b><span>${MESI[+x.k.slice(5) - 1].slice(0, 3)}</span></div>`).join('')}</div></section>
+      <section class="card ns-box" style="--i:6"><div class="ns-bh"><h3>Per categoria</h3><span>${esc(mn)}</span></div>
+        ${top.length ? `<div class="ns-don"><div class="ns-ring2" style="background:conic-gradient(${stops})"><div><b>${esc(eur(tot).replace(/,\d\d/, ''))}</b><small>totale</small></div></div>
+        <ul class="ns-leg">${top.map((x, i) => `<li><em style="--c:${COL[i % COL.length]}"></em><span>${esc(x.k)}</span><b>${Math.round(x.v / tot * 100)}%</b></li>`).join('')}</ul></div>` : '<p class="ns-none">Nessuna spesa nel mese</p>'}</section>
+    </div>
+    <div class="ns-g2">
+      <section class="card ns-box" style="--i:7"><div class="ns-bh"><h3>Per persona</h3><span>${esc(mn)}</span></div>
+        ${byP.length ? byP.map((x, i) => { const d = dipOf(x.k); return `<div class="ns-pp" style="--i:${i}">${av(d)}<div><div class="ns-br-t"><span>${esc(nameOf(d))}</span><b>${eur(x.v)}</b></div><div class="ns-br-b"><i style="--w:${(x.v / maxP * 100).toFixed(1)}%;background:${colOf(d)}"></i></div></div></div>`; }).join('') : '<p class="ns-none">Nessuna spesa nel mese</p>'}</section>
+      <section class="card ns-box" style="--i:8"><div class="ns-bh"><h3>Da controllare</h3><span>${al.length ? al.length : 'tutto a posto'}</span></div>
         ${al.length ? `<div class="ns-al">${al.map((a, i) => `<button type="button" class="ns-a ${a.t}" style="--i:${i}" data-ns="go:${a.k}${a.f ? ':' + a.f : ''}"><i>${svg(a.t === 'wait' ? 'doc' : 'alert')}</i><span><b>${esc(a.x)}</b><small>${esc(a.s)}</small></span>${svg('go')}</button>`).join('')}</div>` : `<div class="ns-ok"><i>${svg('check')}</i><b>Niente da segnalare</b><p>Le spese sono approvate e coincidono con gli estratti conto.</p></div>`}</section>
     </div>
-    <div class="ns-g2">
-      <section class="card ns-box" style="--i:6"><div class="ns-bh"><h3>Per categoria</h3><span>${esc(MESI[+m.slice(5) - 1])}</span></div>${bars(byCat, 0)}</section>
-      <section class="card ns-box" style="--i:7"><div class="ns-bh"><h3>Per persona</h3><span>${esc(MESI[+m.slice(5) - 1])}</span></div>${bars(byP, 0, 'alt')}</section>
-    </div>`;
+    ${recent.length ? `<section class="card ns-box" style="--i:9"><div class="ns-bh"><h3>Attività recente</h3><button type="button" class="ns-lnk" data-ns="go:spese">Vedi tutte</button></div><div class="ns-recent">${recent.map((x, i) => spRow(x, i)).join('')}</div></section>` : ''}`;
   }
 
   const spFiltered = () => SP().filter(s => (S.mon === 'all' || inMon(s.data, S.mon)) && (!S.fp || String(s.dip) === S.fp) && (!S.fm || s.metodo === S.fm) && (!S.fs || (S.fs === 'nofoto' ? (!s.foto && s.stato !== 'rifiutata') : s.stato === S.fs)) &&
@@ -194,12 +209,12 @@
       const s = e.spesa ? spById(e.spesa) : null, sg = sug.get(e.id), ign = e.stato === 'ignorata', cr = N(e.importo) < 0;
       const st = s ? pill('ok', 'Abbinata') : ign ? pill('mute', cr ? 'Accredito' : 'Ignorata') : sg ? pill('wait', sg.k === 'esatta' ? 'Corrisponde' : sg.k === 'importo' ? 'Importo diverso' : 'Probabile') : cr ? pill('mute', 'Accredito') : pill('no', 'Senza nota spesa');
       const det = s ? `<small class="ns-ln"><i>${svg('link')}</i>${esc(nameOf(dipOf(s.dip)))} · ${esc(s.esercente || s.categoria || '')} · ${esc(C.dIt(s.data))}</small>` : sg ? `<small class="ns-ln sg"><i>${svg('scan')}</i>${esc(nameOf(dipOf(sg.s.dip)))} · ${esc(sg.s.esercente || '')} · ${eur(N(sg.s.importo))} · ${esc(C.dIt(sg.s.data))}</small>` : '';
-      const act = !canW() ? '' : s ? `<button type="button" class="btn sm ghost" data-ns="unlink:${esc(e.id)}">Scollega</button>` : sg ? `<button type="button" class="btn sm primary" data-ns="conf:${esc(e.id)}:${esc(sg.s.id)}">Conferma</button><button type="button" class="btn sm ghost" data-ns="pick:${esc(e.id)}">Altra…</button>` : ign ? `<button type="button" class="btn sm ghost" data-ns="unign:${esc(e.id)}">Riattiva</button>` : cr ? '' : `<button type="button" class="btn sm" data-ns="pick:${esc(e.id)}">Abbina</button><button type="button" class="ns-ib" data-ns="ign:${esc(e.id)}" title="Ignora (commissione, canone…)">${svg('x')}</button>`;
+      const ed = canW() ? `<button type="button" class="ns-ib" data-ns="eedit:${esc(e.id)}" title="Dati per il commercialista">${svg('doc')}</button>` : '', act = (!canW() ? '' : s ? `<button type="button" class="btn sm ghost" data-ns="unlink:${esc(e.id)}">Scollega</button>` : sg ? `<button type="button" class="btn sm primary" data-ns="conf:${esc(e.id)}:${esc(sg.s.id)}">Conferma</button><button type="button" class="btn sm ghost" data-ns="pick:${esc(e.id)}">Altra…</button>` : ign ? `<button type="button" class="btn sm ghost" data-ns="unign:${esc(e.id)}">Riattiva</button>` : cr ? '' : `<button type="button" class="btn sm" data-ns="pick:${esc(e.id)}">Abbina</button><button type="button" class="ns-ib" data-ns="ign:${esc(e.id)}" title="Ignora (commissione, canone…)">${svg('x')}</button>`) + ed;
       return `<div class="ns-es${s ? ' m' : ''}${ign ? ' ig' : ''}" style="--i:${Math.min(i, 16)}"><span class="ns-es-d">${esc(C.dIt(e.data))}</span><div class="ns-sp-m"><b>${esc(e.descrizione || '—')}</b>${det}</div><b class="ns-am${cr ? ' pos' : ''}">${cr ? '+' : ''}${eur(Math.abs(N(e.importo)))}</b>${st}<span class="ns-ac2">${act}</span></div>`;
     };
     return `<div class="ns-estb"><div class="ns-flt"><select id="ns-ec">${cs.map(x => `<option value="${esc(x.id)}"${String(x.id) === S.card ? ' selected' : ''}>${esc(cardLbl(x))}${x.dip ? ' · ' + esc(nameOf(dipOf(x.dip))) : ''}</option>`).join('')}</select>
       ${lots.length ? `<select id="ns-el"><option value="">Tutti gli estratti</option>${lots.map(l => `<option value="${esc(l.id)}"${S.lotto === l.id ? ' selected' : ''}>${esc(C.dIt(l.a))} – ${esc(C.dIt(l.b))} · ${l.n} mov.</option>`).join('')}</select>` : ''}
-      <span style="flex:1"></span>${rows.length ? '<button type="button" class="btn sm" data-ns="xls-rec">' + svg('xls') + 'Esporta</button>' : ''}${r.auto.length && canW() ? `<button type="button" class="btn sm" data-ns="autoapply">Abbina ${r.auto.length} ${r.auto.length === 1 ? 'movimento' : 'movimenti'}</button>` : ''}${canW() ? `<button type="button" class="btn sm primary" data-ns="import">${svg('up')}Importa estratto conto</button>` : ''}</div></div>
+      <span style="flex:1"></span>${rows.length ? '<button type="button" class="btn sm" data-ns="xls-rec">' + svg('xls') + 'Esporta</button><button type="button" class="btn sm" data-ns="acct">' + svg('xls') + 'Per il commercialista</button>' : ''}${r.auto.length && canW() ? `<button type="button" class="btn sm" data-ns="autoapply">Abbina ${r.auto.length} ${r.auto.length === 1 ? 'movimento' : 'movimenti'}</button>` : ''}${canW() ? `<button type="button" class="btn sm primary" data-ns="import">${svg('up')}Importa estratto conto</button>` : ''}</div></div>
       ${rows.length ? `<div class="ns-sum"><section class="card ns-rg" style="--i:0"><div class="ns-rg-r">${ring(pct, 'big')}<b>${Math.round(pct * 100)}%</b></div><div><h3>Movimenti abbinati</h3><p>${ok} su ${tot}${ig ? ` · ${ig} ignorati` : ''}</p></div></section>
         <button type="button" class="card ns-k${r.unE.length ? ' warn' : ''}" style="--i:1" data-ns="rfl:no"><span>Senza nota spesa</span><b data-nsn="${r.unE.length}">${r.unE.length}</b><small>${eur(r.unE.reduce((t, x) => t + N(x.importo), 0))} da giustificare</small></button>
         <button type="button" class="card ns-k${r.pairs.length ? ' warn' : ''}" style="--i:2"><span>Da confermare</span><b data-nsn="${r.pairs.length}">${r.pairs.length}</b><small>abbinamenti trovati</small></button>
@@ -348,8 +363,34 @@
     });
     out.dare = co >= 0; return out;
   }
+  /* --- lettura locale del PDF (senza IA): testo del PDF -> movimenti --- */
+  async function pdfLines(f) {
+    await C.loadLib('lib-pdfjs.js'); if (!window.pdfjsLib) throw new Error('lettore PDF non caricato');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib-pdfjs-worker.js';
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise, out = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const tc = await (await pdf.getPage(p)).getTextContent(), rows = [];
+      tc.items.forEach(it => { const t = String(it.str || ''); if (!t) return; const y = it.transform[5], x = it.transform[4]; let r = rows.find(r => Math.abs(r.y - y) < 3); if (!r) rows.push(r = { y, it: [] }); r.it.push({ x, w: it.width || 0, t }); });
+      rows.sort((a, b) => b.y - a.y).forEach(r => { let s = '', e = null; r.it.sort((a, b) => a.x - b.x).forEach(i => { if (e != null && i.x - e > 2.5 && !/^\s/.test(i.t) && !/\s$/.test(s)) s += ' '; s += i.t; e = i.x + i.w; }); s = s.replace(/\s+/g, ' ').trim(); if (s) out.push(s); });
+    }
+    return out;
+  }
+  function parsePdfLines(lines) {
+    const L = [], AMT = /^([+-]?\s*\d{1,3}(?:\.\d{3})*,\d{2}|[+-]?\s*\d+,\d{2})\s*[^\d\s,.+-]{0,4}$/; let c4 = '', cur = null;
+    const push = () => { if (cur && cur.imp != null && cur.data) { const v = cur.imp; L.push({ data: cur.data, descrizione: cur.d.join(' ').replace(/\s+/g, ' ').trim().slice(0, 120), importo: -v }); } cur = null; };
+    lines.forEach(t => {
+      const h = t.match(/carta[^0-9]*(\d{4})\s*$/i); if (h) { c4 = h[1]; return; }
+      if (/^(lista movimenti|relative alla carta|movimenti)$/i.test(t)) return;
+      const d8 = t.match(/^(\d{4})(\d{2})(\d{2})$/); if (d8) { push(); cur = { data: `${d8[1]}-${d8[2]}-${d8[3]}`, d: [] }; return; }
+      if (cur) { if (AMT.test(t)) { if (cur.imp == null) cur.imp = toNum(t.match(AMT)[1].replace(/\s+/g, '')); } else if (/^da contabilizzare$/i.test(t)) cur.pend = 1; else if (cur.imp == null) cur.d.push(t); return; }
+      const m = t.match(/^(\d{2}[\/.]\d{2}[\/.]\d{2,4})\s+(?:\d{2}[\/.]\d{2}[\/.]\d{2,4}\s+)?(.+?)\s+([+-]?\d{1,3}(?:\.\d{3})*,\d{2})\s*[^\d\s,.+-]{0,4}$/);
+      if (m && toDate(m[1])) L.push({ data: toDate(m[1]), descrizione: m[2].slice(0, 120), importo: -toNum(m[3]) });
+    });
+    push(); L.pdf = true; L.c4 = c4; return L;
+  }
   async function readFile(f) {
     const pdf = /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name), img = /^image\//.test(f.type);
+    if (pdf) { try { const LN = await pdfLines(f); const L = parsePdfLines(LN); if (L.length) return L; } catch (e) { if (C.isLocal()) throw e; } }
     if (pdf || img) {
       if (C.isLocal()) throw new Error('Nella demo si possono importare solo file CSV o Excel');
       let b64; if (img) b64 = (await fileToJpeg(f, 2200)).split(',')[1]; else { const u8 = new Uint8Array(await f.arrayBuffer()); let bin = ''; for (let i = 0; i < u8.length; i += 32768) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 32768)); b64 = btoa(bin); }
@@ -367,25 +408,27 @@
     let f; try { f = await pickFile('.csv,.xls,.xlsx,.txt,.pdf,image/*'); } catch { return; }
     let L; try { C.busy('Leggo il file…'); L = await readFile(f); } catch (e) { C.busy(); return C.toast(e.message); } C.busy();
     if (!L || !L.length) return C.toast('Non ho trovato movimenti in questo file: servono almeno data, descrizione e importo');
-    const neg = L.filter(x => x.importo < 0).length > L.filter(x => x.importo > 0).length && !L.ai && !L.dare;
-    S.imp = { f: f.name, L, inv: neg, ai: !!L.ai };
+    const neg = L.filter(x => x.importo < 0).length > L.filter(x => x.importo > 0).length && !L.ai && !L.dare && !L.pdf;
+    if (L.c4) { const k = CARTE().find(c => String(c.ultime4) === L.c4); if (k) S.card = String(k.id); }
+    S.imp = { f: f.name, L, inv: neg, ai: !!L.ai, pdf: !!L.pdf, c4: L.c4 || '' };
     importForm();
   }
   function importRows() { const I = S.imp, sg = I.inv ? -1 : 1; return I.L.map(x => ({ data: x.data, descrizione: x.descrizione, importo: Math.round(x.importo * sg * 100) / 100 })); }
   function importForm() {
     const I = S.imp, R = importRows(), out = R.filter(x => x.importo > 0), ds = R.map(x => x.data).sort(), tot = out.reduce((t, x) => t + x.importo, 0);
-    C.openSheet('Importa estratto conto', `<div class="ns-ifile"><i>${svg('xls')}</i><div><b>${esc(I.f)}</b><small>${R.length} movimenti · dal ${esc(C.dIt(ds[0]))} al ${esc(C.dIt(ds[ds.length - 1]))}${I.ai ? ' · letto con l\'IA: controlla i dati' : ''}</small></div></div>
+    C.openSheet('Importa estratto conto', `<div class="ns-ifile"><i>${svg('xls')}</i><div><b>${esc(I.f)}</b><small>${R.length} movimenti · dal ${esc(C.dIt(ds[0]))} al ${esc(C.dIt(ds[ds.length - 1]))}${I.ai ? ' · letto con l\'IA: controlla i dati' : I.pdf ? ' · PDF letto direttamente' + (I.c4 ? ' · carta ••' + esc(I.c4) : '') : ''}</small></div></div>
       <label class="f"><span>Carta dell'estratto</span><select name="carta">${CARTE().map(c => `<option value="${esc(c.id)}"${String(c.id) === S.card ? ' selected' : ''}>${esc(cardLbl(c))}${c.dip ? ' · ' + esc(nameOf(dipOf(c.dip))) : ''}</option>`).join('')}</select></label>
       <div class="ns-ik"><div><span>Spese (uscite)</span><b>${eur(tot)}</b><small>${out.length} movimenti</small></div><div><span>Accrediti</span><b>${eur(R.filter(x => x.importo < 0).reduce((t, x) => t - x.importo, 0))}</b><small>${R.length - out.length} movimenti</small></div></div>
-      ${I.ai ? '' : `<label class="ns-chk"><input type="checkbox" id="ns-inv"${I.inv ? ' checked' : ''}><span>Le spese hanno l'importo negativo nel file (inverti il segno)</span></label>`}
+      ${I.ai || I.pdf ? '' : `<label class="ns-chk"><input type="checkbox" id="ns-inv"${I.inv ? ' checked' : ''}><span>Le spese hanno l'importo negativo nel file (inverti il segno)</span></label>`}
       <div class="ns-iprev">${R.slice(0, 6).map(x => `<div><span>${esc(C.dIt(x.data))}</span><b>${esc(x.descrizione || '—')}</b><em class="${x.importo < 0 ? 'pos' : ''}">${x.importo < 0 ? '+' : ''}${eur(Math.abs(x.importo))}</em></div>`).join('')}${R.length > 6 ? `<small>e altri ${R.length - 6} movimenti…</small>` : ''}</div>`,
       fd => doImport(fd.get('carta')), null, 'Importa e riconcilia');
     const b = document.getElementById('sheet-body'); const inv = b.querySelector('#ns-inv'); if (inv) inv.onchange = () => { S.imp.inv = inv.checked; const car = b.querySelector('[name=carta]').value; S.card = car; importForm(); };
   }
   function doImport(carta) {
-    const R = importRows(), lotto = 'lt' + C.uid(), have = new Set(EST().filter(e => String(e.carta) === String(carta)).map(e => [e.data, N(e.importo).toFixed(2), norm(e.descrizione).slice(0, 30)].join('|')));
+    const R = importRows(), lotto = 'lt' + C.uid(), have = new Map();
+    EST().filter(e => String(e.carta) === String(carta)).forEach(e => { const k = [e.data, N(e.importo).toFixed(2), norm(e.descrizione).slice(0, 30)].join('|'); have.set(k, (have.get(k) || 0) + 1); });
     let dup = 0; const rows = [];
-    R.forEach(x => { const k = [x.data, x.importo.toFixed(2), norm(x.descrizione).slice(0, 30)].join('|'); if (have.has(k)) { dup++; return; } have.add(k); rows.push({ id: 'es' + C.uid(), carta, lotto, data: x.data, descrizione: x.descrizione, importo: x.importo, spesa: '', stato: x.importo < 0 ? 'ignorata' : '', note: S.imp.f, creato: new Date().toISOString() }); });
+    R.forEach(x => { const k = [x.data, x.importo.toFixed(2), norm(x.descrizione).slice(0, 30)].join('|'); if (have.get(k) > 0) { have.set(k, have.get(k) - 1); dup++; return; } rows.push({ id: 'es' + C.uid(), carta, lotto, data: x.data, descrizione: x.descrizione, importo: x.importo, spesa: '', stato: x.importo < 0 ? 'ignorata' : '', note: S.imp.f, creato: new Date().toISOString() }); });
     if (!rows.length) { C.closeSheet(); return C.toast('Questi movimenti sono già stati importati'); }
     C.write(rows.map(row => ({ action: 'upsert', sheet: 'Estratti', row })));
     S.card = String(carta); S.lotto = lotto; S.tab = 'estratto'; S.fresh = true;
@@ -406,6 +449,104 @@
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Riconciliazione'); XLSX.writeFile(wb, `riconciliazione-${(cardOf(S.card) || {}).ultime4 || ''}.xlsx`); C.toast('Excel scaricato');
   }
 
+  /* ---------- esportazione per il commercialista (formato «Nota spese») ---------- */
+  const MACRO = ['CANCELLERIA', 'CARBURANTI', 'MANUTENZIONE MEZZI', 'MATERIALI DI CONSUMO', 'PEDAGGI', 'VITTO E ALLOGGIO', 'UTENZE/BOLLETTE', 'SPESE TELEFONICHE', 'TRASFERIMENTI', 'VERBALI STRADALI', 'SPESE VARIE', 'ACQUISTI'];
+  const LEG = { 'carburante': 'CARBURANTI', 'pasti e trasferte': 'VITTO E ALLOGGIO', 'materiale e attrezzatura': 'MATERIALI DI CONSUMO', 'pedaggi e parcheggi': 'PEDAGGI', 'cancelleria e ufficio': 'CANCELLERIA', 'ricambi e manutenzione': 'MANUTENZIONE MEZZI', 'abbigliamento da lavoro': 'MATERIALI DI CONSUMO', 'altro': 'SPESE VARIE' };
+  const macroOf = c => { const u = String(c || '').trim().toUpperCase(); if (!u) return ''; if (MACRO.includes(u)) return u; const l = LEG[norm(c)]; if (l) return l; const n = norm(c); return /carbur|benzin|gasol|diesel/.test(n) ? 'CARBURANTI' : /pedagg|autostrad|parcheg/.test(n) ? 'PEDAGGI' : /cancell/.test(n) ? 'CANCELLERIA' : /ristor|pasti|vitto|allogg|hotel/.test(n) ? 'VITTO E ALLOGGIO' : /manutenz|ricamb|officin|gomm/.test(n) ? 'MANUTENZIONE MEZZI' : /telefon/.test(n) ? 'SPESE TELEFONICHE' : /utenz|bolle/.test(n) ? 'UTENZE/BOLLETTE' : /verbal|multa/.test(n) ? 'VERBALI STRADALI' : /trasfer/.test(n) ? 'TRASFERIMENTI' : /acquist|amazon/.test(n) ? 'ACQUISTI' : /material|attrezz|consumo|abbigl/.test(n) ? 'MATERIALI DI CONSUMO' : 'SPESE VARIE'; };
+  const GUESS = [[/\b(Q8|ENI\d*|TAMOIL|KEROPETROL|ESSO|SHELL|AGIP|STAROIL|IPEROIL|IP|API|ERG|TOTALERG|PV\d+|BENZINAIO|DISTRIBUTORE|CARBURANT\w*|AREA DI SERVIZIO|AREA SERVIZIO|STAZ\w*)\b/, 'CARBURANTI'], [/\b(AUTOSTRAD\w*|TELEPASS|VIACARD|PEDAGG\w*|PARCHEGG\w*)\b/, 'PEDAGGI'],
+    [/\b(BAR|RISTORANT\w*|PIZZ\w*|TRATTORIA|OSTERIA|HOTEL|ALBERGO|B ?& ?B|SUPER ?FOOD|CIBO|MCDONALD\w*|PANINO\w*|GELATERIA|PASTICC\w*|TAVOLA CALDA|SUPERMERCAT\w*|CONAD|COOP|CARREFOUR|EUROSPIN|LIDL|PENNY)\b/, 'VITTO E ALLOGGIO'], [/\b(TIM|VODAFONE|WINDTRE|WIND|ILIAD|FASTWEB|TELECOM|HO MOBILE|KENA)\b/, 'SPESE TELEFONICHE'],
+    [/\b(ENEL|ACEA|A2A|HERA|EDISON|SORGENIA|BOLLETT\w*)\b/, 'UTENZE/BOLLETTE'], [/\b(LYRECO|CARTOLERIA|STAPLES|CANCELLER\w*)\b/, 'CANCELLERIA'], [/\b(GOMMIST\w*|OFFICINA|AUTOLAV\w*|CARROZZ\w*|LAVAGGIO|REVISION\w*|MECCANIC\w*)\b/, 'MANUTENZIONE MEZZI'],
+    [/\b(POLIZIA|MULTA|VERBALE|PAGOPA|COMUNE DI)\b/, 'VERBALI STRADALI'], [/\b(AMAZON|AMZN|MAXILIA|MOL|EBAY|ALIEXPRESS|1HOME)\b/, 'ACQUISTI'], [/\b(FERRAMENTA|BRICO\w*|LEROY|OBI|AGRICOLA|GREEN CENTER|UTENSIL\w*)\b/, 'MATERIALI DI CONSUMO']];
+  const guessMacro = d => { const u = String(d || '').toUpperCase().replace(/[*.,]/g, ' '); const g = GUESS.find(x => x[0].test(u)); return g ? g[1] : ''; };
+  const MESI_U = MESI.map(m => m.toUpperCase());
+  const acctOfEst = e => {
+    const s = e.spesa ? SP().find(x => String(x.id) === String(e.spesa)) : null, cr = N(e.importo) < 0;
+    return { data: String(e.data), fatt: e.fattura || '', rs: e.ragsoc || (cr ? 'RICARICA' : (s && s.esercente) || e.descrizione || ''), macro: cr ? '' : (e.categoria || (s && macroOf(s.categoria)) || guessMacro(e.descrizione) || (s && s.categoria ? 'SPESE VARIE' : '')), desc: e.dettaglio || (s && s.descrizione) || '', imp: Math.abs(N(e.importo)), ric: cr };
+  };
+  const acctOfSp = s => ({ data: String(s.data), fatt: '', rs: s.esercente || '', macro: macroOf(s.categoria), desc: s.descrizione || '', imp: N(s.importo), ric: false });
+  const monthsOf = list => [...new Set(list.map(r => r.data.slice(0, 7)))].sort();
+  function acctSrc(v) { // v = 'c:ID' (estratto carta) | 'p:ID' (spese registrate di una persona)
+    const [t, id] = String(v).split(':');
+    if (t === 'c') { const c = cardOf(id); return { rows: EST().filter(x => String(x.carta) === String(id)).map(acctOfEst), nom: c && c.dip ? nameOf(dipOf(c.dip)) : (c && c.nome) || '', file: (c && c.nome) || 'carta' }; }
+    const d = dipOf(id); return { rows: SP().filter(s => String(s.dip) === String(id) && s.stato !== 'rifiutata').map(acctOfSp), nom: nameOf(d), file: nameOf(d) };
+  }
+  async function buildAcct(rows, o) {
+    await C.loadLib('lib-exceljs.min.js'); if (!window.ExcelJS) throw new Error('libreria Excel non caricata');
+    const wb = new ExcelJS.Workbook(); wb.creator = o.org; wb.created = new Date();
+    const CUR = '_-* #,##0.00\\ [$€-410]_-;\\-* #,##0.00\\ [$€-410]_-;_-* "-"??\\ [$€-410]_-;_-@_-', B = { m: 'medium', t: 'thin' };
+    const put = (ws, ref, v, f) => { const c = ws.getCell(ref); if ((v === undefined || v === null) && !f.sz) return c; if (v !== undefined && v !== null) c.value = v; c.font = { name: 'Arial', size: f.sz || 11, bold: !!f.b }; c.alignment = { horizontal: f.h, vertical: 'middle', wrapText: !!f.w }; if (f.fmt) c.numFmt = f.fmt; if (f.bd) { const k = f.bd; c.border = { left: B[k[0]] && { style: B[k[0]] }, right: B[k[1]] && { style: B[k[1]] }, top: B[k[2]] && { style: B[k[2]] }, bottom: B[k[3]] && { style: B[k[3]] } }; } return c; };
+    const sheet = (name, mk, list) => {
+      const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }], pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .197, right: .197, top: .394, bottom: .394, header: .2, footer: .2 } } });
+      [4.6, 18.3, 33.1, 59, 26.3, 80.9, 30.9].forEach((w, i) => ws.getColumn(i + 1).width = w); ws.getColumn(8).hidden = true; ws.getColumn(8).width = 22;
+      const n = Math.max(47, list.length), e = 7 + n, T = e + 1, extra = [...new Set(list.map(r => r.macro).filter(m => m && !MACRO.includes(m)))], ML = MACRO.slice(0, 11).concat(extra), H2 = T + 2, last = H2 + ML.length;
+      [[1, 29.25], [2, 19.5], [3, 20.25], [4, 19.5], [5, 18], [6, 19.5], [7, 40.5]].forEach(([r, h]) => ws.getRow(r).height = h);
+      ws.mergeCells('A1:G1'); put(ws, 'A1', "SOCIETA': " + String(o.org || '').toUpperCase(), { sz: 23, b: 1, h: 'left', bd: 'mmmt' }); ['B', 'C', 'D', 'E', 'F'].forEach(c => put(ws, c + '1', null, { bd: '--mt' })); put(ws, 'G1', null, { bd: '-mmt' });
+      ws.mergeCells('A2:B2'); ws.mergeCells('A3:B3'); ws.mergeCells('A4:B4');
+      put(ws, 'A2', 'Piazzale', { sz: 15, b: 1, h: 'left', bd: 'mt-t' }); put(ws, 'A3', 'Nominativo', { sz: 15, b: 1, h: 'left', bd: 'mttt' }); put(ws, 'A4', 'Mese', { sz: 15, b: 1, h: 'left', bd: 'mttt' });
+      put(ws, 'C2', null, { h: 'center', bd: 't-tt' }); put(ws, 'C3', String(o.nom || '').toUpperCase(), { sz: 16, b: 1, h: 'center', bd: 't-tt' }); put(ws, 'C4', mk ? new Date(Date.UTC(+mk.slice(0, 4), +mk.slice(5) - 1, 1)) : null, { sz: 14, b: 1, h: 'center', fmt: 'mmm-yy', bd: 't-tt' });
+      [2, 3, 4].forEach(r => { put(ws, 'D' + r, null, { bd: '-ttt' }); put(ws, 'E' + r, 'Autorizzato da:', { sz: 15, b: 1, h: 'center', bd: 'tttt' }); put(ws, 'F' + r, null, { bd: '-t-t' }); put(ws, 'G' + r, null, { bd: '-m-t' }); });
+      ws.mergeCells('A6:G6'); put(ws, 'A6', 'DESCRIZIONE SPESE SOSTENUTE', { sz: 15, b: 1, h: 'center', bd: 'mmtt' }); ['B', 'C', 'D', 'E', 'F'].forEach(c => put(ws, c + '6', null, { bd: '--tt' })); put(ws, 'G6', null, { bd: '-mtt' });
+      [['A', 'N°', 15, 'mt-t', 'center'], ['B', 'DATA FATTURA', 16, '-t-t', 'center'], ['C', 'N.\n FATTURA', 16, '-t-t', 'center'], ['D', 'RAGIONE SOCIALE', 16, 't--t', 'left'], ['E', 'MACROVOCE', 16, 't--t', 'center'], ['F', 'DESCRIZIONE', 16, 't--t', 'center'], ['G', 'IMPORTO in €', 16, 'tm-t', 'center']].forEach(([c, t, sz, bd, h]) => put(ws, c + '7', t, { sz, b: 1, h, w: 1, bd, fmt: c === 'G' ? CUR : undefined }));
+      for (let i = 0; i < n; i++) {
+        const r = 8 + i, x = list[i];
+        put(ws, 'A' + r, i + 1, { sz: 11, b: 1, h: 'center', fmt: '0', bd: 'mttt' });
+        put(ws, 'B' + r, x ? new Date(Date.UTC(+x.data.slice(0, 4), +x.data.slice(5, 7) - 1, +x.data.slice(8, 10))) : null, { sz: 16, h: 'center', w: 1, fmt: 'dd/mm/yy;@', bd: '-ttt' });
+        put(ws, 'C' + r, x && x.fatt || null, { sz: 16, h: 'center', w: 1, bd: '-ttt' }); put(ws, 'D' + r, x ? x.rs : null, { sz: 16, h: 'left', w: 1, bd: 'tttt' });
+        put(ws, 'E' + r, x ? (x.ric ? 'RICARICA' : x.macro === 'CARBURANTI' ? 'RIFORNIMENTO' : 'PAGAMENTO') : null, { sz: 16, h: 'center', w: 1, bd: 't-tt' }); if (x && x.macro) { const hc = ws.getCell('H' + r); hc.value = x.macro; hc.font = { name: 'Arial', size: 9, color: { argb: 'FF999999' } }; } put(ws, 'F' + r, x ? x.desc || null : null, { sz: 16, h: 'center', w: 1, bd: 't-tt' });
+        put(ws, 'G' + r, x ? x.imp : null, { sz: 16, h: 'center', fmt: CUR, bd: 'tmtt' });
+        ws.getRow(r).height = x ? Math.max(1, Math.ceil(String(x.rs).length / 21), Math.ceil(String(x.desc || '').length / 50)) * 21 : 20.25;
+      }
+      const tot = list.filter(x => !x.ric).reduce((t, x) => t + x.imp, 0);
+      ws.mergeCells(`A${T}:D${T}`); put(ws, 'A' + T, 'TOTALE COMPLESSIVO', { sz: 18, b: 1, h: 'left', bd: 'mttt' }); ['B', 'C'].forEach(c => put(ws, c + T, null, { bd: '--tt' })); put(ws, 'D' + T, null, { bd: '-ttt' }); put(ws, 'E' + T, null, { sz: 18, b: 1, h: 'center', bd: '--tt' }); put(ws, 'F' + T, null, { sz: 18, b: 1, h: 'center', bd: '--tt' });
+      const g = put(ws, 'G' + T, { formula: `SUMIF(D8:D${e},"<>RICARICA",G8:G${e})`, result: Math.round(tot * 100) / 100 }, { sz: 20, b: 1, h: 'center', fmt: CUR, bd: 'tmtt' }); ws.getRow(T).height = 26.25;
+      ws.getRow(T + 1).height = 26.25;
+      ws.mergeCells(`A${H2}:D${H2}`); ws.mergeCells(`E${H2}:G${H2}`); put(ws, 'A' + H2, 'MACROVOCE', { sz: 15, b: 1, h: 'left', bd: 'mttt' }); ['B', 'C'].forEach(c => put(ws, c + H2, null, { bd: '--tt' })); put(ws, 'D' + H2, null, { bd: '-ttt' }); put(ws, 'E' + H2, 'DESCRIZIONE', { sz: 15, b: 1, h: 'left', bd: 'tmtt' }); put(ws, 'F' + H2, null, { bd: '--tt' }); put(ws, 'G' + H2, null, { bd: '-mtt' }); ws.getRow(H2).height = 19.5;
+      ML.forEach((m, i) => {
+        const r = H2 + 1 + i, b = r === last ? 'm' : 't', sum = list.filter(x => !x.ric && x.macro === m).reduce((t, x) => t + x.imp, 0), cnt = list.filter(x => !x.ric && x.macro === m).length;
+        ws.mergeCells(`A${r}:D${r}`); put(ws, 'A' + r, m, { sz: 15, h: 'left', bd: 'mtt' + b }); ['B', 'C'].forEach(c => put(ws, c + r, null, { bd: '--t' + b })); put(ws, 'D' + r, null, { bd: '-tt' + b });
+        put(ws, 'E' + r, cnt ? cnt + (cnt === 1 ? ' movimento' : ' movimenti') : null, { sz: 15, h: 'center', bd: 't-t' + b }); put(ws, 'F' + r, null, { sz: 15, bd: '--t' + b });
+        put(ws, 'G' + r, { formula: `SUMIF(H8:H${e},A${r},G8:G${e})`, result: Math.round(sum * 100) / 100 }, { sz: 15, h: 'center', fmt: CUR, bd: '-mt' + b }); ws.getRow(r).height = 19.5;
+      });
+      ws.pageSetup.printArea = `A1:G${last}`;
+    };
+    sheet('VUOTO ORIG', '', []);
+    const by = new Map(); rows.forEach(r => { const k = r.data.slice(0, 7); if (!by.has(k)) by.set(k, []); by.get(k).push(r); });
+    [...by.keys()].sort().forEach(k => sheet(`${MESI_U[+k.slice(5) - 1]} ${k.slice(0, 4)}`, k, by.get(k).sort((a, b) => a.data.localeCompare(b.data))));
+    return wb.xlsx.writeBuffer();
+  }
+  function acctForm() {
+    const cs = CARTE(), pp = DIPS().filter(d => SP().some(s => String(s.dip) === String(d.id)));
+    if (!cs.length && !pp.length) return C.toast('Non ci sono ancora dati da esportare');
+    const def = S.tab === 'estratto' && S.card ? 'c:' + S.card : cs.length ? 'c:' + cs[0].id : 'p:' + pp[0].id;
+    const opt = (v, t) => `<option value="${esc(v)}"${v === def ? ' selected' : ''}>${esc(t)}</option>`;
+    C.openSheet('Esporta per il commercialista', `<p class="ns-xh">Un file Excel con un foglio per ogni mese: data, ragione sociale, macrovoce, descrizione e importo, con i totali per macrovoce.</p>
+      <label class="f"><span>Cosa esportare</span><select name="src">${cs.length ? '<optgroup label="Estratto conto della carta">' + cs.map(c => opt('c:' + c.id, cardLbl(c) + (c.dip ? ' · ' + nameOf(dipOf(c.dip)) : ''))).join('') + '</optgroup>' : ''}${pp.length ? '<optgroup label="Spese registrate da">' + pp.map(d => opt('p:' + d.id, nameOf(d))).join('') + '</optgroup>' : ''}</select></label>
+      <div class="ns-row2"><label class="f"><span>Dal mese</span><select name="da"></select></label><label class="f"><span>Al mese</span><select name="a"></select></label></div>
+      <label class="ns-chk"><input type="checkbox" name="ric" checked><span>Includi le ricariche della carta (non entrano nel totale)</span></label><div class="ns-xp" id="ns-xp"></div>`,
+      fd => doAcct(fd), null, 'Scarica Excel');
+    const b = document.getElementById('sheet-body'), sel = b.querySelector('[name=src]'), da = b.querySelector('[name=da]'), a = b.querySelector('[name=a]'), pv = b.querySelector('#ns-xp'), ric = b.querySelector('[name=ric]');
+    const fill = () => { const R = acctSrc(sel.value).rows, ms = monthsOf(R), o = k => `<option value="${k}">${esc(mLbl(k))}</option>`; da.innerHTML = ms.map(o).join(''); a.innerHTML = ms.map(o).join(''); if (ms.length) { da.value = ms[0]; a.value = ms[ms.length - 1]; } upd(); };
+    const upd = () => { const R = acctSrc(sel.value).rows.filter(r => r.data.slice(0, 7) >= da.value && r.data.slice(0, 7) <= a.value && (ric.checked || !r.ric)), sp = R.filter(r => !r.ric), nm = R.filter(r => !r.ric && !r.macro).length; pv.innerHTML = R.length ? `<div><span>Movimenti</span><b>${R.length}</b></div><div><span>Totale spese</span><b>${eur(sp.reduce((t, r) => t + r.imp, 0))}</b></div><div class="${nm ? 'warn' : ''}"><span>Senza macrovoce</span><b>${nm}</b></div>` : '<small>Nessun movimento nel periodo</small>'; };
+    sel.onchange = fill; da.onchange = a.onchange = ric.onchange = upd; fill();
+  }
+  async function doAcct(fd) {
+    const src = acctSrc(fd.get('src')), da = fd.get('da'), a = fd.get('a'), inc = !!fd.get('ric');
+    const rows = src.rows.filter(r => r.data.slice(0, 7) >= da && r.data.slice(0, 7) <= a && (inc || !r.ric)); if (!rows.length) return C.toast('Nessun movimento nel periodo');
+    C.closeSheet(); C.busy('Preparo il file Excel…');
+    try {
+      const buf = await buildAcct(rows, { org: C.orgName(), nom: src.nom }), u = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })), l = document.createElement('a');
+      l.href = u; l.download = `Nota_spese_${String(src.file).trim().replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '')}.xlsx`; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); C.toast('Excel scaricato');
+    } catch (er) { C.toast(er.message); } finally { C.busy(); }
+  }
+  function esEdit(id) {
+    const e = EST().find(x => String(x.id) === String(id)); if (!e) return; const r = acctOfEst(e), g = r.macro;
+    C.openSheet('Dati per il commercialista', `<div class="ns-ifile"><i>${svg('doc')}</i><div><b>${esc(e.descrizione || '—')}</b><small>${esc(C.dIt(e.data))} · ${eur(Math.abs(N(e.importo)))}</small></div></div>
+      <label class="f"><span>Ragione sociale</span><input name="ragsoc" value="${esc(e.ragsoc || '')}" maxlength="80" placeholder="${esc(r.rs)}"></label>
+      <label class="f"><span>Macrovoce</span><select name="categoria"><option value="">Automatica${g ? ' (' + esc(g) + ')' : ''}</option>${MACRO.map(m => `<option${e.categoria === m ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+      <div class="ns-row2"><label class="f"><span>N. fattura</span><input name="fattura" value="${esc(e.fattura || '')}" maxlength="30"></label><label class="f"><span>Descrizione</span><input name="dettaglio" value="${esc(e.dettaglio || '')}" maxlength="120" placeholder="${esc(r.desc || 'es. rifornimento')}"></label></div>`,
+      fd => { C.write([{ action: 'upsert', sheet: 'Estratti', row: { ...e, ragsoc: String(fd.get('ragsoc') || '').trim(), categoria: fd.get('categoria') || '', fattura: String(fd.get('fattura') || '').trim(), dettaglio: String(fd.get('dettaglio') || '').trim() } }]); C.closeSheet(); C.toast('Dati salvati'); });
+  }
+
   /* ---------- eventi ---------- */
   function bind(el) {
     el.addEventListener('click', e => {
@@ -413,7 +554,7 @@
       const [a, b, c] = String(t.dataset.ns).split(':');
       if (e.target.closest('.ns-ac button, .ns-ac2 button') && a === 'spesa') return;
       if (a === 'tab') { S.tab = b; S.fresh = true; return rerender(); }
-      if (a === 'go') { S.tab = b; S.fs = c === 'nofoto' ? 'nofoto' : (b === 'spese' && !c ? S.fs : ''); if (b === 'spese') S.mon = c === 'nofoto' || !c ? 'all' : S.mon; if (a === 'go' && b === 'spese' && !c && t.closest('.ns-k')) { S.fs = t.textContent.includes('Da approvare') ? 'inviata' : ''; S.mon = S.fs ? 'all' : today().slice(0, 7); } S.fresh = true; return rerender(); }
+      if (a === 'go') { S.tab = b; S.fs = c === 'nofoto' || c === 'inviata' ? c : (b === 'spese' && !c ? S.fs : ''); if (b === 'spese') S.mon = c === 'nofoto' || c === 'inviata' || !c ? 'all' : S.mon; S.fresh = true; return rerender(); }
       if (a === 'mon') { S.mon = b === 'all' ? 'all' : mShift(S.mon === 'all' ? today().slice(0, 7) : S.mon, Number(b)); return rerender(); }
       if (a === 'spesa') return b === 'new' ? (canW() ? spesaForm('new') : 0) : canW() || true ? spesaView(b) : 0;
       if (a === 'appr') { e.stopPropagation(); const s = SP().find(x => String(x.id) === b); if (s) { C.write([{ action: 'upsert', sheet: 'Spese', row: { ...s, stato: 'approvata', risposta: '', deciso: new Date().toISOString() } }]); C.toast('Spesa approvata'); } return; }
@@ -431,6 +572,8 @@
       if (a === 'autoapply') { const r = recon(S.card), ops = []; r.auto.forEach(p => ops.push(...linkOps(p.e, p.s))); if (ops.length) { C.write(ops); C.toast(`${r.auto.length} movimenti abbinati`); } return; }
       if (a === 'xls-sp') return xlsSpese().catch(er => C.toast(er.message));
       if (a === 'xls-rec') return xlsRec().catch(er => C.toast(er.message));
+      if (a === 'acct') return acctForm();
+      if (a === 'eedit') return esEdit(b);
     });
     el.addEventListener('input', e => { if (e.target.id === 'ns-q') { S.q = e.target.value; clearTimeout(bind._t); bind._t = setTimeout(() => rerender(), 180); } });
     el.addEventListener('change', e => {
