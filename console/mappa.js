@@ -195,6 +195,7 @@
       ['sigill', 'Sigill', 'Sigillanti, adesivi, stucchi e prodotti per l\'edilizia Sigill (241 prodotti, 596 codici).', ['241 prodotti, 596 codici'], ['sez.preventivi']],
       ['stellabianca', 'Stella Bianca', 'Punte multimateriali, foretti diamantati, portainserti e adattatori Stella Bianca (18 prodotti, 200 codici, con listino).', ['18 prodotti, 200 codici'], ['sez.preventivi']],
       ['doc', 'DOC', 'Pennarelli e kit per il ritocco del legno DOC (3 prodotti, 6 codici).', ['3 prodotti, 6 codici'], ['sez.preventivi']],
+      ['vinco', 'Vinco', 'Macchine e ricambi Vinco, Hyundai, Polar ed EcoFlow: generatori, motori, giardinaggio (618 prodotti, prezzi sui ricambi).', ['618 prodotti'], ['sez.preventivi']],
       ['ribimex', 'Ribimex', 'Giardinaggio, elettroutensili, idropulitrici, pompe, aria compressa, saldatura e DPI Ribimex (1.909 prodotti, senza prezzi).', ['1.909 prodotti'], ['sez.preventivi']],
       ['kapro', 'Kapro', 'Strumenti di misura Kapro: livelle, laser rotativi, a punti e a linee, metri, squadre e tracciatura.', ['147 prodotti'], ['sez.preventivi']],
       ['qbricksys', 'Qbrick System', 'Cassette portautensili, organizer, cassettiere, carrelli, valigie e set Qbrick System (linee ONE, PRO, PRIME, TWO, Red Ultra HD, Black).', ['185 prodotti'], ['sez.preventivi']],
