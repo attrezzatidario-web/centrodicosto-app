@@ -4179,3 +4179,25 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .ph-act .ph-ok { background: var(--accent, #3362ab); border-color: transparent; color: #fff; }
 @keyframes ph-in { from { opacity: 0; } } @keyframes ph-up { from { opacity: 0; transform: translateY(14px) scale(.97); } }
 @media (prefers-reduced-motion: reduce) { .ph-ov, .ph-card { animation: none; } }
+
+/* ---- v216 Nota spese su telefono ---- */
+#ns-body, .ns-body { grid-template-columns: minmax(0, 1fr); min-width: 0; max-width: 100%; }
+#ns-body > *, .ns-body > * { min-width: 0; }
+.ns-bar > * { min-width: 0; }
+@media (max-width: 700px) {
+  .ns-bar { gap: 8px; }
+  .ns-bar > :first-child { flex: 1 1 100%; }
+  .ns-tabs { width: 100%; margin: 0; padding-bottom: 2px; }
+  #ns-body .seg.ns-tabs { display: flex; overflow-x: auto; }
+  .ns-tabs button { flex: none; }
+  .ns-kpis, .ns-sum { gap: 10px; } .ns-k { padding: 12px 14px; } .ns-k b { font-size: 21px; }
+  .ns-cards { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .ns-cc { aspect-ratio: auto; min-height: 168px; padding: 16px 18px; }
+  .ns-cc-num { font-size: 17px; }
+  .ns-cols { gap: 6px; height: 150px; }
+  .ns-peo { grid-template-columns: minmax(0, 1fr); }
+  .ns-flt { display: grid; grid-template-columns: 1fr 1fr; } .ns-flt > * { min-width: 0; } .ns-q { grid-column: 1 / -1; width: 100%; }
+  .ns-mn { grid-column: 1 / -1; justify-content: space-between; } .ns-mn b { white-space: nowrap; min-width: 0; flex: 1; }
+  .ns-g2 { gap: 12px; } .ns-box { padding: 14px; }
+  .ns-row2 { grid-template-columns: 1fr; }
+}
