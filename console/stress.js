@@ -215,9 +215,48 @@
       config['pv:' + pid] = { id: pid, num: `P${y}-${pad(i + 1, 3)}`, data: ds(d), valid: 30, stato: g > 60 ? pick(['accettato', 'rifiutato', 'accettato']) : pick(STATI), cliente: { nome: cli.nome, ref: cli.ref, email: cli.email, tel: cli.tel, ind: cli.ind }, cliId: cli.id, righe, sconto: rnd() < .15 ? 3 : 0, note: 'Consegna in 10 giorni lavorativi.', iva: 22, agg: d.toISOString() };
     }
 
+    /* ---------- dipendenti, presenze, assenze, carte, contanti, note spese, estratti conto (solo se O.staff) ---------- */
+    let extra = {};
+    if (O.staff) {
+      const hm = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}:00`, iso = d => d.toISOString();
+      const EM = [['Giovanni', 'Ferri', 'Magazziniere', 'Magazzino', 'Tempo indeterminato', '4°', 40, 14.5], ['Luca', 'Moretti', 'Autista', 'Consegne', 'Tempo indeterminato', '3°', 40, 15.5], ['Andrea', 'Gallo', 'Autista', 'Consegne', 'Tempo indeterminato', '3°', 40, 15],
+        ['Sara', 'Conti', 'Addetta vendite', 'Banco', 'Tempo indeterminato', '4°', 40, 14], ['Chiara', 'Marini', 'Amministrazione', 'Ufficio', 'Tempo indeterminato', '3°', 40, 17], ['Davide', 'Greco', 'Magazziniere', 'Magazzino', 'Apprendistato', '5°', 40, 11],
+        ['Matteo', 'Bruno', 'Addetto vendite', 'Banco', 'Tempo determinato', '4°', 40, 13.5], ['Elena', 'Costa', 'Segreteria', 'Ufficio', 'Part-time', '4°', 20, 14]];
+      const dips = EM.map((e, i) => ({ id: 'dp' + pad(i + 1, 3), nome: e[0], cognome: e[1], cf: '', nascita: `${1975 + int(0, 22)}-${pad(int(1, 12))}-${pad(int(1, 28))}`, tel: '3' + int(20, 49) + ' ' + int(1000000, 9999999), email: `${e[0].toLowerCase()}.${e[1].toLowerCase()}@${O.dom}`, indirizzo: `Via ${pick(['Roma', 'Garibaldi', 'Mazzini', 'dei Mille', 'Verdi'])} ${int(1, 90)}, ${REAL[i % REAL.length].citta}`,
+        mansione: e[2], reparto: e[3], sede: CENTRI[i % CENTRI.length], contratto: e[4], livello: e[5], assunzione: ds(daysAgo(int(200, 2400))), fine: i === 6 ? ds(daysAgo(-40)) : '', iban: '', visita: ds(daysAgo(-int(10, 300))), corso: ds(daysAgo(-int(20, 400))), stato: 'attivo', note: '', ore: e[6], ferie: 26, permessi: 32, costo: e[7], account: '', foto: '', creato: ds(daysAgo(DAYS)) }));
+      const pres = [], ass = [], leave = new Set();
+      const A = (d, tipo, dal, al, ore, motivo, stato, risp) => { ass.push({ id: id('as'), dip: d.id, tipo, dal: ds(dal), al: ds(al), ore, motivo, stato, risposta: risp || '', chi: 'demo', creato: ds(daysAgo(Math.max(0, Math.round((now - dal) / 864e5)) + 5)), deciso: stato === 'attesa' ? '' : ds(daysAgo(Math.max(0, Math.round((now - dal) / 864e5)) + 3)) }); for (let t = new Date(dal); t <= al; t.setDate(t.getDate() + 1)) if (stato !== 'rifiutata' && stato !== 'attesa') leave.add(d.id + '|' + ds(t)); };
+      A(dips[0], 'ferie', daysAgo(46), daysAgo(41), '', 'Ferie estive', 'approvata'); A(dips[3], 'ferie', daysAgo(30), daysAgo(26), '', 'Ferie', 'approvata'); A(dips[1], 'malattia', daysAgo(19), daysAgo(17), '', 'Certificato medico', 'comunicata');
+      A(dips[4], 'permesso', daysAgo(12), daysAgo(12), 3, 'Visita medica', 'approvata'); A(dips[2], 'permesso', daysAgo(8), daysAgo(8), 2, 'Commissione personale', 'approvata'); A(dips[5], 'altro', daysAgo(5), daysAgo(5), '', 'Esame di maturità professionale', 'approvata');
+      A(dips[6], 'ferie', daysAgo(-12), daysAgo(-8), '', 'Ponte', 'attesa'); A(dips[0], 'permesso', daysAgo(-3), daysAgo(-3), 4, 'Pratica in banca', 'attesa'); A(dips[7], 'ferie', daysAgo(-25), daysAgo(-18), '', 'Ferie', 'approvata'); A(dips[3], 'permesso', daysAgo(22), daysAgo(22), 2, 'Richiesta non compatibile con il turno', 'rifiutata', 'Servono due persone al banco, proviamo un altro giorno');
+      for (let g = 59; g >= 0; g--) { const d = daysAgo(g), wd = d.getDay(); if (wd === 0 || wd === 6) continue;
+        dips.forEach(p => { if (leave.has(p.id + '|' + ds(d))) return; const hrs = p.ore < 40, a = 8 * 60 + int(-12, 18) + (p.mansione === 'Autista' ? -45 : 0), sede = p.sede, mk = (tipo, m) => pres.push({ id: id('pz'), dip: p.id, data: ds(d), ora: hm(m), tipo, sede, fonte: rnd() < .06 ? 'manuale' : 'app', luogo: '', disp: '', nota: '', chi: '', creato: ds(d) });
+          mk('in', a); if (g === 0 && rnd() < .2) return; if (hrs) { if (g > 0) mk('out', a + 240 + int(-5, 10)); return; }
+          if (g === 0) { if (rnd() < .7) { mk('pausa', 12 * 60 + 30 + int(0, 15)); } return; }
+          mk('pausa', 12 * 60 + 30 + int(0, 20)); mk('rientro', 13 * 60 + 30 + int(0, 20)); mk('out', a + 540 + int(-10, 40)); }); }
+      const CT = [['Aziendale Intesa', 'credito', 'Intesa Sanpaolo', 'blu', 4000, 0], ['Carburante flotta', 'prepagata', 'UniCredit', 'verde', 1500, 1], ['Spese cantiere', 'debito', 'BPER Banca', 'viola', 1200, 3], ['Rappresentanza', 'prepagata', 'Revolut Business', 'nero', 800, 4]];
+      const carte = CT.map((c, i) => ({ id: 'ca' + pad(i + 1, 3), nome: c[0], tipo: c[1], ultime4: String(int(1000, 9899)), banca: c[2], titolare: `${dips[c[5]].nome} ${dips[c[5]].cognome}`, dip: dips[c[5]].id, plafond: c[4], centro: CENTRI[i % CENTRI.length], stato: 'attiva', scadenza: `${pad(int(1, 12))}/${27 + int(0, 3)}`, colore: c[3], note: '', creato: ds(daysAgo(DAYS)) }));
+      const fondi = []; [[1, 300], [2, 300], [5, 150], [7, 100]].forEach(([k, v]) => { fondi.push({ id: id('fo'), data: ds(daysAgo(int(100, 140))), dip: dips[k].id, importo: v, tipo: 'consegna', note: 'Fondo cassa iniziale', chi: 'demo', creato: ds(daysAgo(120)) }); fondi.push({ id: id('fo'), data: ds(daysAgo(int(40, 70))), dip: dips[k].id, importo: v / 2, tipo: 'consegna', note: 'Reintegro', chi: 'demo', creato: ds(daysAgo(55)) }); });
+      fondi.push({ id: id('fo'), data: ds(daysAgo(20)), dip: dips[5].id, importo: -40, tipo: 'restituzione', note: 'Restituzione contanti', chi: 'demo', creato: ds(daysAgo(20)) });
+      const ES = { 'Carburante': [['ENI STATION', 45, 95], ['Q8 Easy', 40, 90], ['IP Station', 40, 85], ['Tamoil', 45, 80]], 'Pasti e trasferte': [['Ristorante Da Gino', 14, 48], ['Autogrill', 8, 22], ['Bar Centrale', 3, 12], ['Trattoria Il Fornaio', 15, 40]], 'Materiale e attrezzatura': [['Ferramenta Rossi', 12, 160], ['Brico Center', 20, 220], ['Leroy Merlin', 18, 260]], 'Pedaggi e parcheggi': [['Autostrade per l\'Italia', 4, 30], ['Parcheggio Centro', 2, 12], ['Telepass', 8, 36]], 'Cancelleria e ufficio': [['Lyreco', 12, 90], ['Cartoleria Moderna', 5, 40]], 'Ricambi e manutenzione': [['Ricambi Auto Express', 25, 240], ['Gommista Fratelli Neri', 40, 320]], 'Abbigliamento da lavoro': [['Antinfortunistica Lazio', 30, 180]], 'Altro': [['Amazon', 10, 80], ['Poste Italiane', 3, 25]] };
+      const CW = [['Carburante', 30], ['Pasti e trasferte', 22], ['Materiale e attrezzatura', 14], ['Pedaggi e parcheggi', 12], ['Cancelleria e ufficio', 7], ['Ricambi e manutenzione', 6], ['Abbigliamento da lavoro', 4], ['Altro', 5]];
+      const spese = [], estratti = [], cw = CW.map(x => x[1]);
+      for (let i = 0; i < 140; i++) { const g = Math.min(150, Math.floor(Math.pow(rnd(), 1.15) * 151)), d = daysAgo(g); if (d.getDay() === 0) { i--; continue; }
+        const cat = wPick(CW.map(x => x[0]), cw), [es, lo, hi] = pick(ES[cat]), imp = r2(lo + rnd() * (hi - lo)), card = rnd() < .62 ? pick(carte) : null, dp = card ? dips.find(x => x.id === card.dip) : pick(dips);
+        const st = g < 4 && rnd() < .55 ? 'inviata' : rnd() < .04 ? 'rifiutata' : 'approvata';
+        spese.push({ id: 'sp' + pad(i + 1, 4), data: ds(d), dip: dp.id, importo: imp, esercente: es, categoria: cat, descrizione: '', centro: dp.sede, metodo: card ? 'carta' : 'contanti', carta: card ? card.id : '', foto: '', stato: st, chi: dp.email, creato: iso(d), deciso: st === 'inviata' ? '' : iso(d), risposta: st === 'rifiutata' ? 'Spesa non pertinente: manca lo scontrino' : '', estratto: '' }); }
+      spese.sort((a, b) => a.data < b.data ? -1 : 1);
+      carte.forEach(c => { const mine = spese.filter(s => s.carta === c.id), byM = {}; mine.forEach(s => { (byM[s.data.slice(0, 7)] = byM[s.data.slice(0, 7)] || []).push(s); });
+        Object.keys(byM).sort().forEach(m => { const lotto = 'lt' + m.replace('-', '') + c.id, last = m === ds(now).slice(0, 7);
+          byM[m].forEach(s => { if (s.stato === 'rifiutata' || (s.stato === 'inviata') || rnd() < .22 || (last && rnd() < .5)) return; const e = { id: id('es'), carta: c.id, lotto, data: s.data, descrizione: s.esercente.toUpperCase() + ' ' + (CENTRI[int(0, CENTRI.length - 1)]), importo: s.importo, spesa: s.id, stato: 'abbinata', note: 'estratto-' + m + '.csv', creato: m + '-28' }; s.estratto = e.id; estratti.push(e); });
+          for (let k = 0, n = int(1, 3); k < n; k++) estratti.push({ id: id('es'), carta: c.id, lotto, data: m + '-' + pad(int(1, 27)), descrizione: pick(['AMZN MKTP IT', 'SUMUP *BAR', 'PAYPAL *SERVIZI', 'GOOGLE *ADS', 'ENI STATION 4412', 'AUTOGRILL SPA']), importo: r2(5 + rnd() * 70), spesa: '', stato: '', note: 'estratto-' + m + '.csv', creato: m + '-28' });
+          if (c.tipo === 'prepagata' && !last) estratti.push({ id: id('es'), carta: c.id, lotto, data: m + '-02', descrizione: 'RICARICA CARTA', importo: -c.plafond, spesa: '', stato: 'ignorata', note: 'estratto-' + m + '.csv', creato: m + '-28' }); }); });
+      extra = { Dipendenti: dips, Presenze: pres, Assenze: ass, Carte: carte, Fondi: fondi, Spese: spese, Estratti: estratti };
+    }
+
     return {
       config,
-      sheets: { Fornitori: fornitori, Clienti: clienti, Articoli: articoli, Movimenti: movimenti, Fatture: fatture, GLS: gls, Gasolio: gasolio, Lyreco: lyreco, LyrecoFatture: lyfatture, Amazon: amazon, AmazonArticoli: amazonart, DDT: ddt, Vendite: vendite, MagMov: magmov, Incassi: incassi }
+      sheets: Object.assign({ Fornitori: fornitori, Clienti: clienti, Articoli: articoli, Movimenti: movimenti, Fatture: fatture, GLS: gls, Gasolio: gasolio, Lyreco: lyreco, LyrecoFatture: lyfatture, Amazon: amazon, AmazonArticoli: amazonart, DDT: ddt, Vendite: vendite, MagMov: magmov, Incassi: incassi }, extra)
     };
   }
 
@@ -230,6 +269,6 @@
     return { ops: L, parts };
   }
   // gestionale DEMO per le presentazioni ai clienti: azienda inventata (ingrosso edile), dati credibili ma leggeri (~12.000 righe, circa 1 anno e mezzo)
-  const DEMO = { NAME: 'BIANCHI FORNITURE EDILI S.R.L.', EMAIL: 'demo@bianchiforniture.example', OPT: { name: 'Bianchi Forniture Edili S.r.l.', short: 'Bianchi Forniture', pre: 'BF', dom: 'bianchiforniture.example', seed: 424242, days: 540, sedi: 3, forn: 45, cli: 140, mov: 1800, fat: 260, glsm: 17, glsn: [40, 70], mezzi: 5, lyfm: 17, lyfn: [3, 5], am: 150, art: 220, mmov: 300, ddtn: 320, cb: 80, dest: 60, fimm: 80, inc: 3, pv: 40, srv: 30, pvc: 40 } };
+  const DEMO = { NAME: 'BIANCHI FORNITURE EDILI S.R.L.', EMAIL: 'demo@bianchiforniture.example', OPT: { name: 'Bianchi Forniture Edili S.r.l.', short: 'Bianchi Forniture', pre: 'BF', dom: 'bianchiforniture.example', seed: 424242, days: 540, sedi: 3, forn: 45, cli: 140, mov: 1800, fat: 260, glsm: 17, glsn: [40, 70], mezzi: 5, lyfm: 17, lyfn: [3, 5], am: 150, art: 220, mmov: 300, ddtn: 320, cb: 80, dest: 60, fimm: 80, inc: 3, pv: 40, srv: 30, pvc: 40, staff: 1 } };
   window.CDC_STRESS = { gen, ops, NAME: 'TEST ESTREMO', DEMO };
 })();
