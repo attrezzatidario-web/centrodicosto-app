@@ -195,6 +195,8 @@
       ['sigill', 'Sigill', 'Sigillanti, adesivi, stucchi e prodotti per l\'edilizia Sigill (241 prodotti, 596 codici).', ['241 prodotti, 596 codici'], ['sez.preventivi']],
       ['stellabianca', 'Stella Bianca', 'Punte multimateriali, foretti diamantati, portainserti e adattatori Stella Bianca (18 prodotti, 200 codici, con listino).', ['18 prodotti, 200 codici'], ['sez.preventivi']],
       ['doc', 'DOC', 'Pennarelli e kit per il ritocco del legno DOC (3 prodotti, 6 codici).', ['3 prodotti, 6 codici'], ['sez.preventivi']],
+      ['cieffeplast', 'Cieffeplast', 'Fascette, tappi, clip e minuteria tecnica in plastica Cieffeplast (39 prodotti, 417 codici).', ['39 prodotti, 417 codici'], ['sez.preventivi']],
+      ['mobilplastic', 'Mobil Plastic', 'Articoli in plastica per casa, pulizia e professionale Mobil Plastic (304 prodotti, 713 codici).', ['304 prodotti, 713 codici'], ['sez.preventivi']],
       ['vbelectric', 'VB Electric', 'Spine, prese, prolunghe, avvolgicavi e quadri industriali e da cantiere VB Electric (272 prodotti, 1.789 codici).', ['272 prodotti, 1.789 codici'], ['sez.preventivi']],
       ['saintgobain', 'Saint-Gobain', 'Siliconi Saint-Gobain: multiuso e neutro in cartuccia (2 prodotti, 4 codici).', ['2 prodotti'], ['sez.preventivi']],
       ['vinco', 'Vinco', 'Macchine e ricambi Vinco, Hyundai, Polar ed EcoFlow: generatori, motori, giardinaggio (618 prodotti, prezzi sui ricambi).', ['618 prodotti'], ['sez.preventivi']],
