@@ -196,6 +196,8 @@
       ['stellabianca', 'Stella Bianca', 'Punte multimateriali, foretti diamantati, portainserti e adattatori Stella Bianca (18 prodotti, 200 codici, con listino).', ['18 prodotti, 200 codici'], ['sez.preventivi']],
       ['doc', 'DOC', 'Pennarelli e kit per il ritocco del legno DOC (3 prodotti, 6 codici).', ['3 prodotti, 6 codici'], ['sez.preventivi']],
       ['cieffeplast', 'Cieffeplast', 'Fascette, tappi, clip e minuteria tecnica in plastica Cieffeplast (39 prodotti, 417 codici).', ['39 prodotti, 417 codici'], ['sez.preventivi']],
+      ['lotto', 'Lotto Works', 'Scarpe da lavoro Lotto Works, con prezzi al pubblico (18 modelli, 363 codici colore e taglia).', ['18 modelli, 363 codici'], ['sez.preventivi']],
+      ['metrica', 'Metrica', 'Strumenti di misura e tracciatura Metrica: metri, flessometri, livelle, calibri (576 prodotti, 1.464 codici).', ['576 prodotti, 1.464 codici'], ['sez.preventivi']],
       ['lyrecocat', 'Lyreco catalogo', 'Cancelleria, carta, toner e DPI Lyreco, dallo storico acquisti (108 prodotti, 188 codici).', ['108 prodotti, 188 codici'], ['sez.preventivi']],
       ['mobilplastic', 'Mobil Plastic', 'Articoli in plastica per casa, pulizia e professionale Mobil Plastic (304 prodotti, 713 codici).', ['304 prodotti, 713 codici'], ['sez.preventivi']],
       ['vbelectric', 'VB Electric', 'Spine, prese, prolunghe, avvolgicavi e quadri industriali e da cantiere VB Electric (272 prodotti, 1.789 codici).', ['272 prodotti, 1.789 codici'], ['sez.preventivi']],
