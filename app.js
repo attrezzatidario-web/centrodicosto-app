@@ -6054,10 +6054,15 @@
         row.ddt = [...lkExtra, ...LD.map(x => x.numero).filter(Boolean)].join(', ');
         LD.forEach(x => { if (normDoc(x.fattura) !== normDoc(row.numero) || fornKey(x.fornitore) !== fornKey(row.fornitore)) lo.push({ action: 'upsert', sheet: 'DocForn', row: { ...x, fattura: row.numero } }); });
         lk0.filter(x => !lkSel.has(x.id) && normDoc(x.fattura) === normDoc(r.numero)).forEach(x => lo.push({ action: 'upsert', sheet: 'DocForn', row: { ...x, fattura: '' } }));
-        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo, ...lo]); if (pre) pvLinkAcq(pre.pv, 'fa', row.id, row.numero);
+        // v214: righe di costo della fattura (con i DDT collegati i loro costi escono; i DDT scollegati tornano a contare)
+        const keep = !isNew && ['fornitore', 'numero', 'data', 'imponibile', 'imposta', 'centro'].every(k => String(r[k] ?? '') === String(row[k] ?? ''));
+        const co = costOps('fa', row, isNew ? null : r, { keep }), cx = [];
+        LD.forEach(x => cx.push(...costDel('ddt', x.fornitore, x.numero)));
+        lk0.filter(x => !lkSel.has(x.id)).forEach(x => cx.push(...costOps('ddt', x, null, {}).ops));
+        write([{ action: 'upsert', sheet: 'Fatture', row }, ...mo, ...lo, ...cx, ...co.ops]); if (pre) pvLinkAcq(pre.pv, 'fa', row.id, row.numero);
         if (nxt) setTimeout(() => { if (nxt === 'new') docFornForm(null, { tipo: 'ddt', fornitore: row.fornitore, fattura: row.numero }); else { const dx = GX.dfo().find(x => x.id === nxt); if (dx) docFornForm(dx); } }, 320);
-        faP = ''; toast((isNew ? 'Fattura salvata' : 'Fattura aggiornata') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '')); return true;
-      }, isNew ? null : () => { const mv = GX.mov().filter(m => m.doc === r.id); if (!confirm(`Eliminare questa fattura?${mv.length ? ' I prodotti caricati con la fattura escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'Fatture', id: r.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Fattura eliminata'); return true; });
+        faP = ''; toast((isNew ? 'Fattura salvata' : 'Fattura aggiornata') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '') + costMsg(co)); return true;
+      }, isNew ? null : () => { const mv = GX.mov().filter(m => m.doc === r.id), cr = costDel('fa', r.fornitore, r.numero); if (!confirm(`Eliminare questa fattura?${mv.length ? ' I prodotti caricati con la fattura escono dal magazzino.' : ''}${cr.length ? ' Escono anche le ' + cr.length + ' righe di costo create dalla fattura.' : ''}`)) return; write([{ action: 'delete', sheet: 'Fatture', id: r.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id })), ...cr]); toast('Fattura eliminata'); return true; });
     const AQ = modOn('magazzino') ? acqBox($('#fa-acq'), pre ? pre.lines : acqInit(r.id), pre ? 'controlla quantità e prezzi con la fattura: entrano in magazzino quando salvi (se la merce è già entrata con il DDT, togli le righe)' : 'solo la merce arrivata senza DDT: quella del DDT è già in magazzino') : null;
     // DDT collegati: spunta quelli del fornitore, registrane uno nuovo o aprilo
     const lk0 = r.fornitore ? ddtOfFa(r) : [], lkSel = new Set(lk0.map(x => x.id)), lkBox = $('#fa-lnk'), fIn = $('#sheet-form [name=fornitore]');
@@ -8682,6 +8687,37 @@
     ops.nNew = made.size;
     return ops;
   }
+  /* v214: RIGHE DI COSTO create da fatture e DDT dei fornitori (prima i documenti registrati non entravano nei costi per centro).
+     Nessuna colonna nuova: le righe in Movimenti si riconoscono da fornitore + numero documento + nota «Da fattura» / «Da DDT».
+     La fattura crea una riga per ogni riga letta e una riga «altre voci» che porta il totale all'imponibile; il DDT (solo se ha il totale
+     e non ha una fattura collegata) crea una riga unica. Con la fattura i costi del DDT collegato escono, così nulla si conta due volte. */
+  const COST_N = { fa: 'Da fattura', ddt: 'Da DDT' };
+  const costKey = (forn, n) => fornKey(forn) + '|' + normDoc(n);
+  const isCostRow = m => /^Da (fattura|DDT)/.test(String(m.note || ''));
+  const costRows = (k, forn, n) => normDoc(n) ? (db.movimenti || []).filter(m => String(m.note || '').startsWith(COST_N[k]) && costKey(m.fornitore, m.ndoc) === costKey(forn, n)) : [];
+  const costDel = (k, forn, n) => costRows(k, forn, n).map(m => ({ action: 'delete', sheet: 'Movimenti', id: m.id }));
+  function costOps(k, o, old, opt = {}) {
+    const res = { ops: [], n: 0, skip: '' }, nd = String(o.numero || '').trim();
+    if (opt.keep && old && costRows(k, o.fornitore, o.numero).length) { res.skip = 'invariato'; return res; }
+    const gone = [...(old && normDoc(old.numero) ? costRows(k, old.fornitore, old.numero) : []), ...costRows(k, o.fornitore, o.numero)];
+    [...new Set(gone.map(m => m.id))].forEach(id => res.ops.push({ action: 'delete', sheet: 'Movimenti', id }));
+    if (!nd) { res.skip = 'senza numero'; return res; }
+    if (k === 'ddt' && opt.hasFa) { res.skip = 'fattura'; return res; }
+    if ((db.movimenti || []).some(m => !isCostRow(m) && costKey(m.fornitore, m.ndoc) === costKey(o.fornitore, nd))) { res.skip = 'già registrato'; return res; }
+    let L = [], iva = .22;
+    if (k === 'fa') {
+      const imp = num(o.imponibile);
+      L = faRighe(o).filter(x => String(x.descrizione || '').trim()).map(x => { const q = num(x.quantita) || 1; return { d: String(x.descrizione).trim(), q, p: num(x.prezzo) || r2(num(x.totale) / q), c: String(x.codice || '') }; }).filter(x => x.p);
+      const df = r2(imp - r2(L.reduce((a, x) => a + x.q * x.p, 0)));
+      if (!L.length) { if (imp) L = [{ d: `Fattura n. ${nd}`, q: 1, p: imp, c: '', cat: o.categoria }]; }
+      else if (imp && Math.abs(df) >= .01) L.push({ d: 'Altre voci in fattura (trasporto, sconti, arrotondamenti)', q: 1, p: df, c: '', cat: 'Altro' });
+      if (imp > 0) { const x = num(o.imposta) / imp; iva = [0, .04, .1, .22].reduce((b, v) => Math.abs(v - x) < Math.abs(b - x) ? v : b, .22); }
+    } else if (num(o.totale) > 0) L = [{ d: `DDT n. ${nd}`, q: 1, p: r2(num(o.totale) / 1.22), c: '' }];
+    const now = new Date().toISOString(), soc = isMain() ? (o.centro === 'ATTREZZATI' ? 'Attrezzati' : LS.get('cdc_lastsoc', 'Soluzione Veicolare')) : '';
+    L.forEach(x => { res.n++; res.ops.push({ action: 'upsert', sheet: 'Movimenti', row: { id: uid() + Math.random().toString(36).slice(2, 4), data: o.data, ndoc: nd, codice: x.c || '', descrizione: x.d, um: 'PZ', quantita: x.q, prezzo: x.p, iva, centro: o.centro || '', societa: soc, categoria: x.cat || autoCat(x.d), fornitore: o.fornitore, note: COST_N[k] + (o.centro ? '' : ' · assegna il centro di costo'), creato: now } }); });
+    return res;
+  }
+  const costMsg = c => c.n ? ` · ${c.n} ${c.n === 1 ? 'riga' : 'righe'} di costo` : c.skip === 'già registrato' ? ' · costi già presenti in Acquisti, non duplicati' : '';
   const acqInit = doc => GX.mov().filter(m => m.doc === doc && m.tipo === 'carico').map(m => { const a = artOf(m.articolo); return { d: a ? artLbl(a) : '', q: num(m.quantita), c: m.costo === '' || m.costo == null ? '' : num(m.costo) }; }).filter(l => l.d);
   const acqMag = doc => { const m = GX.mov().find(x => x.doc === doc); return m ? magOf(m) : magLast(); };
   // elenco dei magazzini (Impostazioni del magazzino)
@@ -9880,10 +9916,13 @@
       const lo = [], nn = normDoc(o.numero), f0 = d0 ? faOfDdt(d0) : null;
       if (o.tipo === 'ddt' && lkF && o.numero && !ddtNums(lkF).map(normDoc).includes(nn)) lo.push({ action: 'upsert', sheet: 'Fatture', row: { ...lkF, ddt: [...ddtNums(lkF), o.numero].join(', ') } });
       if (f0 && (!lkF || f0.id !== lkF.id)) { const old0 = normDoc(d0.numero); lo.push({ action: 'upsert', sheet: 'Fatture', row: { ...f0, ddt: ddtNums(f0).filter(x => normDoc(x) !== old0).join(', ') } }); }
-      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo, ...lo]); if (pre) pvLinkAcq(pre.pv, 'df', o.id, o.numero); toast((n ? 'DDT registrato' : 'Documento aggiornato') + (lkF && o.tipo === 'ddt' ? ' · collegato alla fattura' : '') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : ''));
+      // v214: costo del DDT (solo se ha il totale e non ha una fattura collegata, che porta già i suoi costi)
+      const keepC = !!d0 && ['fornitore', 'numero', 'data', 'totale'].every(k => String(d0[k] ?? '') === String(o[k] ?? '')) && !!lkF === !!f0;
+      const co = o.tipo === 'ddt' ? costOps('ddt', o, d0, { hasFa: !!lkF, keep: keepC }) : { ops: d0 ? costDel('ddt', d0.fornitore, d0.numero) : [], n: 0, skip: '' };
+      write([{ action: 'upsert', sheet: 'DocForn', row: o }, ...mo, ...lo, ...co.ops]); if (pre) pvLinkAcq(pre.pv, 'df', o.id, o.numero); toast((n ? 'DDT registrato' : 'Documento aggiornato') + (lkF && o.tipo === 'ddt' ? ' · collegato alla fattura' : '') + (AL.length ? ` · ${AL.length} prodotti in magazzino${mo.nNew ? ` (${mo.nNew} nuovi)` : ''}` : '') + costMsg(co));
       if (nxt) { const nx = nxt, fid = lkF && lkF.id; setTimeout(() => { if (nx === 'new') formFat({ fornitore: o.fornitore, ddt: o.numero, data: today() }); else { const fx = faRows().find(x => x.id === fid); if (fx) formFat(fx); } }, 320); }
       return true;
-    }, n ? null : () => { const mv = GX.mov().filter(m => m.doc === d.id); if (!confirm(`Togliere questo documento dall'archivio? Il file resta nel tuo Google Drive.${mv.length ? ' I prodotti caricati con questo documento escono dal magazzino.' : ''}`)) return; write([{ action: 'delete', sheet: 'DocForn', id: d.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Documento tolto dall\'archivio'); return true; }, n ? 'Archivia' : 'Salva');
+    }, n ? null : () => { const mv = GX.mov().filter(m => m.doc === d.id), cr = costDel('ddt', d.fornitore, d.numero); if (!confirm(`Togliere questo documento dall'archivio? Il file resta nel tuo Google Drive.${mv.length ? ' I prodotti caricati con questo documento escono dal magazzino.' : ''}${cr.length ? ' Esce anche la riga di costo creata dal DDT.' : ''}`)) return; write([{ action: 'delete', sheet: 'DocForn', id: d.id }, ...mv.map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id })), ...cr]); toast('Documento tolto dall\'archivio'); return true; }, n ? 'Archivia' : 'Salva');
     const AQ = modOn('magazzino') ? acqBox($('#df-acq'), pre ? pre.lines : acqInit(d.id), pre ? 'controlla quantità e prezzi con il documento arrivato: entrano in magazzino quando salvi' : '') : null;
     $('#sheet-form').classList.add('wide');
     // fattura collegata: scegli tra quelle del fornitore, registrala adesso o aprila
