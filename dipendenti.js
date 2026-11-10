@@ -55,6 +55,17 @@
   const active = () => DIP().filter(d => d.stato !== 'cessato');
   const workday = s => { const g = parseD(s).getDay(); return set().giorni >= 6 ? g !== 0 : g !== 0 && g !== 6; };
   const dailyMin = d => (N(d.ore) || 40) / (set().giorni >= 6 ? 6 : 5) * 60;
+  /* giornata standard: orari modificabili (Impostazioni › Giornata standard, o dal modulo timbrature) */
+  const STD0 = { in: '08:30', pausa: '12:30', rientro: '13:30', out: '17:30' };
+  const stdDay = () => Object.assign({}, STD0, set().std || {});
+  const stdMin = v => { const m = /^(\d{1,2}):(\d{2})/.exec(String(v || '')); return m ? +m[1] * 60 + +m[2] : null; };
+  const hhmm = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  function stdPunches(d) {
+    const S = stdDay(), a = stdMin(S.in) ?? stdMin(STD0.in), h = Math.round(dailyMin(d)), p = stdMin(S.pausa), r = stdMin(S.rientro), pl = p != null && r != null && r > p ? r - p : 0;
+    let o = stdMin(S.out) ?? a + h + pl; const L = [['in', a]];
+    if (pl && h > 300) { L.push(['pausa', p], ['rientro', r]); if (Math.abs(o - a - pl - h) > 1) o = a + h + pl; } else o = a + h; // chi lavora meno ore (part-time) esce prima, senza pausa se la giornata è breve
+    L.push(['out', o]); return L.map(([tipo, m]) => ({ tipo, ora: hhmm(m), nota: '' }));
+  }
   // v129: indici ricostruiti una volta per disegno — timbrature per dipendente e giorno, assenze per dipendente, ore già calcolate
   let IX = null, AX = null, WK = new Map();
   const reIndex = () => { IX = null; AX = null; WK = new Map(); };
@@ -308,7 +319,10 @@
     const row = (p, i) => `<div class="dp-fx" data-i="${i}"><select name="t${i}">${Object.entries(TIPI).map(([k, l]) => `<option value="${k}"${p.tipo === k ? ' selected' : ''}>${l}</option>`).join('')}</select><input name="o${i}" type="time" step="60" value="${esc(String(p.ora || '').slice(0, 5))}" required><input name="n${i}" value="${esc(p.nota || '')}" placeholder="Nota (facoltativa)"><button type="button" class="pv-lb d" data-fxdel="${i}" title="Togli">${svg('x')}</button>${p.fonte && p.fonte !== 'manuale' ? '<small>dall\'app</small>' : ''}</div>`;
     const draw = () => { $('#dp-fxl').innerHTML = L.length ? L.map(row).join('') : '<div class="empty">Nessuna timbratura</div>'; };
     C.openSheet(`Timbrature · ${nameOf(d)}`, `<p class="muted small" style="margin:0 0 12px">${esc(dLong(day).replace(/^./, c => c.toUpperCase()))}. Le timbrature corrette restano segnate come inserite a mano.</p><div id="dp-fxl" class="dp-fxl"></div>
-      <div class="dp-fxa"><button type="button" class="btn sm" id="dp-fxadd">${svg('plus')}Aggiungi timbratura</button><button type="button" class="btn sm ghost" id="dp-fxday">Giornata standard</button></div>`, fd => {
+      <div class="dp-fxa"><button type="button" class="btn sm" id="dp-fxadd">${svg('plus')}Aggiungi timbratura</button><button type="button" class="btn sm ghost" id="dp-fxday" title="${esc(Object.values(stdDay()).join(' · '))}">Giornata standard</button><button type="button" class="btn sm ghost" id="dp-fxstd">Cambia orari</button></div>
+      <div id="dp-stdbox" hidden style="margin-top:12px"><p class="muted small" style="margin:0 0 8px">Gli orari della giornata standard, validi per tutti. Lascia vuota la pausa se non c'è.</p>
+        <div class="f-row"><label class="f"><span>Entrata</span><input type="time" id="sd-in" value="${esc(stdDay().in)}"></label><label class="f"><span>Inizio pausa</span><input type="time" id="sd-pa" value="${esc(stdDay().pausa)}"></label><label class="f"><span>Fine pausa</span><input type="time" id="sd-ri" value="${esc(stdDay().rientro)}"></label><label class="f"><span>Uscita</span><input type="time" id="sd-out" value="${esc(stdDay().out)}"></label></div>
+        <button type="button" class="btn sm primary" id="sd-save">Salva e applica</button></div>`, fd => {
       const nowS = new Date().toISOString(), keep = new Set(), ops = [];
       L.forEach((p, i) => { const o = String(fd.get('o' + i) || '').trim(); if (!o) return; const tp = String(fd.get('t' + i) || 'in'), nt = String(fd.get('n' + i) || '').trim(), ora = o.length === 5 ? o + ':00' : o; const ch = !p.id || ora !== String(p.ora) || tp !== p.tipo || nt !== (p.nota || ''); const id0 = p.id || 'pz' + C.uid(); keep.add(id0); if (ch) ops.push({ action: 'upsert', sheet: 'Presenze', row: { id: id0, dip: d.id, data: day, ora, tipo: tp, sede: p.sede || d.sede || '', fonte: 'manuale', luogo: p.luogo || '', disp: p.disp || '', nota: nt, chi: (C.me() || {}).email || '', creato: p.creato || nowS } }); });
       punches(id, day).forEach(p => { if (!keep.has(p.id)) ops.push({ action: 'delete', sheet: 'Presenze', id: p.id }); });
@@ -318,7 +332,15 @@
     const sync = () => { const f = $('#sheet-form'); L.forEach((p, i) => { if (!f.elements['o' + i]) return; p.tipo = f.elements['t' + i].value; p.ora = f.elements['o' + i].value; p.nota = f.elements['n' + i].value; }); };
     draw();
     $('#dp-fxadd').onclick = () => { sync(); const last = L[L.length - 1], nx = !last ? 'in' : last.tipo === 'in' || last.tipo === 'rientro' ? 'out' : last.tipo === 'pausa' ? 'rientro' : 'in'; L.push({ tipo: nx, ora: '', nota: '' }); draw(); const ins = $$('#dp-fxl input[type=time]'); if (ins.length) ins[ins.length - 1].focus(); };
-    $('#dp-fxday').onclick = () => { sync(); const h = dailyMin(d), st = 8 * 60 + 30, half = Math.round(h / 2); L.length = 0; [['in', st], ['pausa', st + half], ['rientro', st + half + 60], ['out', st + h + 60]].forEach(([t, m]) => L.push({ tipo: t, ora: `${pad(Math.floor(m / 60))}:${pad(m % 60)}`, nota: '' })); draw(); };
+    $('#dp-fxday').onclick = () => { sync(); L.length = 0; stdPunches(d).forEach(x => L.push(x)); draw(); };
+    $('#dp-fxstd').onclick = () => { const b = $('#dp-stdbox'); b.hidden = !b.hidden; };
+    $('#sd-save').onclick = () => {
+      const v = { in: $('#sd-in').value, pausa: $('#sd-pa').value, rientro: $('#sd-ri').value, out: $('#sd-out').value };
+      if (!v.in || !v.out || stdMin(v.out) <= stdMin(v.in)) return C.toast('Controlla entrata e uscita');
+      if ((v.pausa || v.rientro) && !(v.pausa && v.rientro && stdMin(v.rientro) > stdMin(v.pausa) && stdMin(v.pausa) > stdMin(v.in) && stdMin(v.rientro) < stdMin(v.out))) return C.toast('Controlla gli orari della pausa');
+      if (!v.pausa) { v.pausa = ''; v.rientro = ''; }
+      C.setConfig('pzSet', { ...set(), std: v }); C.toast('Giornata standard salvata'); $('#dp-stdbox').hidden = true; $('#dp-fxday').click();
+    };
     $('#dp-fxl').onclick = e => { const b = e.target.closest('[data-fxdel]'); if (!b) return; sync(); L.splice(+b.dataset.fxdel, 1); draw(); };
   }
   function assForm(a0, dipId) {
