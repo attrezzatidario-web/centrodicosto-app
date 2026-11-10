@@ -9536,6 +9536,45 @@
       return [...M.values()].sort((a, b) => a.m.localeCompare(b.m)).map(o => ({ ...o, inc: r2(o.inc), fv: r2(o.fv), ric: r2(o.inc + o.fv), cost: r2(o.cost), ut: r2(o.inc + o.fv - o.cost) }));
     } finally { ivaOn = keep; }
   }
+  /* grafico «Ricavi, costi e utile»: disegnato alla larghezza reale (niente deformazioni), con assi, griglia e dettaglio al passaggio */
+  const plWidth = () => { const h = $('#v-home'), w = h ? h.clientWidth - 52 : 0; return Math.max(300, Math.min(1400, w || 760)); };
+  function plNice(max, min) {
+    const raw = (max - min) / 4 || 1, pw = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / pw, st = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * pw;
+    const lo = Math.floor(min / st + 1e-9) * st, hi = Math.ceil(max / st - 1e-9) * st, t = [];
+    for (let v = lo; v <= hi + st / 2; v += st) t.push(Math.round(v * 100) / 100);
+    return t;
+  }
+  const plK = v => { const a = Math.abs(v), g = v < 0 ? '−' : '', d = x => fmtNum(x, Number.isInteger(Math.round(x * 10) / 10) ? 0 : 1);
+    return g + (a >= 1e6 ? d(a / 1e6) + ' M' : a >= 1e3 ? d(a / 1e3) + ' k' : fmtNum(a, 0)); };
+  function plChart(CH, W) {
+    const small = W < 520, H = small ? 230 : 300, ml = small ? 42 : 56, mr = 8, mt = 14, mb = 28, pw = W - ml - mr, ph = H - mt - mb;
+    const T = plNice(Math.max(1, ...CH.map(x => Math.max(x.ric, x.cost, x.ut))), Math.min(0, ...CH.map(x => x.ut))), a0 = T[0], a1 = T[T.length - 1];
+    const y = v => mt + (a1 - v) / (a1 - a0) * ph, y0 = y(0), bw = pw / Math.max(CH.length, 1), gw = Math.max(4, Math.min(24, bw * .3)), cur = today().slice(0, 7);
+    const bar = (x, v, cls) => { const t = y(v), h = y0 - t; if (h < .5) return ''; const r = Math.min(4, gw / 2, h);
+      return `<path class="${cls}" d="M${x.toFixed(1)} ${y0.toFixed(1)} V${(t + r).toFixed(1)} Q${x.toFixed(1)} ${t.toFixed(1)} ${(x + r).toFixed(1)} ${t.toFixed(1)} H${(x + gw - r).toFixed(1)} Q${(x + gw).toFixed(1)} ${t.toFixed(1)} ${(x + gw).toFixed(1)} ${(t + r).toFixed(1)} V${y0.toFixed(1)} Z"/>`; };
+    const pts = CH.map((x, i) => [ml + i * bw + bw / 2, y(x.ut)]);
+    return `<svg class="pl-svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Ricavi, costi e utile mese per mese" data-ml="${ml}" data-bw="${bw}">
+      ${T.map(v => `<line class="pl-gl${v === 0 ? ' z' : ''}" x1="${ml}" x2="${W - mr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text class="pl-yt" x="${ml - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${plK(v)}</text>`).join('')}
+      ${CH.map((x, i) => x.m === ovP ? `<rect class="pl-band" x="${(ml + i * bw + 2).toFixed(1)}" y="${mt}" width="${(bw - 4).toFixed(1)}" height="${ph}" rx="8"/>` : '').join('')}
+      ${CH.map((x, i) => { const cx = ml + i * bw + bw / 2; return `<g class="pl-g${x.m === cur ? ' pl-part' : ''}" style="--d:${i * 40}ms">${bar(cx - gw - 1.5, x.ric, 'pl-r')}${bar(cx + 1.5, x.cost, 'pl-c')}</g>`; }).join('')}
+      <path class="pl-u" pathLength="1" d="${pts.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ')}"/>
+      ${pts.map((q, i) => `<circle class="pl-p${CH[i].ut < 0 ? ' neg' : ''}" cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4"/>`).join('')}
+      ${CH.map((x, i) => `<text class="pl-xt${x.m === ovP ? ' on' : ''}" x="${(ml + i * bw + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${esc(MESI[Number(x.m.slice(5)) - 1].slice(0, 3))}${x.m.slice(5) === '01' && bw >= 52 ? ` '${x.m.slice(2, 4)}` : ''}</text>`).join('')}
+      ${CH.map((x, i) => `<rect class="pl-hit" data-ovm="${x.m}" data-i="${i}" x="${(ml + i * bw).toFixed(1)}" y="${mt}" width="${bw.toFixed(1)}" height="${H - mt}"/>`).join('')}
+    </svg>`;
+  }
+  function plTip(ch, CH) {
+    const svg = $('.pl-svg', ch), tip = $('.pl-tip', ch); if (!svg || !tip) return;
+    const ml = +svg.dataset.ml, bw = +svg.dataset.bw, cur = today().slice(0, 7);
+    ch.onmouseleave = () => { tip.hidden = true; };
+    ch.onmousemove = ch.onpointerdown = e => {
+      const h = e.target.closest && e.target.closest('[data-i]'); if (!h) { tip.hidden = true; return; }
+      const x = CH[+h.dataset.i], mg = x.ric ? x.ut / x.ric * 100 : 0;
+      tip.innerHTML = `<b>${esc(mLabel(x.m))}</b>${x.m === cur ? '<small>mese in corso</small>' : ''}<div><i class="r"></i>Ricavi<span>${esc(eur0(x.ric))}</span></div><div><i class="c"></i>Costi<span>${esc(eur0(x.cost))}</span></div><div class="u${x.ut < 0 ? ' neg' : ''}"><i class="u"></i>Utile<span>${esc(eur0(x.ut))}</span></div><small>margine ${fmtNum(mg, 1)}%</small>`;
+      tip.hidden = false;
+      const c = ml + (+h.dataset.i + .5) * bw, tw = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(svg.clientWidth - tw, c - tw / 2)) + 'px';
+    };
+  }
   function ovPL() {
     if (!modOn('incassi') && !modOn('vendite')) return '';
     const L = plModel(), hasR = L.some(x => x.ric > 0);
@@ -9544,16 +9583,7 @@
     const S = k => r2(sel.reduce((s, x) => s + x[k], 0)), R = S('ric'), C = S('cost'), U = r2(R - C), mg = R ? U / R * 100 : 0;
     const dl = (a, b, good) => { if (!b) return ''; const p = (a / b - 1) * 100; if (!isFinite(p)) return ''; const up = p >= 0; return `<em class="pl-d ${up === good ? 'ok' : 'ko'}">${up ? '▲' : '▼'} ${fmtNum(Math.abs(p), 0)}%</em>`; };
     const per = ovP ? mLabel(ovP) : sel.length ? (sel.length > 1 ? `${mLabel(sel[0].m)} – ${mLabel(sel[sel.length - 1].m)}` : mLabel(sel[0].m)) : '';
-    const CH = L.slice(-12), mx = Math.max(1, ...CH.map(x => Math.max(x.ric, x.cost))), mn = Math.min(0, ...CH.map(x => x.ut));
-    const W = 600, H = 170, top = 14, base = H - 26, span = base - top, sc = v => (v / (mx - mn)) * span, zero = base + sc(mn);
-    const bw = W / Math.max(CH.length, 1), gw = Math.min(16, bw * .28);
-    const pts = CH.map((x, i) => [i * bw + bw / 2, zero - sc(x.ut)]);
-    const chart = `<svg class="pl-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-      <line x1="0" x2="${W}" y1="${zero}" y2="${zero}" class="pl-0"/>
-      ${CH.map((x, i) => { const cx = i * bw + bw / 2; return `<g class="pl-g${x.m === ovP ? ' on' : ''}" style="--d:${i * 40}ms"><rect class="pl-r" x="${cx - gw - 1.5}" y="${zero - sc(x.ric)}" width="${gw}" height="${sc(x.ric)}" rx="3"/><rect class="pl-c" x="${cx + 1.5}" y="${zero - sc(x.cost)}" width="${gw}" height="${sc(x.cost)}" rx="3"/></g>`; }).join('')}
-      <path class="pl-u" pathLength="1" d="${pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ')}"/>
-      ${pts.map((p, i) => `<circle class="pl-p${CH[i].ut < 0 ? ' neg' : ''}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.6"/>`).join('')}
-    </svg><div class="pl-x">${CH.map(x => `<span class="${x.m === ovP ? 'on' : ''}" data-ovm="${x.m}" title="${esc(mLabel(x.m))}: ricavi ${esc(eur0(x.ric))} · costi ${esc(eur0(x.cost))} · utile ${esc(eur0(x.ut))}">${esc(MESI[Number(x.m.slice(5)) - 1].slice(0, 3))}</span>`).join('')}</div>`;
+    const CH = L.slice(-12), chart = plChart(CH, plWidth());
     // per sede: incassi della sede contro gli acquisti dello stesso centro
     const selM = new Set(sel.map(x => x.m)), inP = r => ovP ? String(r.data).slice(0, 7) === ovP : selM.has(String(r.data).slice(0, 7));
     const SD = new Map(), up = s => String(s || '').trim().toUpperCase();
@@ -9568,7 +9598,7 @@
         <div class="pl-kc"><span>Costi</span><b data-plk="1">0 €</b><small>tutte le aree di spesa ${prev ? dl(C, prev.cost, false) : ''}</small></div>
         <div class="pl-ku ${U < 0 ? 'neg' : ''}"><span>Utile</span><b data-plk="2">0 €</b><small>margine ${fmtNum(mg, 1)}% ${prev ? dl(U, prev.ut, true) : ''}</small></div>
       </div>
-      <div class="pl-ch">${chart}</div>
+      <div class="pl-ch" data-plw="${plWidth()}">${chart}<div class="pl-tip" hidden></div></div>
       ${sedi.length > 1 ? `<div class="pl-sd"><div class="pl-sdh"><b>${esc(sedeT)}</b><span>Ricavi</span><span>Acquisti</span><span>Utile</span></div>${sedi.map(x => `<div class="pl-sdr"><b>${esc(x.k)}</b><span>${eur0(x.r)}</span><span>${eur0(x.c)}</span><span class="${x.u < 0 ? 'neg' : 'pos'}">${eur0(x.u)}</span></div>`).join('')}</div>` : ''}
     </div>`;
   }
@@ -9576,6 +9606,8 @@
     const L = plModel(), sel = ovP ? L.filter(x => x.m === ovP) : L.slice(-12), S = k => sel.reduce((s, x) => s + x[k], 0);
     const V = [S('ric'), S('cost'), S('ric') - S('cost')];
     $$('[data-plk]', body).forEach(el => { el._v = 0; countTo(el, V[+el.dataset.plk], eur0); });
+    const ch = $('.pl-ch', body); if (ch) { const CH = L.slice(-12), W = plWidth(); if (Math.abs(W - +ch.dataset.plw) > 12) { ch.dataset.plw = W; ch.classList.add('pl-still'); const t = $('.pl-tip', ch); ch.innerHTML = plChart(CH, W); ch.appendChild(t); } plTip(ch, CH);
+      if (!ch._rs) { ch._rs = 1; let tm; addEventListener('resize', () => { clearTimeout(tm); tm = setTimeout(() => { const c = $('.pl-ch'); if (!c) return; const W2 = plWidth(); if (Math.abs(W2 - +c.dataset.plw) <= 12) return; const L2 = plModel().slice(-12), t2 = $('.pl-tip', c); c.dataset.plw = W2; c.classList.add('pl-still'); c.innerHTML = plChart(L2, W2); c.appendChild(t2); plTip(c, L2); }, 150); }); } }
   }
 
   /* =========================================================
