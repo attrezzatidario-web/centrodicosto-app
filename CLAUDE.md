@@ -39,3 +39,7 @@ Storage · Utils · Config · Sync (pull/applyOps) · settore e moduli · State 
 - Mai prezzi d'acquisto nel repo pubblico
 - Non deve risultare da nessuna parte dove lavora (la parola "attrezzati" va bene)
 - Code.gs: consegnarlo solo se cambia; Code.gs non deve contenere codice degli agenti
+
+## Pubblicazione (GitHub Pages)
+- NON togliere il file `.nojekyll`: senza, Jekyll elabora ~190 MB e la pubblicazione va in timeout (10/11/2026). Con `.nojekyll` impiega ~2 minuti.
+- Se tornasse lenta: spostare cat-*, dw-/st-/us-*, img/ in un repo dati separato (repo vuoto già creato: attrezzatidario-web/centrodicosto-dati).
