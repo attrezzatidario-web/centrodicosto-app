@@ -228,7 +228,7 @@
   }
 
   function view() {
-    const T = [['panoramica', 'Panoramica'], ['spese', 'Spese'], ['carte', 'Carte'], ['contanti', 'Contanti'], ['estratto', 'Estratto conto']], pend = SP().filter(s => s.stato === 'inviata').length;
+    const T = [['panoramica', 'Panoramica'], ['spese', 'Spese'], ['carte', 'Carte'], ['contanti', 'Contanti'], ['estratto', 'Estratto<span class="ns-lx"> conto</span>']], pend = SP().filter(s => s.stato === 'inviata').length;
     const body = { panoramica: tabPano, spese: tabSpese, carte: tabCarte, contanti: tabContanti, estratto: tabEstratto }[S.tab]();
     const act = canW() ? (S.tab === 'carte' ? '<button type="button" class="btn sm primary" data-ns="carta:new">+ Carta</button>' : S.tab === 'contanti' ? '<button type="button" class="btn sm primary" data-ns="fondo:new">+ Contanti</button>' : S.tab === 'estratto' ? '' : '<button type="button" class="btn sm primary" data-ns="spesa:new">+ Spesa</button>') : '';
     return `<div class="ns-bar"><div class="seg ns-tabs" role="tablist">${T.map(([k, l]) => `<button type="button" role="tab" data-ns="tab:${k}" class="${S.tab === k ? 'on' : ''}">${l}${k === 'spese' && pend ? `<em>${pend}</em>` : ''}</button>`).join('')}</div>
@@ -241,8 +241,6 @@
     C.sub('Carte aziendali, contanti e spese dei dipendenti');
     const keep = document.activeElement && document.activeElement.id === 'ns-q' ? document.activeElement.selectionStart : null;
     el.innerHTML = view();
-    el.querySelectorAll('[data-nsc]').forEach(x => C.countTo(x, Number(x.dataset.nsc), eur));
-    el.querySelectorAll('[data-nsn]').forEach(x => C.countTo(x, Number(x.dataset.nsn), v => String(Math.round(v))));
     S.fresh = false;
     if (keep != null) { const q = el.querySelector('#ns-q'); if (q) { q.focus(); try { q.setSelectionRange(keep, keep); } catch {} } }
   }

@@ -804,7 +804,7 @@
   async function renderNs() {
     const el = $('#ns-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.37') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare carte, contanti e note spese serve lo script versione cdc-5.37 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=227'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
+    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=234'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
     if (!window.CDC_NS) return; // un altro caricamento è già in corso
     window.CDC_NS.render(el, {
       db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, centri, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,
