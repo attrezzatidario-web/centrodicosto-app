@@ -197,6 +197,7 @@
       ['doc', 'DOC', 'Pennarelli e kit per il ritocco del legno DOC (3 prodotti, 6 codici).', ['3 prodotti, 6 codici'], ['sez.preventivi']],
       ['cieffeplast', 'Cieffeplast', 'Fascette, tappi, clip e minuteria tecnica in plastica Cieffeplast (39 prodotti, 417 codici).', ['39 prodotti, 417 codici'], ['sez.preventivi']],
       ['lotto', 'Lotto Works', 'Scarpe da lavoro Lotto Works, con prezzi al pubblico (18 modelli, 363 codici colore e taglia).', ['18 modelli, 363 codici'], ['sez.preventivi']],
+      ['zimaro', 'Zimaro Pro', 'Calzature antinfortunistiche Zimaro Pro: scarpe, stivali, anfibi (71 modelli, classi S1–S3/O2–O3).', ['71 modelli'], ['sez.preventivi']],
       ['metrica', 'Metrica', 'Strumenti di misura e tracciatura Metrica: metri, flessometri, livelle, calibri (576 prodotti, 1.464 codici).', ['576 prodotti, 1.464 codici'], ['sez.preventivi']],
       ['lyrecocat', 'Lyreco catalogo', 'Cancelleria, carta, toner e DPI Lyreco, dallo storico acquisti (108 prodotti, 188 codici).', ['108 prodotti, 188 codici'], ['sez.preventivi']],
       ['mobilplastic', 'Mobil Plastic', 'Articoli in plastica per casa, pulizia e professionale Mobil Plastic (304 prodotti, 713 codici).', ['304 prodotti, 713 codici'], ['sez.preventivi']],
