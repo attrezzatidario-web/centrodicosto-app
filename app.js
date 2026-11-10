@@ -804,7 +804,7 @@
   async function renderNs() {
     const el = $('#ns-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.37') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare carte, contanti e note spese serve lo script versione cdc-5.37 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=236'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
+    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=239'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
     if (!window.CDC_NS) return; // un altro caricamento è già in corso
     window.CDC_NS.render(el, {
       db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, centri, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,
@@ -3552,6 +3552,15 @@
     return out.sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
   }
   const anaForn = () => FOR().map(f => ({ k: 'f', id: f.id, nome: f.nome, ref: f.referente || '', email: f.email || '', tel: f.tel || '', ind: anaInd(f.indirizzo, f.cap, f.citta, f.prov) })).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
+  /* preventivo a fornitore: suggerisce in automatico tutti i fornitori noti (anagrafica, cataloghi, fatture, documenti); resta libero scriverne altri a mano */
+  const pvFornOpts = () => {
+    const seen = new Set(), out = [], add = n => { n = String(n || '').trim(); const k = pvCliKey(n); if (!k || seen.has(k)) return; seen.add(k); out.push({ nome: n }); };
+    anaForn().forEach(x => add(x.nome));
+    Object.keys(PV_SUP).filter(k => PV_SUP[k].file && k !== 'mag' && k !== 'srv').forEach(k => add(PV_SUP[k].n));
+    try { faRows().forEach(x => add(x.fornitore)); } catch (e) {}
+    try { GX.dfo().forEach(x => add(x.fornitore)); } catch (e) {}
+    return out.sort((x, y) => x.nome.localeCompare(y.nome, 'it'));
+  };
   const anaFind = (dest, nome) => { const k = pvCliKey(nome); if (!k) return null; return dest === 'forn' ? (anaForn().find(x => pvCliKey(x.nome) === k) || (() => { const f = FOR().find(z => fMatch(z, nome)); return f ? anaForn().find(x => x.id === f.id) : null; })()) : anaCli().find(x => pvCliKey(x.nome) === k) || null; };
   const pvOfCli = nome => { const k = pvCliKey(nome); return k ? pvList().filter(p => pvDest(p) === 'cli' && pvCliKey(p.cliente && p.cliente.nome) === k) : []; };
   const pvOfForn = f => pvList().filter(p => pvDest(p) === 'forn' && p.cliente && p.cliente.nome && fMatch(f, p.cliente.nome));
@@ -4564,7 +4573,7 @@
             <div class="pv-ehb"><button type="button" class="btn sm" id="pv-work" title="Scheda di lavoro per la produzione (senza prezzi)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9zM7 5.5H5.5A1.5 1.5 0 0 0 4 7v12.5A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5H17M8 12l2 2 4-4M8 17h8"/></svg><span>Scheda lavoro</span></button><button type="button" class="btn sm tr-pdfbtn" id="pv-pdf"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 11v6M9.5 14.5 12 17l2.5-2.5"/></svg><span>PDF</span></button><button type="button" class="btn sm primary" id="pv-save">Salva</button></div></div>
           ${(() => { const dst = pvDest(p), A = cl.nome ? anaFind(dst, cl.nome) : null; return `<div class="pv-dest"><span>Intestato a</span><div class="seg pv-dseg" role="radiogroup" aria-label="Destinatario"><button type="button" role="radio" data-pvdest="cli" class="${dst === 'cli' ? 'on' : ''}" aria-checked="${dst === 'cli'}">Cliente</button><button type="button" role="radio" data-pvdest="forn" class="${dst === 'forn' ? 'on' : ''}" aria-checked="${dst === 'forn'}">Fornitore</button></div><input type="hidden" data-pvf="dest" value="${dst}">${A ? `<button type="button" class="btn sm pv-ana" data-pvana="${esc(dst + '|' + A.k + '|' + A.id)}">${GIC_CARD}Scheda ${dst === 'forn' ? 'fornitore' : 'cliente'}</button>` : cl.nome ? `<small class="muted">Nuovo: lo aggiungo all'anagrafica ${dst === 'forn' ? 'Fornitori' : 'Clienti'} quando salvi</small>` : ''}</div>`; })()}
           <div class="pv-ef">
-            <label class="f"><span>${pvDest(p) === 'forn' ? 'Fornitore' : 'Cliente'} / ragione sociale</span><input data-pvf="cliente.nome" list="pv-cli-dl" autocomplete="off" value="${esc(cl.nome || '')}" placeholder="${pvDest(p) === 'forn' ? 'Scegli o scrivi un fornitore' : 'Scegli o scrivi un cliente'}"><datalist id="pv-cli-dl">${(pvDest(p) === 'forn' ? anaForn() : anaCli()).map(c => `<option value="${esc(c.nome)}">`).join('')}</datalist></label>
+            <label class="f"><span>${pvDest(p) === 'forn' ? 'Fornitore' : 'Cliente'} / ragione sociale</span><input data-pvf="cliente.nome" list="pv-cli-dl" autocomplete="off" value="${esc(cl.nome || '')}" placeholder="${pvDest(p) === 'forn' ? 'Scegli o scrivi un fornitore' : 'Scegli o scrivi un cliente'}"><datalist id="pv-cli-dl">${(pvDest(p) === 'forn' ? pvFornOpts() : anaCli()).map(c => `<option value="${esc(c.nome)}">`).join('')}</datalist></label>
             <label class="f"><span>Referente</span><input data-pvf="cliente.ref" value="${esc(cl.ref || '')}"></label>
             <label class="f"><span>Email</span><input data-pvf="cliente.email" type="email" value="${esc(cl.email || '')}"></label>
             <label class="f"><span>Telefono</span><input data-pvf="cliente.tel" value="${esc(cl.tel || '')}"></label>

@@ -30,6 +30,9 @@
   const colOf = d => (d && d.colore) || COL[[...String(d ? d.id : 'x')].reduce((s, c) => s + c.charCodeAt(0), 0) % COL.length];
   const av = d => `<span class="ns-av" style="--c:${colOf(d)}">${esc(ini(d))}</span>`;
   const cardOf = id => CARTE().find(c => String(c.id) === String(id));
+  /* una carta può essere assegnata a più persone: «dip» contiene gli id separati da virgola */
+  const dipIds = c => c ? String(c.dip || '').split(',').map(x => x.trim()).filter(Boolean) : [];
+  const cardWho = c => dipIds(c).map(i => nameOf(dipOf(i))).join(', ');
   const cardLbl = c => c ? `${c.nome || 'Carta'} ••${c.ultime4 || ''}` : 'Carta';
   const canW = () => C.secPerm('notespese') === 'w';
   const CAT_DEF = ['Carburante', 'Pasti e trasferte', 'Materiale e attrezzatura', 'Pedaggi e parcheggi', 'Cancelleria e ufficio', 'Ricambi e manutenzione', 'Abbigliamento da lavoro', 'Altro'];
@@ -171,11 +174,11 @@
   }
 
   function cardVis(c, i) {
-    const d = dipOf(c.dip), pl = N(c.plafond), u = cardMon(c.id, today().slice(0, 7)), p = pl ? u / pl : 0, bl = c.stato === 'bloccata';
+    const who = cardWho(c), pl = N(c.plafond), u = cardMon(c.id, today().slice(0, 7)), p = pl ? u / pl : 0, bl = c.stato === 'bloccata';
     return `<div class="ns-cw" style="--i:${i}"><button type="button" class="ns-cc ${ccls(c.colore)}${bl ? ' blk' : ''}"${cst(c.colore)} data-ns="carta:${esc(c.id)}">
       <span class="ns-cc-top"><span class="ns-cc-nm">${bankBadge(c.banca)}<b>${esc(c.nome || 'Carta aziendale')}</b></span><i class="ns-chip-ic"></i></span>
       <span class="ns-cc-num">•••• •••• •••• ${esc(c.ultime4 || '0000')}</span>
-      <span class="ns-cc-bot"><span><small>${esc(({ credito: 'Credito', debito: 'Debito', prepagata: 'Prepagata' })[c.tipo] || 'Carta')}${c.banca ? ' · ' + esc(c.banca) : ''}</small><b>${d ? esc(nameOf(d)) : 'Non assegnata'}</b></span>${pl ? `<span class="ns-cc-r">${ring(p, p > 1 ? 'over' : '')}<em>${Math.round(p * 100)}%</em></span>` : ''}</span>${bl ? '<span class="ns-cc-bk">Bloccata</span>' : ''}</button>
+      <span class="ns-cc-bot"><span><small>${esc(({ credito: 'Credito', debito: 'Debito', prepagata: 'Prepagata' })[c.tipo] || 'Carta')}${c.banca ? ' · ' + esc(c.banca) : ''}</small><b>${who ? esc(who) : 'Non assegnata'}</b></span>${pl ? `<span class="ns-cc-r">${ring(p, p > 1 ? 'over' : '')}<em>${Math.round(p * 100)}%</em></span>` : ''}</span>${bl ? '<span class="ns-cc-bk">Bloccata</span>' : ''}</button>
       <div class="ns-cm"><span>Questo mese <b>${eur(u)}</b>${pl ? ` su ${eur(pl)}` : ''}</span>${pl ? `<div class="ns-br-b"><i class="${p > 1 ? 'over' : ''}" style="--w:${Math.min(100, p * 100).toFixed(1)}%"></i></div>` : ''}</div></div>`;
   }
   function tabCarte() {
@@ -214,7 +217,7 @@
       const ed = canW() ? `<button type="button" class="ns-ib" data-ns="eedit:${esc(e.id)}" title="Dati per il commercialista">${svg('doc')}</button>` : '', act = (!canW() ? '' : s ? `<button type="button" class="btn sm ghost" data-ns="unlink:${esc(e.id)}">Scollega</button>` : sg ? `<button type="button" class="btn sm primary" data-ns="conf:${esc(e.id)}:${esc(sg.s.id)}">Conferma</button><button type="button" class="btn sm ghost" data-ns="pick:${esc(e.id)}">Altra…</button>` : ign ? `<button type="button" class="btn sm ghost" data-ns="unign:${esc(e.id)}">Riattiva</button>` : cr ? '' : `<button type="button" class="btn sm" data-ns="pick:${esc(e.id)}">Abbina</button><button type="button" class="ns-ib" data-ns="ign:${esc(e.id)}" title="Ignora (commissione, canone…)">${svg('x')}</button>`) + ed;
       return `<div class="ns-es${s ? ' m' : ''}${ign ? ' ig' : ''}" style="--i:${Math.min(i, 16)}"><span class="ns-es-d">${esc(C.dIt(e.data))}</span><div class="ns-sp-m"><b>${esc(e.descrizione || '—')}</b>${det}</div><b class="ns-am${cr ? ' pos' : ''}">${cr ? '+' : ''}${eur(Math.abs(N(e.importo)))}</b>${st}<span class="ns-ac2">${act}</span></div>`;
     };
-    return `<div class="ns-estb"><div class="ns-flt"><select id="ns-ec">${cs.map(x => `<option value="${esc(x.id)}"${String(x.id) === S.card ? ' selected' : ''}>${esc(cardLbl(x))}${x.dip ? ' · ' + esc(nameOf(dipOf(x.dip))) : ''}</option>`).join('')}</select>
+    return `<div class="ns-estb"><div class="ns-flt"><select id="ns-ec">${cs.map(x => `<option value="${esc(x.id)}"${String(x.id) === S.card ? ' selected' : ''}>${esc(cardLbl(x))}${cardWho(x) ? ' · ' + esc(cardWho(x)) : ''}</option>`).join('')}</select>
       ${lots.length ? `<select id="ns-el"><option value="">Tutti gli estratti</option>${lots.map(l => `<option value="${esc(l.id)}"${S.lotto === l.id ? ' selected' : ''}>${esc(C.dIt(l.a))} – ${esc(C.dIt(l.b))} · ${l.n} mov.</option>`).join('')}</select>` : ''}
       <span style="flex:1"></span>${rows.length ? '<button type="button" class="btn sm" data-ns="xls-rec">' + svg('xls') + 'Esporta</button><button type="button" class="btn sm" data-ns="acct">' + svg('xls') + 'Per il commercialista</button>' : ''}${r.auto.length && canW() ? `<button type="button" class="btn sm" data-ns="autoapply">Abbina ${r.auto.length} ${r.auto.length === 1 ? 'movimento' : 'movimenti'}</button>` : ''}${canW() ? `<button type="button" class="btn sm primary" data-ns="import">${svg('up')}Importa estratto conto</button>` : ''}</div></div>
       ${rows.length ? `<div class="ns-sum"><section class="card ns-rg" style="--i:0"><div class="ns-rg-r">${ring(pct, 'big')}<b>${Math.round(pct * 100)}%</b></div><div><h3>Movimenti abbinati</h3><p>${ok} su ${tot}${ig ? ` · ${ig} ignorati` : ''}</p></div></section>
@@ -302,7 +305,7 @@
       <label class="f"><span>Nome della carta</span><input name="nome" value="${esc(r.nome || '')}" maxlength="40" placeholder="Es. Visa aziendale, Carta carburante" required data-focus></label>
       <div class="ns-row2"><label class="f"><span>Ultime 4 cifre</span><input name="ultime4" value="${esc(r.ultime4 || '')}" inputmode="numeric" maxlength="4" pattern="\\d{4}" placeholder="1234" required></label><label class="f"><span>Tipo</span><select name="tipo"><option value="credito"${r.tipo === 'credito' ? ' selected' : ''}>Credito</option><option value="debito"${r.tipo === 'debito' ? ' selected' : ''}>Debito</option><option value="prepagata"${r.tipo === 'prepagata' ? ' selected' : ''}>Prepagata</option></select></label></div>
       <div class="ns-row2"><label class="f"><span>Banca</span><div class="ns-bi"><i id="ns-bb" class="ns-bbw">${bankBadge(r.banca)}</i><input name="banca" list="ns-bl" value="${esc(r.banca || '')}" maxlength="40" placeholder="Es. Intesa Sanpaolo" autocomplete="off"></div><datalist id="ns-bl">${['Intesa Sanpaolo', 'UniCredit', 'BPER Banca', 'Banco BPM', 'Fineco', 'Poste Italiane', 'N26', 'Revolut Business', 'Qonto', 'American Express', 'BNL', 'Monte dei Paschi', 'Credem', 'Banca Sella', 'ING', 'Banca Mediolanum', 'Crédit Agricole', 'Nexi', 'Hype', 'Satispay'].map(x => `<option value="${x}">`).join('')}</datalist></label><label class="f"><span>Intestata a</span><input name="titolare" value="${esc(r.titolare || '')}" maxlength="60" placeholder="facoltativo"></label></div>
-      <label class="f"><span>Assegnata a</span><select name="dip"><option value="">Nessuno (carta non assegnata)</option>${optDip(r.dip, true)}</select></label>
+      <div class="f"><span>Assegnata a</span><div class="ns-dps">${DIPS().filter(d => d.stato !== 'cessato' || dipIds(r).includes(String(d.id))).map(d => `<label class="dp-chk"><input type="checkbox" name="dipm" value="${esc(d.id)}"${dipIds(r).includes(String(d.id)) ? ' checked' : ''}><span>${esc(nameOf(d))}</span></label>`).join('') || '<small class="muted">Nessun dipendente in anagrafica</small>'}</div><small class="muted">Puoi sceglierne più di uno: ognuno vede la carta nella sua app e la usa per le sue spese. Nessuno = carta non assegnata.</small></div>
       <div class="ns-row2"><label class="f"><span>Limite mensile € (facoltativo)</span><input name="plafond" inputmode="decimal" value="${N(r.plafond) ? esc(String(N(r.plafond)).replace('.', ',')) : ''}" placeholder="senza limite"></label><label class="f"><span>Scadenza</span><input name="scadenza" value="${esc(r.scadenza || '')}" maxlength="5" placeholder="MM/AA"></label></div>
       <label class="f"><span>Magazzino / sede predefinita</span><input name="centro" list="ns-cl2" value="${esc(r.centro || '')}" placeholder="facoltativo"><datalist id="ns-cl2">${centri.map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
       <div class="f"><span>Colore</span><div class="ns-sw">${Object.keys(COLORI).map(k => `<label><input type="radio" name="colore" value="${k}"${r.colore === k ? ' checked' : ''}><i class="c-${k}" title="${COLORI[k]}"></i></label>`).join('')}<label class="ns-pick${HEX.test(r.colore || '') ? ' on' : ''}" title="Scegli un colore tuo"><input type="color" name="colorex" value="${HEX.test(r.colore || '') ? r.colore : '#3362ab'}"><i></i></label></div></div>
@@ -310,7 +313,7 @@
       <p class="muted small">Inserisci solo le ultime 4 cifre: il numero completo della carta non serve e non va mai scritto qui.</p>`,
       fd => {
         const u4 = String(fd.get('ultime4') || '').trim(); if (!/^\d{4}$/.test(u4)) return C.toast('Scrivi solo le ultime 4 cifre');
-        const row = { ...(o || {}), id: o ? o.id : 'ca' + C.uid(), nome: String(fd.get('nome')).trim(), tipo: fd.get('tipo'), ultime4: u4, banca: String(fd.get('banca') || '').trim(), titolare: String(fd.get('titolare') || '').trim(), dip: fd.get('dip') || '', plafond: N(fd.get('plafond')) || 0, centro: String(fd.get('centro') || '').trim(), stato: o ? fd.get('stato') : 'attiva', scadenza: String(fd.get('scadenza') || '').trim(), colore: (document.querySelector('.ns-pick.on') && fd.get('colorex') || fd.get('colore') || 'blu') || 'blu', note: o ? o.note : '', creato: o ? o.creato : new Date().toISOString() };
+        const row = { ...(o || {}), id: o ? o.id : 'ca' + C.uid(), nome: String(fd.get('nome')).trim(), tipo: fd.get('tipo'), ultime4: u4, banca: String(fd.get('banca') || '').trim(), titolare: String(fd.get('titolare') || '').trim(), dip: fd.getAll('dipm').join(','), plafond: N(fd.get('plafond')) || 0, centro: String(fd.get('centro') || '').trim(), stato: o ? fd.get('stato') : 'attiva', scadenza: String(fd.get('scadenza') || '').trim(), colore: (document.querySelector('.ns-pick.on') && fd.get('colorex') || fd.get('colore') || 'blu') || 'blu', note: o ? o.note : '', creato: o ? o.creato : new Date().toISOString() };
         C.write([{ action: 'upsert', sheet: 'Carte', row }]); C.closeSheet(); C.toast('Carta salvata');
       }, o && canW() ? () => { if (SP().some(s => String(s.carta) === String(o.id)) && !confirm('Questa carta ha spese registrate. Eliminarla lo stesso?')) return; C.write([{ action: 'delete', sheet: 'Carte', id: o.id }]); C.closeSheet(); C.toast('Carta eliminata'); } : null);
     const b = document.getElementById('sheet-body'), pv = b.querySelector('#ns-pv');
@@ -338,7 +341,7 @@
     const b = document.getElementById('sheet-body');
     b.onclick = ev => { const k = ev.target.closest('[data-pk]'), mk = ev.target.closest('#ns-mk');
       if (k) { const s = SP().find(x => String(x.id) === k.dataset.pk); C.write(linkOps(e, s)); C.closeSheet(); C.toast('Movimento abbinato'); }
-      if (mk) { const c = cardOf(e.carta), s = { id: 'sp' + C.uid(), data: e.data, dip: c ? c.dip : '', importo: N(e.importo), esercente: e.descrizione, categoria: '', descrizione: 'Creata dall\'estratto conto', centro: c ? c.centro : '', metodo: 'carta', carta: e.carta, foto: '', stato: 'approvata', chi: (C.me() || {}).email || '', creato: new Date().toISOString(), deciso: new Date().toISOString(), estratto: e.id };
+      if (mk) { const c = cardOf(e.carta), s = { id: 'sp' + C.uid(), data: e.data, dip: dipIds(c)[0] || '', importo: N(e.importo), esercente: e.descrizione, categoria: '', descrizione: 'Creata dall\'estratto conto', centro: c ? c.centro : '', metodo: 'carta', carta: e.carta, foto: '', stato: 'approvata', chi: (C.me() || {}).email || '', creato: new Date().toISOString(), deciso: new Date().toISOString(), estratto: e.id };
         C.write([{ action: 'upsert', sheet: 'Spese', row: s }, { action: 'upsert', sheet: 'Estratti', row: { ...e, spesa: s.id, stato: 'abbinata' } }]); C.closeSheet(); C.toast('Nota spesa creata: completala con i dati mancanti'); } };
   }
 
@@ -419,7 +422,7 @@
   function importForm() {
     const I = S.imp, R = importRows(), out = R.filter(x => x.importo > 0), ds = R.map(x => x.data).sort(), tot = out.reduce((t, x) => t + x.importo, 0);
     C.openSheet('Importa estratto conto', `<div class="ns-ifile"><i>${svg('xls')}</i><div><b>${esc(I.f)}</b><small>${R.length} movimenti · dal ${esc(C.dIt(ds[0]))} al ${esc(C.dIt(ds[ds.length - 1]))}${I.ai ? ' · letto con l\'IA: controlla i dati' : I.pdf ? ' · PDF letto direttamente' + (I.c4 ? ' · carta ••' + esc(I.c4) : '') : ''}</small></div></div>
-      <label class="f"><span>Carta dell'estratto</span><select name="carta">${CARTE().map(c => `<option value="${esc(c.id)}"${String(c.id) === S.card ? ' selected' : ''}>${esc(cardLbl(c))}${c.dip ? ' · ' + esc(nameOf(dipOf(c.dip))) : ''}</option>`).join('')}</select></label>
+      <label class="f"><span>Carta dell'estratto</span><select name="carta">${CARTE().map(c => `<option value="${esc(c.id)}"${String(c.id) === S.card ? ' selected' : ''}>${esc(cardLbl(c))}${cardWho(c) ? ' · ' + esc(cardWho(c)) : ''}</option>`).join('')}</select></label>
       <div class="ns-ik"><div><span>Spese (uscite)</span><b>${eur(tot)}</b><small>${out.length} movimenti</small></div><div><span>Accrediti</span><b>${eur(R.filter(x => x.importo < 0).reduce((t, x) => t - x.importo, 0))}</b><small>${R.length - out.length} movimenti</small></div></div>
       ${I.ai || I.pdf ? '' : `<label class="ns-chk"><input type="checkbox" id="ns-inv"${I.inv ? ' checked' : ''}><span>Le spese hanno l'importo negativo nel file (inverti il segno)</span></label>`}
       <div class="ns-iprev">${R.slice(0, 6).map(x => `<div><span>${esc(C.dIt(x.data))}</span><b>${esc(x.descrizione || '—')}</b><em class="${x.importo < 0 ? 'pos' : ''}">${x.importo < 0 ? '+' : ''}${eur(Math.abs(x.importo))}</em></div>`).join('')}${R.length > 6 ? `<small>e altri ${R.length - 6} movimenti…</small>` : ''}</div>`,
@@ -469,7 +472,7 @@
   const monthsOf = list => [...new Set(list.map(r => r.data.slice(0, 7)))].sort();
   function acctSrc(v) { // v = 'c:ID' (estratto carta) | 'p:ID' (spese registrate di una persona)
     const [t, id] = String(v).split(':');
-    if (t === 'c') { const c = cardOf(id); return { rows: EST().filter(x => String(x.carta) === String(id)).map(acctOfEst), nom: c && c.dip ? nameOf(dipOf(c.dip)) : (c && c.nome) || '', file: (c && c.nome) || 'carta' }; }
+    if (t === 'c') { const c = cardOf(id); return { rows: EST().filter(x => String(x.carta) === String(id)).map(acctOfEst), nom: c && cardWho(c) ? cardWho(c) : (c && c.nome) || '', file: (c && c.nome) || 'carta' }; }
     const d = dipOf(id); return { rows: SP().filter(s => String(s.dip) === String(id) && s.stato !== 'rifiutata').map(acctOfSp), nom: nameOf(d), file: nameOf(d) };
   }
   async function buildAcct(rows, o) {
@@ -522,7 +525,7 @@
     const def = S.tab === 'estratto' && S.card ? 'c:' + S.card : cs.length ? 'c:' + cs[0].id : 'p:' + pp[0].id;
     const opt = (v, t) => `<option value="${esc(v)}"${v === def ? ' selected' : ''}>${esc(t)}</option>`;
     C.openSheet('Esporta per il commercialista', `<p class="ns-xh">Un file Excel con un foglio per ogni mese: data, ragione sociale, macrovoce, descrizione e importo, con i totali per macrovoce.</p>
-      <label class="f"><span>Cosa esportare</span><select name="src">${cs.length ? '<optgroup label="Estratto conto della carta">' + cs.map(c => opt('c:' + c.id, cardLbl(c) + (c.dip ? ' · ' + nameOf(dipOf(c.dip)) : ''))).join('') + '</optgroup>' : ''}${pp.length ? '<optgroup label="Spese registrate da">' + pp.map(d => opt('p:' + d.id, nameOf(d))).join('') + '</optgroup>' : ''}</select></label>
+      <label class="f"><span>Cosa esportare</span><select name="src">${cs.length ? '<optgroup label="Estratto conto della carta">' + cs.map(c => opt('c:' + c.id, cardLbl(c) + (cardWho(c) ? ' · ' + cardWho(c) : ''))).join('') + '</optgroup>' : ''}${pp.length ? '<optgroup label="Spese registrate da">' + pp.map(d => opt('p:' + d.id, nameOf(d))).join('') + '</optgroup>' : ''}</select></label>
       <div class="ns-row2"><label class="f"><span>Dal mese</span><select name="da"></select></label><label class="f"><span>Al mese</span><select name="a"></select></label></div>
       <label class="ns-chk"><input type="checkbox" name="ric" checked><span>Includi le ricariche della carta (non entrano nel totale)</span></label><div class="ns-xp" id="ns-xp"></div>`,
       fd => doAcct(fd), null, 'Scarica Excel');
