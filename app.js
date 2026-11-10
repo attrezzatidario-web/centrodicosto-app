@@ -8908,7 +8908,7 @@
   }
 
   /* ---------- MAGAZZINO ---------- */
-  let mgTab = 'art', mgQ = '', mgLow = false, mgMag = '';
+  let mgTab = 'art', mgQ = '', mgLow = false, mgAvail = false, mgMag = '', mgSup = ''; // mgSup: '' = tutto · '__srv' = servizi · '__none' = senza fornitore · altrimenti il fornitore
   // v136: selezione multipla nel magazzino (elimina o modifica più articoli insieme)
   const mgSel = new Set(); let mgMode = false, mgIds = [];
   const mgN = () => [...mgSel].filter(id => artOf(id)).length;
@@ -8943,6 +8943,15 @@
     write(ids.map(id => { const a = artOf(id), o = { ...a, ...ch }; if (pp != null && num(a.prezzo)) o.prezzo = r2(num(a.prezzo) * (1 + pp / 100)); if (pc != null && num(a.costo)) o.costo = r2(num(a.costo) * (1 + pc / 100)); return { action: 'upsert', sheet: 'Articoli', row: o }; }));
     toast(`${n} ${n === 1 ? 'articolo aggiornato' : 'articoli aggiornati'}`);
   }
+  // fornitori degli articoli in magazzino (con il logo se è un fornitore del catalogo dei Preventivi)
+  function mgSupList(A) {
+    const M = new Map();
+    A.forEach(a => { const nm = String(a.fornitore || '').trim(), k = nm ? pvCliKey(nm) : '__none'; if (!k) return; const e = M.get(k) || { k, nm: nm || 'Senza fornitore', n: 0, c: {} }; e.n++; if (nm) e.c[nm] = (e.c[nm] || 0) + 1; M.set(k, e); });
+    const logo = {}; Object.keys(PV_SUP).forEach(k => { if (PV_SUP[k].file && k !== 'mag' && k !== 'srv') logo[pvCliKey(PV_SUP[k].n)] = k; });
+    return [...M.values()].map(e => { const top = Object.keys(e.c).sort((x, y) => e.c[y] - e.c[x])[0]; return { k: e.k, nm: top || e.nm, n: e.n, logo: logo[e.k] || '' }; })
+      .sort((a, b) => (a.k === '__none') - (b.k === '__none') || b.n - a.n || a.nm.localeCompare(b.nm, 'it'));
+  }
+  const mgSupOf = a => { const nm = String(a.fornitore || '').trim(); return nm ? pvCliKey(nm) : '__none'; };
   function renderMag() {
     const el = $('#mg-body'); if (!el) return;
     sub('Articoli, giacenze, carichi e scarichi');
@@ -8958,13 +8967,20 @@
       ${xiMagNote()}${gxKpi([['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`], ['Valore del magazzino', eur0(val), `giacenze al costo · ${ivaLbl()}`], ['Sotto scorta', fmtNum(nLow, 0), nLow ? 'da riordinare' : 'tutto a posto', nLow ? 'warn' : ''], ['Movimenti del mese', fmtNum(MM.length, 0), `${MM.filter(m => num(m.quantita) > 0).length} carichi · ${MM.filter(m => num(m.quantita) < 0).length} scarichi`]])}`;
     if (!A.length) h += gxEmpty(GIC.mag, 'Magazzino vuoto', 'Aggiungi gli articoli che tieni in magazzino, oppure importali da Excel. Le giacenze si aggiornano da sole con carichi, DDT e fatture.', '<button type="button" class="btn primary" data-gx="art-new">+ Aggiungi il primo articolo</button>');
     else if (mgTab === 'art') {
-      const F = A.filter(a => (!q || nh([a.codice, a.codForn, a.descrizione, a.categoria, a.fornitore, a.barcode].join(' ')).includes(q)) && (!mgLow || low(a)));
+      const SL = mgSupList(A), SV = SRV(), nSrv = SV.length;
+      if (mgSup && mgSup !== '__srv' && !SL.some(x => x.k === mgSup)) mgSup = '';
+      if (mgSup === '__srv' && !nSrv) mgSup = '';
+      const sq = x => !q || nh([x.cod, x.d, x.note, 'servizio'].join(' ')).includes(q);
+      const SF = mgSup === '' || mgSup === '__srv' ? SV.filter(sq) : [];
+      const F = mgSup === '__srv' ? [] : A.filter(a => (!q || nh([a.codice, a.codForn, a.descrizione, a.categoria, a.fornitore, a.barcode].join(' ')).includes(q)) && (!mgLow || low(a)) && (!mgAvail || (G.get(a.id) || 0) > 0) && (!mgSup || mgSupOf(a) === mgSup));
       mgIds = F.map(a => a.id);
+      const srvRow = x => { const k = ivaOn ? 1 + num(x.iva) / 100 : 1; return `<tr class="mg-srvr" data-gx="srv-edit" data-id="${esc(x.id)}"><td data-l="Articolo"><b>${esc(x.d)}</b> <span class="chip soon">Servizio</span><small>${esc([x.cod, x.um, x.note].filter(Boolean).join(' · '))}</small></td><td class="r" data-l="Giacenza">—</td><td class="r" data-l="Scorta min.">—</td><td class="r" data-l="Costo">${num(x.costo) ? eur(num(x.costo) * k) : '—'}</td><td class="r" data-l="Prezzo">${x.p === '' || x.p == null ? '—' : eur(num(x.p) * k)}</td><td class="r" data-l="Valore">—</td><td class="r gx-ra"></td></tr>`; };
       if (mgMode) { const nS = mgN(); h += `<div class="gx-note mg-bar"><span>Selezionati: <b id="mg-n">${nS}</b></span><span class="mg-acts"><button type="button" class="btn sm" data-mgs="all">Seleziona tutti (${F.length})</button><button type="button" class="btn sm" data-mgs="none">Nessuno</button><button type="button" class="btn sm" data-mgs="edit"${nS ? '' : ' disabled'}>Modifica</button><button type="button" class="btn sm danger-ghost" data-mgs="del"${nS ? '' : ' disabled'}>Elimina</button></span></div>`; }
-      h += `<div class="gx-chips"><button type="button" class="chip-f${mgLow ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button></div>
+      h += `<div class="mg-sups" role="group" aria-label="Fornitore"><button type="button" class="mg-sp mg-all${mgSup === '' ? ' on' : ''}" data-mgsup="" title="Tutti i prodotti e i servizi"><b>Tutti</b><em>${A.length + nSrv}</em></button>${SL.map(x => `<button type="button" class="mg-sp${mgSup === x.k ? ' on' : ''}" data-mgsup="${esc(x.k)}" title="${esc(x.nm)}">${x.logo ? `<img src="logo-${esc(x.logo)}.svg" alt="${esc(x.nm)}" loading="lazy">` : `<b>${esc(x.nm)}</b>`}<em>${x.n}</em></button>`).join('')}${nSrv ? `<button type="button" class="mg-sp mg-srv${mgSup === '__srv' ? ' on' : ''}" data-mgsup="__srv" title="Servizi e lavorazioni"><b>Servizi</b><em>${nSrv}</em></button>` : ''}</div>
+      <div class="gx-chips"><button type="button" class="chip-f${mgLow || mgAvail ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgAvail ? ' on' : ''}" data-mgav="1">Disponibili <em>${A.filter(a => (G.get(a.id) || 0) > 0).length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button></div>
       <div class="card gx-list"><table class="gx-tbl"><thead><tr><th>Articolo</th><th class="r">Giacenza</th><th class="r">Scorta min.</th><th class="r">Costo</th><th class="r">Prezzo</th><th class="r">Valore</th><th></th></tr></thead><tbody>
-      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${fmtNum(g, g % 1 ? 2 : 0)} ${esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
-      </tbody></table>${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}</div>`;
+      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${fmtNum(g, g % 1 ? 2 : 0)} ${esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
+      </tbody></table>${mgSup === '__srv' ? `<div class="gx-act mg-sa"><button type="button" class="btn sm" data-gx="srv-new">+ Servizio</button></div>` : ''}${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}</div>`;
     } else {
       const M = GX.mov().map(m => ({ m, a: artOf(m.articolo) })).filter(x => !q || nh([x.a && x.a.codice, x.a && x.a.descrizione, x.m.causale].join(' ')).includes(q)).sort((x, y) => String(y.m.data).localeCompare(String(x.m.data)) || String(y.m.creato).localeCompare(String(x.m.creato)));
       const TP = { carico: ['Carico', 'paid'], scarico: ['Scarico', 'late'], rettifica: ['Inventario', 'soon'] };
@@ -9499,7 +9515,9 @@
     }
     const ipb = t.closest('[data-incp]'); if (ipb && !ipb.disabled) { const ms = [...new Set([...INC().map(r => String(r.data).slice(0, 7)), today().slice(0, 7)].filter(k => /^\d{4}-\d\d$/.test(k)))].sort(), opts = ['', ...ms.reverse()], i = opts.indexOf(incP) - Number(ipb.dataset.incp); incP = opts[Math.max(0, Math.min(opts.length - 1, i))] || ''; renderInc(); return; }
     const tb = t.closest('[data-mgtab]'); if (tb) { mgTab = tb.dataset.mgtab; renderMag(); return; }
-    const lw = t.closest('[data-mglow]'); if (lw) { mgLow = lw.dataset.mglow === '1'; renderMag(); return; }
+    const lw = t.closest('[data-mglow]'); if (lw) { mgLow = lw.dataset.mglow === '1'; mgAvail = false; renderMag(); return; }
+    const av = t.closest('[data-mgav]'); if (av) { mgAvail = !mgAvail; if (mgAvail) mgLow = false; renderMag(); return; }
+    const sp = t.closest('[data-mgsup]'); if (sp) { mgSup = sp.dataset.mgsup; renderMag(); return; }
     const mk = t.closest('[data-mgck]'); if (mk) { mgToggle(mk.dataset.mgck, mk.checked); return; }
     const ms = t.closest('[data-mgs]');
     if (ms && !ms.disabled) {
