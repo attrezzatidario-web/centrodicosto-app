@@ -4214,6 +4214,38 @@
   const pvConvBtns = (p, id = '') => pvDest(p) === 'forn'
     ? `<button type="button" class="btn sm" data-pvconv="ddt"${id ? ` data-pvid="${esc(id)}"` : ''} title="Registra il DDT arrivato con i prodotti di questo preventivo e caricali in magazzino">${DOC_IC}DDT arrivato</button><button type="button" class="btn sm" data-pvconv="fv"${id ? ` data-pvid="${esc(id)}"` : ''} title="Registra la fattura del fornitore con i prodotti di questo preventivo">${DOC_IC}Fattura fornitore</button>`
     : modOn('vendite') ? `<button type="button" class="btn sm" data-pvconv="ddt"${id ? ` data-pvid="${esc(id)}"` : ''} title="Crea un DDT di vendita con le righe di questo preventivo">${DOC_IC}Crea DDT</button><button type="button" class="btn sm" data-pvconv="fv"${id ? ` data-pvid="${esc(id)}"` : ''} title="Crea la fattura al cliente con le righe di questo preventivo">${DOC_IC}Crea fattura</button>` : '';
+  /* v245: dal preventivo al cliente, un ordine per ogni fornitore (preventivo a fornitore già «inviato») + email pronta */
+  const pvOrdSup = l => l.sup || 'payper';
+  const pvOrdQ = l => Object.values(l.q || {}).reduce((n, v) => n + num(v), 0);
+  const pvOrdName = sup => (PV_SUP[sup] || {}).n || (pvCats[sup] || {}).nome || (sup === 'jrc' ? 'JRC' : sup === 'payper' ? 'Payper' : sup);
+  const pvOrdMail = nome => (anaFind('forn', nome) || {}).email || (FOR().find(f => fMatch(f, nome)) || {}).email || '';
+  const pvOrdLines = ls => ls.map(l => { const sz = l.tool ? '' : pvSzSort(Object.keys(l.q || {})).filter(z => num(l.q[z]) > 0).map(z => `${z} x${fmtNum(num(l.q[z]), 0)}`).join(', '); return `- ${l.n}${l.cn ? ' ' + l.cn : ''} (cod. ${l.c || l.it})${sz ? ': ' + sz : ''} = ${fmtNum(pvOrdQ(l), 0)} pz`; }).join('\n');
+  const pvOrdMailto = (o, to) => { const az = (cfg('azienda') || {}).nome || (me && me.wsNome) || '', pz = o.righe.reduce((n, l) => n + pvOrdQ(l), 0); return `mailto:${encodeURIComponent(to || '').replace(/%40/g, '@')}?subject=${encodeURIComponent(`Ordine ${o.num}${az ? ' - ' + az : ''}`)}&body=${encodeURIComponent(`Buongiorno,\n\nvi invio l'ordine ${o.num} (${fmtNum(pz, 0)} pezzi):\n\n${pvOrdLines(o.righe)}\n\nVi chiedo conferma di ricezione e della data di consegna.\n\nGrazie${az ? '\n' + az : ''}`)}`; };
+  function pvOrdSheet(id) {
+    const p = pvGet(id); if (!p) return;
+    const by = groupBy(p.righe, pvOrdSup), rows = [...by.entries()].map(([sup, ls]) => { const nome = pvOrdName(sup), old = p.ord && p.ord[sup] && pvGet(p.ord[sup].id); return { sup, ls, nome, old, mail: pvOrdMail(nome) }; });
+    openSheet(`Ordina ai fornitori · ${p.num}`, `<p class="pvx-intro">Per ogni fornitore creo un ordine con i suoi prodotti. Poi invii ogni email con un tocco, dal tuo indirizzo di posta.</p>
+      <div class="pvo-l" data-pvo="${esc(id)}">${rows.map(r => `<label class="pvo-r"><input type="checkbox" data-pvosup="${esc(r.sup)}"${r.old ? '' : ' checked'}><span class="pvo-n"><b>${esc(r.nome)}</b><small>${r.ls.length} ${r.ls.length === 1 ? 'riga' : 'righe'} · ${fmtNum(r.ls.reduce((n, l) => n + pvOrdQ(l), 0), 0)} pezzi${r.old ? ` · ordine ${esc(r.old.num)} già creato` : ''}</small></span><input type="email" class="pvo-m" data-pvomail="${esc(r.sup)}" value="${esc(r.mail)}" placeholder="email del fornitore" inputmode="email" aria-label="Email di ${esc(r.nome)}"></label>`).join('')}</div>
+      <div class="pvo-a"><button type="button" class="btn primary" id="pvo-go">Conferma e crea gli ordini</button></div>`, () => true, null, 'Chiudi');
+  }
+  function pvOrdGo() {
+    const box = $('.pvo-l'); if (!box) return; const p = pvGet(box.dataset.pvo); if (!p) return;
+    const by = groupBy(p.righe, pvOrdSup), sel = $$('[data-pvosup]', box).filter(c => c.checked).map(c => c.dataset.pvosup); if (!sel.length) return toast('Scegli almeno un fornitore');
+    p.ord = p.ord || {}; const out = [];
+    sel.forEach(sup => {
+      const ls = by.get(sup) || [], nome = pvOrdName(sup), mail = String(($(`[data-pvomail="${CSS.escape(sup)}"]`, box) || {}).value || '').trim(), A = anaFind('forn', nome) || {};
+      let o = p.ord[sup] && pvGet(p.ord[sup].id);
+      if (!o) { o = pvNew(); o.dest = 'forn'; o.cliente = { nome, ref: A.ref || '', email: mail, tel: A.tel || '', ind: A.ind || '' }; o.note = `Ordine generato dal preventivo ${p.num}`; o.ordDa = p.id; }
+      else o.cliente = { ...o.cliente, email: mail || o.cliente.email };
+      o.righe = ls.map(l => ({ ...l, q: { ...l.q }, p: pvAcq(l.it, l.c) ?? null }));
+      o.stato = 'inviato'; pvSave(o); p.ord[sup] = { id: o.id, num: o.num, data: today() }; out.push({ o, nome, mail: o.cliente.email });
+    });
+    pvSave(p);
+    const b = $('#sheet-body') || box.parentNode;
+    b.innerHTML = `<p class="pvx-intro"><b>${out.length === 1 ? 'Ordine creato' : out.length + ' ordini creati'}.</b> Ora invia ogni email: si apre il tuo programma di posta con il testo già scritto.</p>
+      <div class="pvo-l">${out.map(x => `<div class="pvo-r"><span class="pvo-n"><b>${esc(x.nome)}</b><small>ordine ${esc(x.o.num)} · ${x.o.righe.length} ${x.o.righe.length === 1 ? 'riga' : 'righe'}${x.mail ? ' · ' + esc(x.mail) : ' · manca l\'email: scrivila tu nel programma di posta'}</small></span><a class="btn sm primary" href="${pvOrdMailto(x.o, x.mail)}">Invia email</a><button type="button" class="btn sm" data-pvoopen="${esc(x.o.id)}">Apri ordine</button></div>`).join('')}</div>`;
+    toast(out.length === 1 ? 'Ordine creato' : out.length + ' ordini creati');
+  }
   function pvConvMenu(id) {
     const p = pvGet(id); if (!p) return;
     const forn = pvDest(p) === 'forn', btn = (k, t, d) => `<button type="button" class="btn pv-cvb" data-pvconv="${k}" data-pvid="${esc(id)}"><b>${t}</b><small>${d}</small></button>`;
@@ -4567,7 +4599,7 @@
     const t = pvTotals(p), st = PV_ST[p.stato] || PV_ST.bozza;
     const cl = p.cliente || {}, LG = p.loghi || {}, hasLg = !!(LG.f || LG.r);
     body.innerHTML = `
-      <div class="pv-back"><button type="button" class="btn sm" id="pv-qback">‹ Preventivi</button><span class="chip ${st[1]}">${st[0]}</span>${pvDest(p) === 'forn' ? pvAChip(p) : pvFChip(p)}<span class="pv-sp"></span>${pvConvBtns(p)}<button type="button" class="btn sm primary" id="pv-close" title="Salva e chiudi: non aggiungi più prodotti a questo preventivo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Chiudi preventivo</button><button type="button" class="btn sm" id="pv-dup">Duplica</button><button type="button" class="btn sm st-btn-d" id="pv-del">Elimina</button></div>
+      <div class="pv-back"><button type="button" class="btn sm" id="pv-qback">‹ Preventivi</button><span class="chip ${st[1]}">${st[0]}</span>${pvDest(p) === 'forn' ? pvAChip(p) : pvFChip(p)}<span class="pv-sp"></span>${pvDest(p) === 'cli' && p.righe.length ? `<button type="button" class="btn sm" id="pv-ordf" title="Crea e invia gli ordini ai fornitori dei prodotti di questo preventivo">${DOC_IC}Ordina ai fornitori</button>` : ''}${pvConvBtns(p)}<button type="button" class="btn sm primary" id="pv-close" title="Salva e chiudi: non aggiungi più prodotti a questo preventivo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Chiudi preventivo</button><button type="button" class="btn sm" id="pv-dup">Duplica</button><button type="button" class="btn sm st-btn-d" id="pv-del">Elimina</button></div>
       ${pvDocs(p).length ? `<div class="pv-docs">${pvDocs(p).map(x => `<button type="button" class="pv-doc" data-pvdoc="${esc(x.k + '|' + x.id)}">${DOC_IC}<span><b>${x.k === 'ddt' ? 'DDT' : 'Fattura'} n. ${esc(dnum(x.d))}</b><small>${esc(dIt(x.d.data))}${x.k === 'ddt' ? (x.d.fattura ? ' · fatturato' : ' · da fatturare') : ' · ' + esc(x.d.stato === 'pagata' ? 'incassata' : 'da incassare')}</small></span></button>`).join('')}</div>` : ''}
       <div class="pv-ed" id="pv-ed" data-id="${esc(p.id)}">
         <div class="card pv-eh">
@@ -10273,6 +10305,9 @@
       if (t.closest('#pv-add')) { pvAddToQuote(); return; }
       const pf = t.closest('[data-pvfatt]'); if (pf) { e.preventDefault(); e.stopPropagation(); const p = pf.closest('#pv-ed, .pv-back') && pvEdit ? pvFromForm() : pvGet(pf.dataset.pvfatt); if (!p) return; p.fatt = pvFatt(p) ? 'no' : 'si'; pvSave(p); toast(p.fatt === 'si' ? `Preventivo ${p.num} segnato fatturato` : `Preventivo ${p.num} da fatturare`); return; }
       const pcm = t.closest('[data-pvmenu]'); if (pcm) { e.preventDefault(); e.stopPropagation(); pvConvMenu(pcm.dataset.pvmenu); return; }
+      if (t.closest('#pv-ordf')) { pvOrdSheet(pvEdit); return; }
+      if (t.closest('#pvo-go')) { pvOrdGo(); return; }
+      { const oo = t.closest('[data-pvoopen]'); if (oo) { pvOpen(oo.dataset.pvoopen); return; } }
       const pcv = t.closest('[data-pvconv]'); if (pcv) { const k = pcv.dataset.pvconv, id = pcv.dataset.pvid; if (id && !$('#sheet').hidden) { closeSheet(); setTimeout(() => pvToDoc(k, id), 300); } else pvToDoc(k, id); return; }
       const lkp = t.closest('[data-lkpv]'); if (lkp) { pvOpen(lkp.dataset.lkpv); return; }
       const lka = t.closest('[data-lk]'); if (lka) {

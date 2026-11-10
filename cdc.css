@@ -4297,3 +4297,12 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .mg-qb:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .mg-qb.tot { font-size: 16px; }
 .pv-t .pv-rt { text-align: center; }
+
+/* v245: ordini ai fornitori dal preventivo */
+.pvo-l { display: grid; gap: 10px; margin: 6px 0 14px; }
+.pvo-r { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 220px); gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.pvo-l:not(:has(input[type=checkbox])) .pvo-r { grid-template-columns: minmax(0, 1fr) auto auto; }
+.pvo-n b, .pvo-n small { display: block; } .pvo-n small { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.pvo-m { width: 100%; min-width: 0; font-size: 16px; }
+.pvo-a { display: flex; justify-content: flex-end; }
+@media (max-width: 560px) { .pvo-r { grid-template-columns: auto minmax(0, 1fr); } .pvo-m { grid-column: 1 / -1; } .pvo-l:not(:has(input[type=checkbox])) .pvo-r { grid-template-columns: 1fr; } }
