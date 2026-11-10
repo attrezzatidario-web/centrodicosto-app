@@ -3553,6 +3553,7 @@
   }
   const anaForn = () => FOR().map(f => ({ k: 'f', id: f.id, nome: f.nome, ref: f.referente || '', email: f.email || '', tel: f.tel || '', ind: anaInd(f.indirizzo, f.cap, f.citta, f.prov) })).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it'));
   /* preventivo a fornitore: suggerisce in automatico tutti i fornitori noti (anagrafica, cataloghi, fatture, documenti); resta libero scriverne altri a mano */
+  const pvFornAll = () => { const A = anaForn(), seen = new Set(A.map(x => pvCliKey(x.nome))); const X = pvFornOpts().filter(o => !seen.has(pvCliKey(o.nome))).map(o => ({ k: 'x', id: pvCliKey(o.nome), nome: o.nome, ref: '', email: '', tel: '', ind: '' })); return A.concat(X).sort((a, b) => String(a.nome).localeCompare(String(b.nome), 'it')); };
   const pvFornOpts = () => {
     const seen = new Set(), out = [], add = n => { n = String(n || '').trim(); const k = pvCliKey(n); if (!k || seen.has(k)) return; seen.add(k); out.push({ nome: n }); };
     anaForn().forEach(x => add(x.nome));
@@ -4510,17 +4511,17 @@
   let pvCliQ = '', pvCliT = 'cli';
   function pvClients(body) {
     const forn = pvCliT === 'forn', Q = pvList(), std = fmtNum((pvRic() - 1) * 100, 0), PL = pvCliList();
-    const L = forn ? anaForn() : anaCli();
+    const L = forn ? pvFornAll() : anaCli();
     const qs = c => forn ? Q.filter(p => pvDest(p) === 'forn' && pvCliKey(p.cliente && p.cliente.nome) === pvCliKey(c.nome)) : Q.filter(p => pvDest(p) === 'cli' && pvCliKey(p.cliente && p.cliente.nome) === pvCliKey(c.nome));
     const stat = c => { const X = qs(c); return { n: X.length, acc: X.filter(p => p.stato === 'accettato').reduce((s, p) => s + pvAmt(pvTotals(p)), 0) }; };
     const q = pvCliKey(pvCliQ), F = L.filter(c => !q || pvCliKey(`${c.nome} ${c.ref} ${c.email} ${c.tel}`).includes(q));
     const ini = n => esc((String(n).match(/[A-Za-zÀ-ÿ0-9]/g) || ['?']).slice(0, 2).join('').toUpperCase());
-    body.innerHTML = `<div class="card pv-clis"><div class="card-h"><div class="seg pv-dseg pv-ctab" role="tablist"><button type="button" data-pvct="cli" class="${forn ? '' : 'on'}">Clienti <em>${anaCli().length}</em></button><button type="button" data-pvct="forn" class="${forn ? 'on' : ''}">Fornitori <em>${anaForn().length}</em></button></div><button type="button" class="btn sm primary" id="pv-cliadd">+ Nuovo ${forn ? 'fornitore' : 'cliente'}</button></div>
+    body.innerHTML = `<div class="card pv-clis"><div class="card-h"><div class="seg pv-dseg pv-ctab" role="tablist"><button type="button" data-pvct="cli" class="${forn ? '' : 'on'}">Clienti <em>${anaCli().length}</em></button><button type="button" data-pvct="forn" class="${forn ? 'on' : ''}">Fornitori <em>${pvFornAll().length}</em></button></div><button type="button" class="btn sm primary" id="pv-cliadd">+ Nuovo ${forn ? 'fornitore' : 'cliente'}</button></div>
       <p class="muted small pv-clinote">${forn ? 'Gli stessi fornitori della sezione Fornitori: puoi intestare un preventivo anche a loro.' : 'Gli stessi clienti della sezione Clienti, di DDT e fatture: chi scrivi in un preventivo entra da solo in anagrafica.'}</p>
       ${L.length ? `<div class="pv-sb sm pv-clisb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="pv-cliq" type="search" placeholder="Cerca un ${forn ? 'fornitore' : 'cliente'}…" value="${esc(pvCliQ)}" autocomplete="off"></div>
       <div class="pv-cll">${F.slice(0, 300).map(c => { const s2 = stat(c), P = forn ? null : pvCliFind(PL, c.nome), ric = P && pvRicOk(P.ric); return `<div class="pv-clr"><button type="button" class="pv-clm" data-pvana="${esc((forn ? 'forn' : 'cli') + '|' + c.k + '|' + c.id)}"><span class="pv-cla">${ini(c.nome)}</span><span class="pv-cln"><b>${esc(c.nome)}</b><small>${esc([c.ref, c.tel, c.email].filter(Boolean).join(' · ') || 'nessun contatto')}</small></span></button>
         <span class="pv-clk">${forn || pvCli ? '' : `<span class="chip ${ric ? 'paid' : ''}" title="Ricarico sul prezzo d'acquisto">${ric ? `ricarico +${esc(fmtNum(num(P.ric), 1).replace(/,0$/, ''))}%` : `standard +${esc(std)}%`}</span>`}<small>${s2.n} ${s2.n === 1 ? 'preventivo' : 'preventivi'}${s2.acc ? ` · ${eur0(s2.acc)} accettati` : ''}</small></span>
-        <span class="pv-cla2"><button type="button" class="btn sm" data-pvanew="${esc((forn ? 'forn' : 'cli') + '|' + c.k + '|' + c.id)}">+ Preventivo</button></span></div>`; }).join('') || `<div class="empty">Nessun ${forn ? 'fornitore' : 'cliente'} trovato</div>`}</div>` : `<div class="empty">${forn ? 'Ancora nessun fornitore in anagrafica.' : 'Ancora nessun cliente. Scrivi il nome del cliente in un preventivo oppure premi «+ Nuovo cliente».'}</div>`}</div>`;
+        <span class="pv-cla2"><button type="button" class="btn sm" data-pvanew="${esc((forn ? 'forn' : 'cli') + '|' + c.k + '|' + c.id)}">+ Preventivo</button></span></div>`; }).join('') || `<div class="empty">Nessun ${forn ? 'fornitore' : 'cliente'} trovato</div>`}${forn && pvCliQ.trim() && !L.some(c => pvCliKey(c.nome) === q) ? `<button type="button" id="pv-fnew" class="btn sm pv-fnew">+ Preventivo a «${esc(pvCliQ.trim())}» (nuovo fornitore)</button>` : ''}</div>` : `<div class="empty">${forn ? 'Ancora nessun fornitore in anagrafica.' : 'Ancora nessun cliente. Scrivi il nome del cliente in un preventivo oppure premi «+ Nuovo cliente».'}</div>`}</div>`;
   }
   function pvCliForm(id) {
     const L = pvCliList(), c0 = L.find(x => x.id === id), c = c0 || { id: uid(), nome: '', ref: '', email: '', tel: '', ind: '', ric: null, note: '', dal: today() };
@@ -4545,7 +4546,8 @@
   function pvCliClick(t) {
     if (t.closest('#pv-cliadd')) { if (pvCliT === 'forn') fornForm(); else if (gxOk()) cliForm(null); else pvCliForm(''); return true; }
     const ct = t.closest('[data-pvct]'); if (ct) { pvCliT = ct.dataset.pvct; pvCliQ = ''; renderPv(); return true; }
-    const an = t.closest('[data-pvanew]'); if (an) { const [dst, k, id] = an.dataset.pvanew.split('|'), A = (dst === 'forn' ? anaForn() : anaCli()).find(x => x.k === k && x.id === id); if (A) pvNewFor(dst, A); return true; }
+    const an = t.closest('[data-pvanew]'); if (an) { const [dst, k, id] = an.dataset.pvanew.split('|'), A = (dst === 'forn' ? pvFornAll() : anaCli()).find(x => x.k === k && x.id === id); if (A) pvNewFor(dst, A); return true; }
+    if (t.closest('#pv-fnew')) { const n = String(pvCliQ || '').trim(); if (n) pvNewFor('forn', { nome: n }); return true; }
     const ed = t.closest('[data-pvcliedit]'); if (ed) { pvCliForm(ed.dataset.pvcliedit); return true; }
     const nw = t.closest('[data-pvclinew]'); if (nw) { const c = pvCliList().find(x => x.id === nw.dataset.pvclinew); if (!c) return true; const p = pvNew(); p.cliente = { nome: c.nome, ref: c.ref || '', email: c.email || '', tel: c.tel || '', ind: c.ind || '' }; p.cliId = c.id; pvSave(p); pvTab = 'prev'; pvEdit = p.id; pvTarget = p.id; renderPv(); window.scrollTo(0, 0); return true; }
     if (t.closest('#pv-close')) { const p = pvFromForm(); if (p) pvQuiet(p); pvTarget = ''; pvEdit = ''; pvTab = 'prev'; renderPv(); window.scrollTo(0, 0); toast(`Preventivo ${p ? p.num : ''} salvato e chiuso`); return true; }
@@ -10357,6 +10359,7 @@
       const el = e.target;
       if (el.id === 'pv-rq' && pvR) { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvR.q = el.value; pvReplRes(); }, 180); return; }
       if (el.id === 'pv-gq') { clearTimeout(pvGDeb); pvGDeb = setTimeout(() => { pvGQ = el.value; pvGSup = ''; pvGCat = ''; pvGLimit = 60; if (pvGQ.trim().length >= 3) pvGLoadAll(); pvGStatus(); pvGRes(); }, 200); return; }
+      if (el.id === 'pv-cliq') { pvCliQ = el.value; clearTimeout(pvDeb); pvDeb = setTimeout(() => { renderPv(); const i2 = $('#pv-cliq'); if (i2) { i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); } }, 250); return; }
       if (el.id === 'pv-gsort') { pvGSort = el.value; pvGRes(); return; }
       if (el.id === 'pv-gmin' || el.id === 'pv-gmax') { clearTimeout(pvGDeb); const id = el.id; pvGDeb = setTimeout(() => { if (id === 'pv-gmin') pvGMin = el.value; else pvGMax = el.value; pvGLimit = 60; pvGRes(); const n = document.getElementById(id); if (n) { n.focus(); try { n.setSelectionRange(n.value.length, n.value.length); } catch {} } }, 450); return; }
       if (el.id === 'pv-q') { clearTimeout(pvDeb); pvDeb = setTimeout(() => { const was = !!(pvQ || pvGroup); pvQ = el.value; pvLimit = 48; if (!$('#pv-res') || (!pvQ && !pvGroup) !== !was) { renderPv(); const i2 = $('#pv-q'); if (i2) { i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); } } else pvCatRes(); }, 180); return; }
@@ -10368,7 +10371,6 @@
     document.addEventListener('change', e => {
       const el = e.target;
       if (el.id === 'pv-cl') { pvCl = el.value; pvLimit = 48; pvCatRes(); return; }
-      if (el.id === 'pv-cliq') { pvCliQ = el.value; clearTimeout(pvDeb); pvDeb = setTimeout(() => { renderPv(); const i2 = $('#pv-cliq'); if (i2) { i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); } }, 250); return; }
       if (el.id === 'pv-sort') { pvSort = el.value; pvCatRes(); return; }
       if (el.id === 'pv-acq' || el.dataset.pvacqc) { pvSaveAcq(pvItem); toast('Prezzo d\'acquisto salvato'); return; }
       if (el.id === 'pv-percol') { if (el.checked) pvPerCol.add(pvItem); else pvPerCol.delete(pvItem); if (!el.checked) pvSaveAcq(pvItem); else renderPv(); return; }
