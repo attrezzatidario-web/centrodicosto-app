@@ -409,7 +409,7 @@
   const contactReq = id => { window.cdcPixel && cdcPixel.lead(); const s = SET.get(id || settoreId()) || {}; location.href = `mailto:${CONTATTI.email}?subject=${encodeURIComponent('Richiesta gestionale · ' + (s.n || ''))}&body=${encodeURIComponent(`Ciao ${CONTATTI.nome},\nvorrei attivare il gestionale per la mia attività (${s.n || ''}).\n\nAzienda:\nCittà:\nTelefono:\nCosa mi servirebbe:\n`)}`; };
   function renderDemoBar() {
     let bar = $('#demo-bar');
-    const vis = me && me.admin && !DEMO && !me.principale && !/^bianchi forniture edili/i.test(me.wsNome || ''); // la demo per i clienti deve sembrare un gestionale vero: niente barra // v102: l'amministratore è entrato dalla Console nel gestionale di un cliente
+    const vis = me && me.admin && !DEMO && !me.principale; // v102: l'amministratore è entrato dalla Console nel gestionale di un cliente
     if (me && (DEMO || me.ruolo === 'lettura' || vis)) {
       if (!bar) { bar = document.createElement('div'); bar.id = 'demo-bar'; bar.className = 'demo-bar'; $('#app main .top').after(bar); }
       const s = settore();
