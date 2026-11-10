@@ -241,6 +241,8 @@
     C.sub('Carte aziendali, contanti e spese dei dipendenti');
     const keep = document.activeElement && document.activeElement.id === 'ns-q' ? document.activeElement.selectionStart : null;
     el.innerHTML = view();
+    el.querySelectorAll('[data-nsc]').forEach(x => C.countTo(x, Number(x.dataset.nsc), eur));
+    el.querySelectorAll('[data-nsn]').forEach(x => C.countTo(x, Number(x.dataset.nsn), v => String(Math.round(v))));
     S.fresh = false;
     if (keep != null) { const q = el.querySelector('#ns-q'); if (q) { q.focus(); try { q.setSelectionRange(keep, keep); } catch {} } }
   }

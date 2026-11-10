@@ -4240,17 +4240,10 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .ns-pick i { display: block; width: 30px; height: 30px; border-radius: 50%; background: conic-gradient(#e11d48, #f59e0b, #22c55e, #06b6d4, #6366f1, #d946ef, #e11d48); }
 .ns-pick.on i, .ns-sw input:checked + i { box-shadow: 0 0 0 2px var(--card, #fff), 0 0 0 4px var(--ink, #111); }
 
-/* v233 · Nota spese sobria: niente zoom, movimenti o animazioni */
-#ns-body *, #ns-body *::before, #ns-body *::after, .ns-prev *, .ns-sw *, .ns-cw * { animation: none !important; transition: none !important; }
-#ns-body *:hover, #ns-body *:active, .ns-sw *:hover, .ns-cw *:hover { transform: none !important; }
-.ns-sw input:checked + i { transform: none !important; }
-.ns-cc:hover { box-shadow: none; } .ns-cc:hover::after { display: none; }
-.ns-cc::after { display: none; }
-.ns-k:hover, .ns-a:hover, .ns-pc:hover { box-shadow: none; }
+/* v233 · Nota spese: schede piatte e campi a 16px (le animazioni restano) */
 #ns-body .card, .ns-hero { box-shadow: none; border: 1px solid var(--line); }
 #ns-body .ns-hero { background: var(--card, #fff); }
 #ns-body input, #ns-body select, #ns-body textarea, .sheet input, .sheet select { font-size: 16px; }
-.ns-split i, .ns-col-b i, .ns-br-b i { transform: none !important; }
 /* v233 · telefono: schede, filtri e testate più compatti */
 @media (max-width: 700px) {
   #ns-body .ns-tabs button { font-size: 13px; padding: 8px 10px; }
