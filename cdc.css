@@ -4291,3 +4291,9 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .mg-card .mg-pm { position: absolute; right: 0; bottom: 0; }
 .mg-card.mg-on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
 .mg-card .mg-ck { position: absolute; right: 0; top: 0; }
+
+/* v244: scheda prodotto del magazzino */
+.mg-qb { appearance: none; border: 1px solid var(--line); background: var(--surface); font: inherit; font-weight: 700; font-size: 14px; min-width: 40px; padding: 6px 10px; border-radius: 9px; cursor: pointer; color: var(--text); transition: border-color .2s, background .2s; }
+.mg-qb:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.mg-qb.tot { font-size: 16px; }
+.pv-t .pv-rt { text-align: center; }

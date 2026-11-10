@@ -8910,7 +8910,7 @@
   }
 
   /* ---------- MAGAZZINO ---------- */
-  let mgTab = 'art', mgQ = '', mgLow = false, mgAvail = false, mgMag = '', mgSup = '', mgView = (() => { try { return localStorage.getItem('cdc_mgv') || ''; } catch { return ''; } })(); // mgView: '' = automatica (schede se scelgo un fornitore) · 'g' schede · 'l' elenco. mgSup: '' = tutto · '__srv' = servizi · '__none' = senza fornitore · altrimenti il fornitore
+  let mgTab = 'art', mgQ = '', mgLow = false, mgAvail = false, mgMag = '', mgSup = '', mgItem = '', mgView = (() => { try { return localStorage.getItem('cdc_mgv') || ''; } catch { return ''; } })(); // mgView: '' = automatica (schede se scelgo un fornitore) · 'g' schede · 'l' elenco. mgSup: '' = tutto · '__srv' = servizi · '__none' = senza fornitore · altrimenti il fornitore
   // v136: selezione multipla nel magazzino (elimina o modifica più articoli insieme)
   const mgSel = new Set(); let mgMode = false, mgIds = [];
   const mgN = () => [...mgSel].filter(id => artOf(id)).length;
@@ -8955,16 +8955,49 @@
   }
   /* v242: la foto dell'articolo di magazzino è quella del prodotto nel catalogo del fornitore (cercata per codice fornitore) */
   const mgSupKey = a => { const k = mgSupOf(a); if (k === '__none') return ''; return Object.keys(PV_SUP).find(s => s !== 'mag' && s !== 'srv' && PV_SUP[s].file && pvCliKey(PV_SUP[s].n) === k) || ''; };
-  const mgIdx = cat => { if (cat._mgI) return cat._mgI; const M = new Map(); (cat.items || []).forEach(it => (it.c || []).forEach(c => { const im = pvImg(cat, c); if (!im) return; [c[0], it.id].forEach(v => { const k = codeKey(v); if (k && !M.has(k)) M.set(k, im); }); })); return cat._mgI = M; };
   const mgLoadedSup = new Set();
-  function mgPhoto(a) {
-    const code = codeKey(a.codForn || a.codice); if (!code) return '';
-    const s = mgSupKey(a);
-    if (s) { const cat = pvCats[s]; if (cat) return mgIdx(cat).get(code) || ''; if (!mgLoadedSup.has(s)) { mgLoadedSup.add(s); pvLoad(s).then(() => { if (view === 'magazzino') renderMag(); }).catch(() => {}); } return ''; }
-    for (const k in pvCats) { const c = pvCats[k]; if (c && c.items && !c.mag && !c.srv) { const im = mgIdx(c).get(code); if (im) return im; } }
-    return '';
-  }
+  const mgPhoto = a => { const L = mgLink(a); return L ? pvImg(L.cat, L.c) || '' : ''; };
   const mgThumb = a => { const im = mgPhoto(a), ini = esc((String(a.descrizione || '?').match(/[A-Za-zÀ-ÿ0-9]/g) || ['?']).slice(0, 2).join('').toUpperCase()); return `<span class="mg-th">${ini}${im ? pvImgTag(im, 't') : ''}</span>`; };
+  /* v244: collega l'articolo al prodotto del catalogo (colore/versione = codice fornitore, taglia = «tg X» nel nome) */
+  // i codici colore del fornitore sono condivisi da molti prodotti (es. 14000 = NERO): il prodotto si riconosce dal nome nella descrizione («NOME · COLORE · tg M»)
+  const mgLinkIdx = cat => { if (cat._mgL) return cat._mgL; const M = new Map(); (cat.items || []).forEach(it => (it.c || []).forEach(c => { const k = codeKey(c[0]); if (!k) return; if (!M.has(k)) M.set(k, []); M.get(k).push({ it, c }); })); return cat._mgL = M; };
+  function mgLink(a) {
+    const k = codeKey(a.codForn || ''); if (!k) return null;
+    const s0 = mgSupKey(a), S = s0 ? [s0] : Object.keys(pvCats), d = String(a.descrizione || ''), nm = d.split(' · ')[0].trim().toUpperCase();
+    for (const sup of S) {
+      const cat = pvCats[sup];
+      if (!cat) { if (s0 && !mgLoadedSup.has(s0)) { mgLoadedSup.add(s0); pvLoad(s0).then(() => { if (view === 'magazzino') renderMag(); }).catch(() => {}); } continue; }
+      if (!cat.items || cat.mag || cat.srv) continue;
+      const H = mgLinkIdx(cat).get(k); if (!H) continue;
+      const h = H.find(x => String(x.it.n || '').toUpperCase() === nm) || (H.length === 1 ? H[0] : null); if (!h) continue;
+      const m = /(?:tg\.?|taglia)\s*([^\s·]+)\s*$/i.exec(d), sz = m && (h.it.sz || []).find(z => String(z).toUpperCase() === m[1].toUpperCase());
+      return { sup, cat, it: h.it, c: h.c, sz: sz || '' };
+    }
+    return null;
+  }
+  // scheda del prodotto come nei Preventivi, ma con le sole quantità disponibili in magazzino
+  function mgDetail(el) {
+    const [sup, id] = mgItem.split('|'), cat = pvCats[sup], it = cat && cat.items.find(x => x.id === id);
+    if (!it) { mgItem = ''; return renderMag(); }
+    sub('Articoli, giacenze, carichi e scarichi');
+    const G = giacMap(mgMag), R = new Map(); let tot = 0, val = 0, um = '';
+    GX.art().forEach(a => { const L = mgLink(a); if (!L || L.cat !== cat || L.it !== it) return; const g = G.get(a.id) || 0; if (g <= 0) return; um = um || a.um || ''; tot += g; val += g * num(a.costo); const r = R.get(L.c[0]) || { c: L.c, z: new Map(), n: 0, first: a }; r.n += g; const cur = r.z.get(L.sz); r.z.set(L.sz, { a: cur ? cur.a : a, g: (cur ? cur.g : 0) + g }); R.set(L.c[0], r); });
+    const rows = [...R.values()].sort((x, y) => it.c.indexOf(x.c) - it.c.indexOf(y.c));
+    const useSz = !cat.tool && (it.sz || []).length > 0, used = useSz ? it.sz.filter(z => rows.some(r => r.z.has(z))) : [];
+    const qb = (x, big) => `<button type="button" class="mg-qb${big ? ' tot' : ''}" data-gx="mov-art" data-id="${esc(x.a.id)}" title="Carico / scarico">${fmtNum(x.g, x.g % 1 ? 2 : 0)}</button>`;
+    const head = `<div class="pv-back"><button type="button" class="btn sm" id="mg-iback">‹ Magazzino</button><span class="muted small">${esc(cat.nome)} · ${esc(it.cl || '')}</span></div>
+      <div class="card pv-hd"><div class="pv-hm">${pvThumb(cat, it, (rows[0] || { c: it.c[0] }).c, 'big')}</div>
+        <div class="pv-hi"><span class="pv-code">${esc(pvCode(it))}</span><h2>${esc(it.n)}</h2><p>${esc(it.d || '')}</p>
+          <div class="pv-spec">${(cat.tool ? pvSpecTool(it) : [['Composizione', it.comp], ['Grammatura', it.gsm], ['Prodotto in', it.mi], ['Taglie', (it.sz || []).join(' · ')]]).filter(x => x[1]).map(([a, b]) => `<div><span>${a}</span><b>${esc(String(b))}</b></div>`).join('')}</div></div>
+        <div class="pv-prices"><div class="pv-pf"><span>In magazzino</span><b class="pv-big">${fmtNum(tot, tot % 1 ? 2 : 0)} ${esc(um)}</b><small>${rows.length} ${rows.length === 1 ? (cat.tool ? 'versione' : 'colore') : (cat.tool ? 'versioni' : 'colori')} disponibili</small></div>
+          ${val ? `<div class="pv-pf"><span>Valore al costo</span><b>${eur(val)}</b><small>IVA esclusa</small></div>` : ''}</div></div>`;
+    let mx;
+    if (!rows.length) mx = '<div class="card pv-mx"><div class="empty">Nessun pezzo disponibile in magazzino</div></div>';
+    else if (useSz) mx = `<div class="card pv-mx"><div class="card-h"><h3>Taglie e colori disponibili</h3><span class="muted small">solo le quantità in magazzino · tocca un numero per carico o scarico</span></div>
+        <div class="pv-tw"><table class="pv-t"><thead><tr><th class="pv-ch">Colore</th>${used.map(z => `<th>${esc(z)}</th>`).join('')}<th>Pezzi</th></tr></thead><tbody>${rows.map(r => `<tr><td class="pv-ch"><span class="pv-cr">${pvThumb(cat, it, r.c, 'sm')}<span><b>${esc(r.c[1])}</b><small>${esc(r.c[0])}</small></span></span></td>${used.map(z => `<td class="pv-szc" data-l="${esc(z)}">${r.z.has(z) ? qb(r.z.get(z)) : ''}</td>`).join('')}<td class="pv-rt" data-l="Pezzi"><b>${fmtNum(r.n, r.n % 1 ? 2 : 0)}</b></td></tr>`).join('')}</tbody></table></div></div>`;
+    else mx = `<div class="card pv-mx"><div class="card-h"><h3>Disponibili in magazzino</h3><span class="muted small">tocca un numero per carico o scarico</span></div><div class="pv-vr">${rows.map(r => `<div class="pv-vrow"><span class="pv-vn"><b>${esc(r.c[1] || r.c[0])}</b><small>cod. ${esc(r.c[0])}</small></span>${qb({ a: r.first, g: r.n }, 1)}</div>`).join('')}</div></div>`;
+    el.innerHTML = head + mx;
+  }
   /* v243: vista a schede (come i Preventivi): foto, nome, codice, giacenza, costo e prezzo */
   function mgGridHtml(F, SF, G, low, mgIva) {
     const card = (a, i) => { const g = G.get(a.id) || 0, im = mgPhoto(a);
@@ -8975,12 +9008,19 @@
           <span class="pv-pr">${num(a.prezzo) ? `<strong>${eur(num(a.prezzo) * mgIva(a))}</strong>` : ''}<small>${num(a.costo) ? 'costo ' + eur(num(a.costo) * mgIva(a)) : 'costo da inserire'}</small></span>
           <button type="button" class="btn sm ghost mg-pm" data-gx="mov-art" data-id="${esc(a.id)}" title="Carico / scarico">±</button></span></div>`; };
     const sc = (x, i) => `<div class="card pv-card mg-card" data-gx="srv-edit" data-id="${esc(x.id)}" role="button" tabindex="0"><span class="pv-img"><b class="ph">SV</b></span><span class="pv-cm"><b>${esc(x.d)}</b><small>${esc([x.cod, 'servizio'].filter(Boolean).join(' · '))}</small><span class="pv-pr">${num(x.p) ? `<strong>${eur(num(x.p) * (ivaOn ? 1 + num(x.iva) / 100 : 1))}</strong>` : ''}<small>${esc(x.um || '')}</small></span></span></div>`;
-    const body = F.slice(0, 400).map(card).join('') + SF.map(sc).join('');
+    const gcard = (g, i) => { const tot = g.arts.reduce((n, x) => n + (G.get(x.id) || 0), 0), cols = new Set(g.arts.map(x => (mgLink(x) || {}).c && mgLink(x).c[0])).size, a0 = g.arts[0], L0 = mgLink(a0);
+      return `<div class="card pv-card mg-card" data-mgitem="${esc(g.key)}" role="button" tabindex="0" style="--d:${Math.min(i, 16) * 30}ms">${pvThumb(L0.cat, L0.it, L0.c)}<span class="pv-cm"><b>${esc(L0.it.n)}</b><small>${esc(pvCode(L0.it))} · ${esc(String(L0.it.cl || '').toLowerCase())}</small>
+        <span class="mg-cq"><span class="gx-q${tot <= 0 ? ' zero' : ''}">${fmtNum(tot, tot % 1 ? 2 : 0)} ${esc(a0.um || '')}</span><small>${g.arts.length} ${g.arts.length === 1 ? 'articolo' : 'articoli'}${cols > 1 ? ' · ' + cols + ' colori' : ''}</small></span></span></div>`; };
+    const items = []; const GR = new Map();
+    F.slice(0, 400).forEach(a => { const L = mgSel.size || mgMode ? null : mgLink(a); if (!L) { items.push({ a }); return; } const key = L.sup + '|' + L.it.id; let g = GR.get(key); if (!g) { g = { key, arts: [] }; GR.set(key, g); items.push({ g }); } g.arts.push(a); });
+    const body = items.map((x, i) => x.g ? gcard(x.g, i) : card(x.a, i)).join('') + SF.map(sc).join('');
     return `<div class="${body ? 'pv-grid mg-grid' : ''}">${body || '<div class="empty">Nessun articolo trovato</div>'}</div>${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}`;
   }
   const mgSupOf = a => { const nm = String(a.fornitore || '').trim(); return nm ? pvCliKey(nm) : '__none'; };
   function renderMag() {
     const el = $('#mg-body'); if (!el) return;
+    if (mgItem && mgTab === 'art' && pvCats[mgItem.split('|')[0]]) return mgDetail(el);
+    mgItem = '';
     sub('Articoli, giacenze, carichi e scarichi');
     if (GX.art().some(a => !String(a.codice || '').trim())) setTimeout(artFixCodes, 0);
     if (mgMag && !MAGS().includes(mgMag)) mgMag = '';
@@ -9546,6 +9586,8 @@
     const tb = t.closest('[data-mgtab]'); if (tb) { mgTab = tb.dataset.mgtab; renderMag(); return; }
     const lw = t.closest('[data-mglow]'); if (lw) { mgLow = lw.dataset.mglow === '1'; mgAvail = false; renderMag(); return; }
     const av = t.closest('[data-mgav]'); if (av) { mgAvail = !mgAvail; if (mgAvail) mgLow = false; renderMag(); return; }
+    const mgi = t.closest('[data-mgitem]'); if (mgi && !t.closest('[data-gx]')) { mgItem = mgi.dataset.mgitem; renderMag(); window.scrollTo(0, 0); return; }
+    if (t.closest('#mg-iback')) { mgItem = ''; renderMag(); return; }
     const mvw = t.closest('[data-mgview]'); if (mvw) { mgView = mvw.dataset.mgview; try { localStorage.setItem('cdc_mgv', mgView); } catch {} renderMag(); return; }
     const sp = t.closest('[data-mgsup]'); if (sp) { mgSup = sp.dataset.mgsup; renderMag(); return; }
     const mk = t.closest('[data-mgck]'); if (mk) { mgToggle(mk.dataset.mgck, mk.checked); return; }
