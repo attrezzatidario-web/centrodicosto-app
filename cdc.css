@@ -3248,8 +3248,8 @@ body.scn-on { overflow: hidden; }
 .pv-qr .pv-qt { font-size: 15px; font-weight: 700; white-space: nowrap; }
 .pv-qr:last-child { border-bottom: 0; }
 @media (max-width: 1180px) { .pv-qr, .pv-qh { grid-template-columns: 112px minmax(0, 1fr) 170px 104px 108px; gap: 14px; } }
-.pv-back [data-pvconv] { display: inline-flex; align-items: center; gap: 6px; }
-.pv-back [data-pvconv] svg, .pv-doc svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pv-back [data-pvconv], .pv-back #pv-ordf { display: inline-flex; align-items: center; gap: 6px; }
+.pv-back [data-pvconv] svg, .pv-back #pv-ordf svg, .pv-doc svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pv-docs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
 .pv-doc { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; text-align: left; animation: pkIn .35s both; }
 .pv-doc:hover { border-color: var(--accent); }
@@ -3259,7 +3259,7 @@ body.scn-on { overflow: hidden; }
   .pv-back { grid-template-columns: auto auto 1fr !important; }
   .pv-back .pv-sp { display: none !important; }
   .pv-back .pv-fchip { justify-self: start; }
-  .pv-back [data-pvconv] { grid-row: 3; justify-content: center; height: 42px; }
+  .pv-back [data-pvconv], .pv-back #pv-ordf { grid-row: 3; justify-content: center; height: 42px; }
   .pv-back [data-pvconv="ddt"] { grid-column: 1 / 2; } .pv-back [data-pvconv="fv"] { grid-column: 2 / -1; }
   .pv-back #pv-dup, .pv-back #pv-del { grid-row: 4; }
   .pv-docs { display: grid; } .pv-doc { width: 100%; }
