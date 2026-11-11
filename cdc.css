@@ -4313,3 +4313,7 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .pk-vw { display: flex; flex: none; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; } .pk-vw button { border: 0; background: var(--surface); font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 0 10px; height: 32px; cursor: pointer; white-space: nowrap; } .pk-vw button.on { background: var(--ink); color: #fff; }
 .pk-gh { display: flex; align-items: center; gap: 8px; padding: 14px 6px 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); position: sticky; top: 0; background: var(--surface, #fff); z-index: 1; } .pk-gh b { font-weight: 700; color: var(--ink-2); } .pk-gh em { font-style: normal; font-size: 11px; background: var(--line); border-radius: 99px; padding: 1px 7px; }
 @media (max-width: 640px) { .pk-ms { flex-direction: column; align-items: stretch; padding: 0 12px 8px; } .pk-vw { align-self: flex-start; } }
+.mg-qb.out { color: var(--muted); background: transparent; border-style: dashed; font-weight: 500; }
+.mg-st { margin-top: 14px; }
+.mg-qb.out { color: var(--muted); background: transparent; border-style: dashed; font-weight: 500; }
+.mg-st { margin-top: 14px; }
