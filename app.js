@@ -3440,7 +3440,7 @@
     const items = A.map(a => {
       const cl = String(a.categoria || '').trim() || 'Articoli'; if (!groups.has(gk(cl))) groups.set(gk(cl), { k: gk(cl), t: cl, s: '' });
       const sp = [['Codice interno', a.codice], ['Codice fornitore', a.codForn], ['Codice a barre', a.barcode], ['Fornitore', a.fornitore], ['Unità', a.um], ['Giacenza', fmtNum(G.get(a.id) || 0, 0) + ' ' + (a.um || '')]].filter(x => String(x[1] || '').trim());
-      const it = { id: a.id, n: a.descrizione, cl, g: gk(cl), sc: [a.codForn ? 'cod. fornitore ' + a.codForn : '', a.fornitore].filter(Boolean).join(' · '), sz: ['Pz'], c: [[a.codice || a.id, '', num(a.prezzo) || null, [0], '']], uv: 1, peso: null, dim: [null, null, null], mod: '', sp, url: '', um: a.um || 'PZ', d: a.note || '', code: a.codice || '', mag: 1, giac: G.get(a.id) || 0, scorta: num(a.scorta) };
+      const it = { id: a.id, n: a.descrizione, cl, g: gk(cl), sc: [a.codForn ? 'cod. fornitore ' + a.codForn : '', a.fornitore].filter(Boolean).join(' · '), sz: ['Pz'], c: [[a.codice || a.id, '', num(a.prezzo) || null, [0], mgPhoto(a)]], uv: 1, peso: null, dim: [null, null, null], mod: '', sp, url: '', um: a.um || 'PZ', d: a.note || '', code: a.codice || '', mag: 1, forn: String(a.fornitore || '').trim(), giac: G.get(a.id) || 0, scorta: num(a.scorta) };
       it.k = amNorm(`${it.n} ${a.codice || ''} ${a.codForn || ''} ${a.barcode || ''} ${cl} ${a.fornitore || ''}`);
       pvListSup[it.id] = 'mag'; delete pvListPub[it.id];
       if (num(a.costo)) pvListRaw[it.id] = num(a.costo); else delete pvListRaw[it.id];
@@ -8545,7 +8545,7 @@
     return { art: a ? a.id : '', sup, it: it.id, vc: c[0], c: a ? a.codice || '' : s ? s.cod || '' : String(c[0] || pvCode(it)), d, um: a ? a.um || 'PZ' : s ? s.um || 'H' : it.um && it.um !== 'PZ' ? it.um : 'PZ', q: q || 1, p: docPrice(cliName, it.id, c[0]) ?? '', sc: '', iva: a ? (a.iva === '' || a.iva == null ? 22 : num(a.iva)) : s ? num(s.iva) : 22, acq: acq == null ? '' : acq, ...(s ? { srv: 1 } : {}) };
   }
   /* ---------- finestra «Aggiungi prodotti»: servizi, magazzino e tutti i cataloghi, con foto, versioni e taglie ---------- */
-  let pkSrc = 'all';
+  let pkSrc = 'all', pkMs = '', pkView = 'sup';
   function pickOpen(o = {}) {
     const cli = o.cli || '';
     let src = o.src || (o.noSrv && pkSrc === 'srv' ? 'all' : pkSrc), q = o.q || '', sel = null, added = 0; const kicked = {};
@@ -8554,10 +8554,11 @@
       <div class="pk-h"><b>${esc(o.title || 'Aggiungi prodotti')}</b>${cli ? `<span class="pk-cli">prezzi per ${esc(cli)}${cliRic(cli) != null ? ' · ricarico +' + esc(fmtNum(cliRic(cli), 1).replace(/,0$/, '')) + '%' : ''}</span>` : ''}<span class="pk-sp"></span><button type="button" class="md-x" data-pk="x" aria-label="Chiudi"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div class="pk-s"><label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Cerca nome, codice o tipo…" autocomplete="off"><button type="button" class="scan-ib" data-pk="scan" title="Scansiona" aria-label="Scansiona">${SCAN_IC}</button></label></div>
       <div class="pk-src"></div>
+      <div class="pk-ms" hidden></div>
       <div class="pk-list"></div>
       <div class="pk-f"><span class="pk-msg" aria-live="polite"></span>${o.noSrv ? (o.onNew ? '<button type="button" class="btn sm" data-pk="newprod">+ Nuovo prodotto</button>' : '') : '<button type="button" class="btn sm" data-pk="newsrv">+ Nuovo servizio</button>'}<button type="button" class="btn primary" data-pk="x">Fatto <em class="pk-n">0</em></button></div></div>`;
     document.body.appendChild(ov); requestAnimationFrame(() => ov.classList.add('in'));
-    const inp = $('.pk-s input', ov), list = $('.pk-list', ov), srcEl = $('.pk-src', ov), msg = $('.pk-msg', ov);
+    const inp = $('.pk-s input', ov), list = $('.pk-list', ov), srcEl = $('.pk-src', ov), msEl = $('.pk-ms', ov), msg = $('.pk-msg', ov);
     const close = () => { ov.classList.remove('in'); document.removeEventListener('keydown', key, true); setTimeout(() => ov.remove(), 220); if (o.onClose) o.onClose(added); };
     const key = e => { if (e.key === 'Escape') { e.stopPropagation(); if (sel) { sel = null; draw(); } else close(); } };
     document.addEventListener('keydown', key, true);
@@ -8565,12 +8566,28 @@
     const say = t => { msg.textContent = t; msg.classList.remove('pop'); void msg.offsetWidth; msg.classList.add('pop'); };
     const priceTxt = (it, c) => { const p = docPrice(cli, it.id, c[0]), a = pvAcq(it.id, c[0]); return `${p != null ? `<b>${eur(p)}</b>` : '<b class="muted">prezzo da scrivere</b>'}${!pvCli && a != null ? `<small>acquisto ${eur(a)}</small>` : ''}`; };
     const drawSrc = () => {
+      drawMs();
       const S = [['all', 'Tutto'], ...(o.noSrv ? [] : [['srv', 'Servizi']]), ...(pvMagOk() ? [['mag', 'Magazzino']] : []), ...sups().filter(s => s !== 'mag' && s !== 'srv').map(s => [s, PV_SUP[s].n])];
       srcEl.innerHTML = S.map(([k, t]) => `<button type="button" class="pk-c${k === src ? ' on' : ''}" data-pksrc="${k}">${['all', 'srv', 'mag'].includes(k) ? esc(t) : `<img src="logo-${k}.svg" alt="${esc(t)}" title="${esc(t)}">`}</button>`).join('');
+    };
+    const magSups = () => mgSupList(GX.art());
+    const drawMs = () => {
+      if (src !== 'mag') { msEl.hidden = true; msEl.innerHTML = ''; return; }
+      const SL = magSups(), nAll = GX.art().length; if (pkMs && !SL.some(x => x.k === pkMs)) pkMs = '';
+      msEl.hidden = false;
+      msEl.innerHTML = `<div class="pk-ms-s"><button type="button" class="pk-c${pkMs === '' ? ' on' : ''}" data-pkms="">Tutti <em>${nAll}</em></button>${SL.map(x => `<button type="button" class="pk-c${pkMs === x.k ? ' on' : ''}" data-pkms="${esc(x.k)}" title="${esc(x.nm)}">${x.logo ? `<img src="logo-${esc(x.logo)}.svg" alt="${esc(x.nm)}">` : esc(x.nm)} <em>${x.n}</em></button>`).join('')}</div>
+        <div class="pk-vw" role="group" aria-label="Vista"><button type="button" class="${pkView === 'sup' ? 'on' : ''}" data-pkview="sup">Per fornitore</button><button type="button" class="${pkView === 'all' ? 'on' : ''}" data-pkview="all">Tutti insieme</button></div>`;
     };
     const match = (it, toks) => toks.every(t => it.k.includes(t));
     async function results() {
       const toks = amNorm(q).split(/\s+/).filter(Boolean);
+      if (src === 'mag') {
+        const cat = (pvCats.mag = pvMagCat());
+        // le foto vengono dai cataloghi dei fornitori: li carico e ridisegno quando arrivano
+        new Set(GX.art().map(mgSupKey).filter(Boolean)).forEach(k => { if (pvCats[k] || kicked[k]) return; kicked[k] = 1; pvLoad(k).catch(() => null).then(() => { clearTimeout(kicked._t); kicked._t = setTimeout(() => { if (!sel && ov.isConnected && src === 'mag') draw(); }, 150); }); });
+        const L = []; for (const it of cat.items) { if (pkMs && mgSupOf(artOf(it.id) || {}) !== pkMs) continue; if (!toks.length || match(it, toks)) L.push(['mag', it]); }
+        return { L: L.slice(0, 500), hint: L.length > 500 ? `Mostrati 500 articoli su ${L.length}: scrivi per restringere` : L.length ? '' : toks.length ? 'Nessun articolo trovato' : 'Magazzino vuoto', mag: true };
+      }
       const S = src === 'all' ? sups() : [src];
       const need = S.filter(s => !pvCats[s] || s === 'mag' || s === 'srv');
       if (src === 'all' && !toks.length) {
@@ -8589,7 +8606,9 @@
       return { L, hint: waiting.length ? (tot > 1 ? `Cerco anche negli altri cataloghi… (${done}/${tot})` : 'Carico il catalogo…') : L.length ? '' : toks.length ? 'Nessun prodotto trovato' : src === 'srv' ? 'Nessun servizio: crealo con «+ Nuovo servizio»' : 'Catalogo vuoto' };
     }
     function drawList(r) {
-      list.innerHTML = (r.L.map(([s, it]) => { const cat = pvCats[s], one = it.c.length === 1 && it.sz.length <= 1; return `<div class="pk-r" data-pkit="${esc(s + '|' + it.id)}">${s === 'srv' ? `<span class="pv-img sm pk-si">${DOC_IC}</span>` : pvThumb(cat, it, pvCover(it), 'sm')}<span class="pk-t"><b>${esc(it.n)}</b><small>${esc([s === 'mag' ? 'Magazzino' : s === 'srv' ? 'Servizio' : PV_SUP[s].n, pvCode(it), it.c.length > 1 ? it.c.length + ' versioni' : '', it.sz.length > 1 ? it.sz.length + ' taglie' : ''].filter(Boolean).join(' · '))}</small></span><span class="pk-p">${priceTxt(it, pvCover(it))}</span><button type="button" class="pk-add" data-pkadd="${esc(s + '|' + it.id)}" aria-label="${one ? 'Aggiungi' : 'Scegli versione e quantità'}">${one ? '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'}</button></div>`; }).join('') || '') + (r.hint ? `<div class="pk-hint">${esc(r.hint)}</div>` : '');
+      let lastF = null; const gh = it => { if (!r.mag || pkView !== 'sup' || pkMs) return ''; const f = it.forn || 'Senza fornitore'; if (f === lastF) return ''; lastF = f; const n = r.L.filter(x => (x[1].forn || 'Senza fornitore') === f).length; return `<div class="pk-gh"><b>${esc(f)}</b><em>${n}</em></div>`; };
+      if (r.mag && pkView === 'sup' && !pkMs) r.L.sort((a, b) => (!a[1].forn - !b[1].forn) || String(a[1].forn).localeCompare(String(b[1].forn), 'it'));
+      list.innerHTML = (r.L.map(([s, it]) => { const cat = pvCats[s], one = it.c.length === 1 && it.sz.length <= 1; return gh(it) + `<div class="pk-r" data-pkit="${esc(s + '|' + it.id)}">${s === 'srv' ? `<span class="pv-img sm pk-si">${DOC_IC}</span>` : pvThumb(cat, it, pvCover(it), 'sm')}<span class="pk-t"><b>${esc(it.n)}</b><small>${esc([s === 'mag' ? (pkView === 'all' || pkMs || !r.mag ? it.forn || 'Magazzino' : '') : s === 'srv' ? 'Servizio' : PV_SUP[s].n, pvCode(it), s === 'mag' ? fmtNum(it.giac || 0, 0) + ' in magazzino' : '', it.c.length > 1 ? it.c.length + ' versioni' : '', it.sz.length > 1 ? it.sz.length + ' taglie' : ''].filter(Boolean).join(' · '))}</small></span><span class="pk-p">${priceTxt(it, pvCover(it))}</span><button type="button" class="pk-add" data-pkadd="${esc(s + '|' + it.id)}" aria-label="${one ? 'Aggiungi' : 'Scegli versione e quantità'}">${one ? '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'}</button></div>`; }).join('') || '') + (r.hint ? `<div class="pk-hint">${esc(r.hint)}</div>` : '');
       pvFillImgs();
     }
     function drawSel() {
@@ -8624,6 +8643,8 @@
           give(arr); sel = null; return draw();
         }
       }
+      const ms = t.closest('[data-pkms]'); if (ms) { pkMs = ms.dataset.pkms; sel = null; return draw(); }
+      const vw = t.closest('[data-pkview]'); if (vw) { pkView = vw.dataset.pkview; sel = null; return draw(); }
       const sc = t.closest('[data-pksrc]'); if (sc) { src = pkSrc = sc.dataset.pksrc; sel = null; return draw(); }
       const ad = t.closest('[data-pkadd]') || t.closest('[data-pkit]');
       if (ad) {
