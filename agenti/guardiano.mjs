@@ -65,8 +65,9 @@ async function prova(nome, fn) {
 await prova('Demo', async (p, errs) => {
   const s = Date.now();
   await p.goto(BASE, { waitUntil: 'load', timeout: 45000 });
-  await p.waitForSelector('[data-demo]', { state: 'visible', timeout: 30000 });
-  await p.click('[data-demo]');
+  await p.waitForTimeout(3000); // lascia partire la presentazione iniziale
+  await p.getByRole('button', { name: /Prova la demo/ }).first().click({ timeout: 10000 })
+    .catch(async () => { await p.evaluate(() => document.querySelector('[data-demo]').click()); });
   await p.waitForFunction(() => { const v = document.querySelector('#v-home'); return v && !v.hidden && v.offsetHeight > 0; }, null, { timeout: 30000 });
   const apri = Date.now() - s;
   const viste = await p.$$eval('section.view[data-v]', a => a.map(x => x.dataset.v));
