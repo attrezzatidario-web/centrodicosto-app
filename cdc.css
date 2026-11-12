@@ -4156,7 +4156,7 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 @media (prefers-reduced-motion: reduce) { .nav a[data-view] { transition: none; } }
 
 /* v213: foto profilo dei dipendenti */
-.dp-av { overflow: hidden; } .dp-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dp-av, .ns-av { overflow: hidden; } .dp-av img, .ns-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dp-avb { position: relative; display: inline-grid; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; flex: none; }
 .dp-avb:disabled { cursor: default; }
 .dp-avb .dp-av.lg { width: 72px; height: 72px; font-size: 24px; }

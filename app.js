@@ -480,6 +480,9 @@
   }
   async function busyBtn(btn, txt, fn) { const t0 = btn.textContent; btn.disabled = true; btn.textContent = txt; try { return await fn(); } finally { btn.disabled = false; btn.textContent = t0; } }
   const netErr = e => e instanceof TypeError ? 'Nessuna connessione: riprova' : e.message;
+  // il pixel Meta (dopo il consenso) gira solo nella pagina d'ingresso: entrando con un account vero si ricarica la pagina,
+  // così lo script di Facebook non resta in memoria accanto ai dati di clienti e dipendenti
+  function pixelOut(u) { if (!window.fbq || (u && u.demo)) return false; busy('Apro il gestionale…'); location.reload(); return true; }
   async function doLogin(ev) {
     ev.preventDefault(); authMsg();
     const email = $('#login-email').value.trim(), pw = $('#login-pw').value;
@@ -487,7 +490,9 @@
     try {
       const r = await busyBtn($('#login-go'), 'Verifico…', () => authCall('login', { email, password: pw, device: device() }));
       $('#login-pw').value = '';
-      setSession(r.user, r.token); start(); toast(r.user.demo ? 'Benvenuto nella demo' : `Ciao ${String(r.user.nome || '').split(' ')[0]}`);
+      setSession(r.user, r.token);
+      if (pixelOut(r.user)) return;
+      start(); toast(r.user.demo ? 'Benvenuto nella demo' : `Ciao ${String(r.user.nome || '').split(' ')[0]}`);
       if (r.user.mustPw) setTimeout(() => pwForm(true), 900);
     } catch (e) { authMsg(netErr(e)); }
   }
@@ -507,7 +512,7 @@
       const body = { nome: v('nome'), azienda: v('azienda'), email: v('email'), password: f.elements.password.value, device: device() };
       Object.assign(body, nuova ? { nuova: true, settore: v('settore'), citta: v('citta') } : { codice: v('codice').toUpperCase() });
       const r = await busyBtn($('#reg-go'), nuova ? 'Invio la richiesta…' : 'Creo l\'account…', () => authCall('register', body));
-      if (r.attivo && r.token) { f.reset(); setSession(r.user, r.token); start(); toast(r.user.demo ? 'Benvenuto nella demo' : 'Account creato'); return; }
+      if (r.attivo && r.token) { f.reset(); setSession(r.user, r.token); if (pixelOut(r.user)) return; start(); toast(r.user.demo ? 'Benvenuto nella demo' : 'Account creato'); return; }
       $('#login-email').value = v('email'); f.reset(); regMode('code'); authPane('login');
       authMsg('', nuova ? 'Richiesta inviata. Prepariamo il gestionale della tua azienda: riceverai una email appena è pronto.' : 'Richiesta inviata. L\'amministratore deve approvare il tuo account: riceverai una email appena sarà attivo.');
     } catch (e) { authMsg(/Codice gestionale non valido/.test(e.message) && nuova ? 'Per registrare una nuova azienda aggiorna lo script Google alla versione cdc-4.1' : netErr(e)); }
@@ -789,7 +794,7 @@
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.0') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare dipendenti, timbrature e ferie serve lo script versione cdc-5.0 o successiva: senza aggiornamento i dipendenti inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_DIP) { el.innerHTML = '<div class="card"><div class="empty">Carico i dipendenti…</div></div>'; try { await loadLib('dipendenti.js?v=148'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'dipendenti') return; }
+    if (!window.CDC_DIP) { el.innerHTML = '<div class="card"><div class="empty">Carico i dipendenti…</div></div>'; try { await loadLib('dipendenti.js?v=250'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'dipendenti') return; }
     if (!window.CDC_DIP) return; // un'altra chiamata sta ancora caricando la sezione
     window.CDC_DIP.render(el, {
       db: () => db, write, api, applyLocal: ops => { applyMany(ops); save(); render(); }, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, setConfig, centri,
@@ -804,7 +809,7 @@
   async function renderNs() {
     const el = $('#ns-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.37') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare carte, contanti e note spese serve lo script versione cdc-5.37 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=239'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
+    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=250'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
     if (!window.CDC_NS) return; // un altro caricamento è già in corso
     window.CDC_NS.render(el, {
       db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, centri, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,

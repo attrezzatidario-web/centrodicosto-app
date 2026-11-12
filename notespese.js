@@ -28,7 +28,7 @@
   const ini = d => d ? (String(d.nome || '?')[0] + String(d.cognome || '')[0]).toUpperCase() : '?';
   const COL = ['#3362ab', '#1baf7a', '#eb6834', '#8b5cf6', '#0e9fb4', '#d55181', '#c98500', '#64748b'];
   const colOf = d => (d && d.colore) || COL[[...String(d ? d.id : 'x')].reduce((s, c) => s + c.charCodeAt(0), 0) % COL.length];
-  const av = d => `<span class="ns-av" style="--c:${colOf(d)}">${esc(ini(d))}</span>`;
+  const av = d => `<span class="ns-av" style="--c:${colOf(d)}">${d && d.foto ? `<img src="${esc(d.foto)}" alt="">` : esc(ini(d))}</span>`;
   const cardOf = id => CARTE().find(c => String(c.id) === String(id));
   /* una carta può essere assegnata a più persone: «dip» contiene gli id separati da virgola */
   const dipIds = c => c ? String(c.dip || '').split(',').map(x => x.trim()).filter(Boolean) : [];
