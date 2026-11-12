@@ -156,10 +156,7 @@ svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width:
 .pz-btn:not(.primary) .pz-spin.sm, .pz-lnk .pz-spin.sm { border-color: var(--line); border-top-color: var(--accent); }
 @keyframes pzs { to { transform: rotate(360deg); } }
 @media (max-width: 380px) { .pz-clock { font-size: 54px; } .pz-reqb { grid-template-columns: 1fr 1fr; } .pz-reqb .primary { grid-column: 1 / -1; } .pz-seg span { font-size: 12px; } }
-/* v128: aggiornamento in sottofondo */
-.pz-top::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 50% 100%; background-repeat: no-repeat; opacity: 0; transition: opacity .2s; }
-.pz-top.sync::after { opacity: 1; animation: pzbar 1.1s linear infinite; }
-@keyframes pzbar { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+/* v258: tolta la barra blu di aggiornamento in sottofondo (sul telefono non serve) */
 
 /* ===== nota spese ===== */
 .pz-nsw { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; margin: 0 -2px; scrollbar-width: none; }
