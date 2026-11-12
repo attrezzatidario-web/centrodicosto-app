@@ -4317,3 +4317,24 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .mg-st { margin-top: 14px; }
 .mg-qb.out { color: var(--muted); background: transparent; border-style: dashed; font-weight: 500; }
 .mg-st { margin-top: 14px; }
+/* v249: ritocchi grafici (report del Grafico) */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .demo-bar .btn.sm:not(.demo-info) { background: rgba(255,255,255,.12); } }
+:root[data-theme="dark"] .demo-bar .btn.sm:not(.demo-info) { background: rgba(255,255,255,.12); }
+.chip-f.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mg-sp img { background: #fff; border-radius: 6px; padding: 2px 5px; box-sizing: content-box; opacity: .8; } :root:not([data-theme="light"]) .mg-sp.on img { opacity: 1; } }
+:root[data-theme="dark"] .mg-sp img { background: #fff; border-radius: 6px; padding: 2px 5px; box-sizing: content-box; opacity: .8; }
+:root[data-theme="dark"] .mg-sp.on img { opacity: 1; }
+@media (max-width: 639px) {
+  .gx-seg button, .gx-act .btn.sm, .chip-f, .pv-tabs button, .pv-gsug button, .dp-act .btn.sm, .demo-bar .btn.sm, .gx-ra .btn.sm, .scan-ib { min-height: 40px; }
+  #dp-body .seg.dp-tabs button, #dp-body .seg.dp-fs button { height: 40px; }
+  #dp-body .seg.dp-tabs button { padding: 0 7px; font-size: 12.5px; gap: 4px; flex: 1 0 auto; justify-content: center; }
+  body[data-view="utenti"] .iva-tg, body[data-view="dipendenti"] .iva-tg, body[data-view="analisi"] .iva-tg { display: none; }
+  .iva-tg { height: 40px; } .iva-tg span { line-height: 32px; }
+  .scan-ib { min-width: 40px; }
+  .pv-sh .link, .dp-rdel, .pv-gvw button { position: relative; }
+  .pv-sh .link::after, .dp-rdel::after, .pv-gvw button::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 40px; transform: translateY(-50%); }
+  .dp-rdel::after { left: -5px; right: -5px; }
+  .top .subtitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top-l, .top-l > div { min-width: 0; } .top-r { flex: none; }
+  .dp-k span { white-space: normal; }
+}
