@@ -297,8 +297,8 @@
   const SECS = () => C.sections();
   function acc(d) {
     const u = staffOf(d), cr = S.creds && S.creds.dip === d.id ? S.creds : null;
-    const kind = u ? (u.ruolo === 'utente' ? 'resp' : u.ruolo === 'lettura' ? 'ro' : Object.values(u.sezioni || {}).some(Boolean) ? 'ges' : 'pz') : (S.akind || 'pz');
-    const perm = u ? (u.sezioni || {}) : (S.aperm || {});
+    const kind = S.akind || (u ? (u.ruolo === 'utente' ? 'resp' : u.ruolo === 'lettura' ? 'ro' : Object.values(u.sezioni || {}).some(Boolean) ? 'ges' : 'pz') : 'pz');
+    const perm = S.aperm && String(S.apermDip) === String(d.id) ? S.aperm : (u ? (u.sezioni || {}) : {});
     const sugg = d.email || `${String(d.nome || '').toLowerCase()}.${String(d.cognome || '').toLowerCase()}`.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9.]/g, '').replace(/^\.|\.$/g, '');
     const K = [['pz', 'Solo app Presenze', 'timbra e chiede ferie e permessi, non entra nel gestionale'], ['ges', 'Presenze + gestionale', 'entra nel gestionale e vede solo le sezioni che scegli tu'], ['resp', 'Responsabile', 'vede e modifica tutto, anche i dipendenti e gli accessi'], ['ro', 'Sola lettura', 'vede tutto il gestionale ma non può modificare']];
     return `${cr ? `<div class="card dp-cred"><div class="dp-credi">${svg('key')}</div><div><h3>Credenziali di ${esc(nameOf(d))}</h3><p>Dagliele a voce o mandale: al primo accesso gli chiederà di cambiare la password. ${cr.inviata ? '<b>Le abbiamo mandate anche via email.</b>' : ''}</p>
@@ -456,11 +456,11 @@ else{l.onclick=e=>{const d=e.target.closest('[data-i]');if(d){const p=P[+d.datas
   function bind(el) {
     const re = () => render(el, C);
     el.addEventListener('click', async ev => {
-      const t = ev.target, b = t.closest('[data-dp]'); if (!b || (b.tagName === 'TR' && t.closest('button'))) { if (!b) { const pv = t.closest('.dp-p3 [data-pv]'); if (pv) { pv.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === pv)); } } if (!b) return; }
+      const t = ev.target, b = t.closest('[data-dp]'); if (!b || (b.tagName === 'TR' && t.closest('button'))) { if (!b) { const pv = t.closest('.dp-p3 [data-pv]'); if (pv) { pv.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === pv)); S.aperm = permFromUI(); S.apermDip = S.det; } } if (!b) return; }
       const [k, a1, a2] = b.dataset.dp.split(':');
       if (k === 'tab') { S.tab = a1; S.det = ''; re(); window.scrollTo(0, 0); }
       else if (k === 'fst') { S.fst = a1; re(); }
-      else if (k === 'open') { S.det = a1; S.dtab = a2 || 'riepilogo'; S.creds = null; S.akind = ''; S.alogin = ''; re(); window.scrollTo(0, 0); }
+      else if (k === 'open') { S.det = a1; S.dtab = a2 || 'riepilogo'; S.creds = null; S.akind = ''; S.alogin = ''; S.aperm = null; S.apermDip = ''; re(); window.scrollTo(0, 0); }
       else if (k === 'back') { S.det = ''; S.creds = null; re(); }
       else if (k === 'new') { S.det = 'new'; S.dtab = 'anag'; re(); window.scrollTo(0, 0); setTimeout(() => { const i = el.querySelector('[name=nome]'); if (i) i.focus(); }, 60); }
       else if (k === 'dtab') { S.dtab = a1; re(); }
@@ -556,12 +556,12 @@ else{l.onclick=e=>{const d=e.target.closest('[data-i]');if(d){const p=P[+d.datas
       const st = db().staff = (db().staff || []).filter(x => String(x.dip) !== String(d.id));
       st.push({ email: login.toLowerCase(), nome: nameOf(d), ruolo, sezioni, stato: 'attivo', dip: d.id, cambia: u ? u.cambia : '1', accessi: 0, ultimo: '' });
       if (!u) S.creds = { dip: d.id, login: login.toLowerCase(), pw: 'Esempio-' + Math.random().toString(36).slice(2, 7), inviata: false };
-      render(root, C); return C.toast(u ? 'Demo: permessi salvati solo su questo dispositivo' : 'Demo: ecco come appaiono le credenziali (non sono reali)');
+      S.aperm = null; S.apermDip = ''; S.akind = ''; render(root, C); return C.toast(u ? 'Demo: permessi salvati solo su questo dispositivo' : 'Demo: ecco come appaiono le credenziali (non sono reali)');
     }
     try {
       C.busy(u ? 'Salvo i permessi…' : 'Creo l\'accesso…');
       const r = await C.api('staffSave', { login, nome: nameOf(d), dip: d.id, ruolo, sezioni, stato: u ? u.stato : 'attivo', invia: !!(root.querySelector('#dp-inv') || {}).checked, telefono: d.tel || '' });
-      C.busy(); db().staff = r.staff;
+      C.busy(); db().staff = r.staff; S.aperm = null; S.apermDip = ''; S.akind = '';
       if (r.nuovo) { S.creds = { dip: d.id, login: r.login, pw: r.pw, inviata: r.inviata }; if (!d.account) C.write([{ action: 'upsert', sheet: 'Dipendenti', row: { ...d, account: r.login } }]); else render(root, C); C.toast('Accesso creato'); }
       else { render(root, C); C.toast('Permessi salvati · valgono dal prossimo accesso'); }
     } catch (e) { C.busy(); C.toast(e.message); }
