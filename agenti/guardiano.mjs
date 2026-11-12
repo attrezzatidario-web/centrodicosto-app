@@ -66,10 +66,12 @@ await prova('Demo', async (p, errs) => {
   const s = Date.now();
   await p.goto(BASE, { waitUntil: 'load', timeout: 45000 });
   await p.waitForTimeout(3000); // lascia partire la presentazione iniziale
-  await p.getByRole('button', { name: /Prova la demo/ }).first().click({ timeout: 10000 })
-    .catch(async () => { await p.evaluate(() => document.querySelector('[data-demo]').click()); });
+  // il pulsante vero è [data-demo]: lo clicchiamo subito (aspettare un pulsante nascosto falsava il tempo di apertura di ~10 s)
+  await p.waitForSelector('[data-demo]', { state: 'attached', timeout: 10000 });
+  const s1 = Date.now();
+  await p.evaluate(() => document.querySelector('[data-demo]').click());
   await p.waitForFunction(() => { const v = document.querySelector('#v-home'); return v && !v.hidden && v.offsetHeight > 0; }, null, { timeout: 30000 });
-  const apri = Date.now() - s;
+  const apri = Date.now() - s1;
   const viste = await p.$$eval('section.view[data-v]', a => a.map(x => x.dataset.v));
   const visibili = await p.evaluate(() => [...document.querySelectorAll('a[href^="#"]')].filter(a => a.offsetParent && getComputedStyle(a).visibility !== 'hidden').map(a => a.getAttribute('href').slice(1)).filter(Boolean));
   const da = viste.filter(v => visibili.includes(v));
