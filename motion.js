@@ -148,3 +148,6 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
+
+/* v259: niente zoom a due dita su iPhone (user-scalable=no viene ignorato da Safari) */
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));

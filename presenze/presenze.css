@@ -269,7 +269,7 @@ button.pz-btn[data-spmore] { margin-top: 8px; }
 .pz-sbar { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom)); margin: 8px -18px calc(-18px - env(safe-area-inset-bottom)); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--surface) 78%, transparent); }
 
 /* v256 — rifiniture telefono: niente zoom involontario, nessuno sforamento a 320 px, allineamenti */
-html { touch-action: manipulation; }
+html, body { touch-action: pan-x pan-y; }
 body { overflow-x: hidden; }
 .pz-tabs { grid-auto-columns: minmax(0, 1fr); }
 .pz-tabs button span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -416,3 +416,13 @@ button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 .pz-dch input { height: 42px !important; }
 .pz-nsw { padding-bottom: 16px; margin-bottom: -8px; }
 @media (prefers-color-scheme: dark) { .pz-big:not(.alt):not(.pause):not(.stop) { background: #1f9d73; } .pz-big.pause:not(.alt) { color: #1a1200; } .pz-tabs { box-shadow: 0 10px 34px rgba(0, 0, 0, .5), 0 0 0 .5px var(--line), inset 0 1px 0 rgba(255, 255, 255, .08); } }
+
+/* ===== v259 — barra in alto stile iOS: trasparente in cima, vetro e titolo piccolo scorrendo; demo su una riga ===== */
+.pz-top { margin: 0 -14px; padding: calc(10px + env(safe-area-inset-top)) 18px 8px; min-height: 58px; background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; transition: background .25s var(--ease), box-shadow .25s var(--ease); }
+.pz-scr .pz-top { background: color-mix(in srgb, var(--bg) 78%, transparent); -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%); box-shadow: 0 .5px 0 var(--line); }
+.pz-ct { position: absolute; left: 50%; top: calc(10px + env(safe-area-inset-top)); height: 36px; display: flex; align-items: center; transform: translateX(-50%); max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 600; letter-spacing: -.015em; opacity: 0; pointer-events: none; transition: opacity .2s var(--ease); }
+.pz-scr .pz-ct { opacity: 1; }
+.pz-who div { transition: opacity .2s var(--ease); } .pz-scr .pz-who div { opacity: 0; }
+.pz-lt { padding-top: 8px; }
+.pz-demo { width: fit-content; max-width: 100%; margin: 0 auto 4px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .pz-top, .pz-ct, .pz-who div { transition: none; } }

@@ -127,6 +127,7 @@
     $$('.pz-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
     const TT = { oggi: 'Oggi', storico: 'Storico', richieste: 'Ferie e permessi', spese: 'Spese' };
     const lt = `<header class="pz-lt">${tab === 'oggi' ? `<small>${esc(cap(dLong(today())))}</small>` : ''}<h1>${TT[tab] || ''}</h1></header>`;
+    { const ct = $('#pz-ct'); if (ct) ct.textContent = TT[tab] || ''; }
     $('#pz-main').innerHTML = lt + (tab === 'storico' ? vStorico() : tab === 'richieste' ? vRichieste() : tab === 'spese' ? vSpese() : vOggi());
     if (tab === 'spese') nsInit();
     tick();
@@ -450,6 +451,10 @@
     if (t.closest('[data-m2="out"]')) return logout();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#pz-sheet').hidden) closeSheet(); });
+  // niente zoom: né a due dita né a doppio tocco (iPhone ignora user-scalable=no, quindi si blocca anche il gesto)
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+  // barra in alto: trasparente in cima, vetro con titolo piccolo quando si scorre
+  { let sc = false; const onS = () => { const v = window.scrollY > 52; if (v !== sc) { sc = v; $('#pz-app').classList.toggle('pz-scr', v); } }; window.addEventListener('scroll', onS, { passive: true }); }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && M) refresh(); });
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('../sw.js').catch(() => {});
   boot();
