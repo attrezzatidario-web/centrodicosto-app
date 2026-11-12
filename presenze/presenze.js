@@ -125,7 +125,9 @@
   const syncing = on => { const t = $('.pz-top'); if (t) t.classList.toggle('sync', !!on); };
   function render() {
     $$('.pz-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
-    $('#pz-main').innerHTML = tab === 'storico' ? vStorico() : tab === 'richieste' ? vRichieste() : tab === 'spese' ? vSpese() : vOggi();
+    const TT = { oggi: 'Oggi', storico: 'Storico', richieste: 'Ferie e permessi', spese: 'Spese' };
+    const lt = `<header class="pz-lt">${tab === 'oggi' ? `<small>${esc(cap(dLong(today())))}</small>` : ''}<h1>${TT[tab] || ''}</h1></header>`;
+    $('#pz-main').innerHTML = lt + (tab === 'storico' ? vStorico() : tab === 'richieste' ? vRichieste() : tab === 'spese' ? vSpese() : vOggi());
     if (tab === 'spese') nsInit();
     tick();
   }
