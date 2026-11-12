@@ -112,6 +112,7 @@
 
   /* ---------- barra di avanzamento mentre salva ---------- */
   function syncBar() {
+    return; /* barra blu in alto rimossa (v254) */
     let bar = $('#mv-prog'); if (!bar) { bar = document.createElement('div'); bar.id = 'mv-prog'; bar.innerHTML = '<i></i>'; document.body.appendChild(bar); }
     const s = $('#sync-side') || $('#sync'), busy = s && /Salvo|Carico|Aggiorno/i.test(s.textContent);
     bar.classList.toggle('on', !!busy);
