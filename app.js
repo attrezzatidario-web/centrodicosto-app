@@ -809,7 +809,7 @@
   async function renderNs() {
     const el = $('#ns-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.37') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare carte, contanti e note spese serve lo script versione cdc-5.37 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=254'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
+    if (!window.CDC_NS) { el.innerHTML = '<div class="card"><div class="empty">Carico la nota spese…</div></div>'; try { await loadLib('notespese.js?v=255'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'notespese') return; }
     if (!window.CDC_NS) return; // un altro caricamento è già in corso
     window.CDC_NS.render(el, {
       db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, centri, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,
@@ -8832,6 +8832,8 @@
   const fvLate = f => f.stato !== 'pagata' && validD(f.scadenza) && f.scadenza < today();
   const slug = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
   const gxKpi = K => `<div class="gx-kpis">${K.map(([l, v, s2, cls]) => `<div class="gx-k${cls ? ' ' + cls : ''}"><span>${l}</span><b>${v}</b><small>${s2 || ''}</small></div>`).join('')}</div>`;
+  const MG_KI = { box: '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>', eur: '<path d="M18 7a6 6 0 1 0 0 10M5 10h9M5 14h9"/>', alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/>', flow: '<path d="M7 4v14m0 0-3.5-3.5M7 18l3.5-3.5M17 20V6m0 0-3.5 3.5M17 6l3.5 3.5"/>' };
+  const mgKpi = K => `<div class="gx-kpis mg-kpis">${K.map(([l, v, s2, cls, p, ic], i) => `<div class="gx-k mg-k${cls ? ' ' + cls : ''}" style="--i:${i}"><i class="mg-ki"><svg viewBox="0 0 24 24" aria-hidden="true">${MG_KI[ic] || ''}</svg></i><span>${l}</span><b>${v}</b><small>${s2 || ''}</small>${p ? `<em class="mg-kb"><u style="--p:${Math.min(1, p).toFixed(3)}"></u></em>` : ''}</div>`).join('')}</div>`;
   const gxEmpty = (ic, t, d, btn) => `<div class="card gx-empty"><span class="set-ci lg"><svg viewBox="0 0 24 24">${ic}</svg></span><h3>${t}</h3><p>${d}</p>${btn || ''}</div>`;
   const GIC = {
     cli: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 11h6M19 8v6"/>',
@@ -9095,6 +9097,7 @@
     return `<div class="${body ? 'pv-grid mg-grid' : ''}">${body || '<div class="empty">Nessun articolo trovato</div>'}</div>${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}`;
   }
   const mgSupOf = a => { const nm = String(a.fornitore || '').trim(); return nm ? pvCliKey(nm) : '__none'; };
+  document.addEventListener('click', e => { document.querySelectorAll('.mg-more[open]').forEach(d => { if (!d.contains(e.target) || e.target.closest('.mg-menu button')) d.removeAttribute('open'); }); });
   function renderMag() {
     const el = $('#mg-body'); if (!el) return;
     if (mgItem && mgTab === 'art' && pvCats[mgItem.split('|')[0]]) return mgDetail(el);
@@ -9108,8 +9111,12 @@
     const m0 = today().slice(0, 7), MM = GX.mov().filter(m => String(m.data).slice(0, 7) === m0), nLow = A.filter(low).length;
     const tabs = `<div class="gx-seg" role="tablist"><button type="button" data-mgtab="art" class="${mgTab === 'art' ? 'on' : ''}">Articoli</button><button type="button" data-mgtab="mov" class="${mgTab === 'mov' ? 'on' : ''}">Movimenti</button></div>`;
     let h = gxWarn() + `<div class="gx-bar">${tabs}<label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mg-q" placeholder="Cerca codice, codice a barre o descrizione…" value="${esc(mgQ)}"><button type="button" class="scan-ib" data-gx="mag-scan" title="Scansiona un codice a barre" aria-label="Scansiona un codice a barre">${SCAN_IC}</button></label>
-      <div class="gx-act">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" class="btn sm${mgMode ? ' primary' : ''}" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona'}</button>` : ''}<button type="button" class="btn sm" data-gx="mag-imp"><span class="lb-d">Importa Excel</span><span class="lb-m">Importa</span></button><button type="button" class="btn sm" data-gx="mag-xls"><span class="lb-d">Esporta</span><span class="lb-m">Esporta</span></button>${magMulti() ? `<select id="mg-mag" class="btn sm" aria-label="Magazzino"><option value="">Tutti i magazzini</option>${MAGS().map(x => `<option${x === mgMag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}${secPerm('magazzino') === 'w' ? '<button type="button" class="btn sm" data-gx="mags">Magazzini</button>' : ''}<button type="button" class="btn sm" data-gx="mov-new">${magMulti() ? 'Movimento' : 'Carico / scarico'}</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
-      ${xiMagNote()}${gxKpi([['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`], ['Valore del magazzino', eur0(val), `giacenze al costo · ${ivaLbl()}`], ['Sotto scorta', fmtNum(nLow, 0), nLow ? 'da riordinare' : 'tutto a posto', nLow ? 'warn' : ''], ['Movimenti del mese', fmtNum(MM.length, 0), `${MM.filter(m => num(m.quantita) > 0).length} carichi · ${MM.filter(m => num(m.quantita) < 0).length} scarichi`]])}`;
+      <div class="gx-act mg-act">${magMulti() ? `<label class="mg-sel"><select id="mg-mag" aria-label="Magazzino"><option value="">Tutti i magazzini</option>${MAGS().map(x => `<option${x === mgMag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}<details class="mg-more"><summary class="btn sm" aria-label="Altre azioni">Altro<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary><div class="mg-menu">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona articoli'}</button>` : ''}<button type="button" data-gx="mag-imp">Importa da Excel</button><button type="button" data-gx="mag-xls">Esporta in Excel</button>${secPerm('magazzino') === 'w' ? '<button type="button" data-gx="mags">Gestisci magazzini</button>' : ''}</div></details><button type="button" class="btn sm" data-gx="mov-new">${magMulti() ? 'Movimento' : 'Carico / scarico'}</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
+      ${xiMagNote()}${mgKpi([
+        ['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`, '', A.length ? A.filter(a => (G.get(a.id) || 0) > 0).length / A.length : 0, 'box'],
+        ['Valore del magazzino', eur0(val), `giacenze al costo · ${ivaLbl()}`, '', 0, 'eur'],
+        ['Sotto scorta', fmtNum(nLow, 0), nLow ? 'da riordinare' : 'tutto a posto', nLow ? 'warn' : 'ok', A.length ? nLow / A.length : 0, 'alert'],
+        ['Movimenti del mese', fmtNum(MM.length, 0), `${MM.filter(m => num(m.quantita) > 0).length} carichi · ${MM.filter(m => num(m.quantita) < 0).length} scarichi`, '', MM.length ? MM.filter(m => num(m.quantita) > 0).length / MM.length : 0, 'flow']])}`;
     if (!A.length) h += gxEmpty(GIC.mag, 'Magazzino vuoto', 'Aggiungi gli articoli che tieni in magazzino, oppure importali da Excel. Le giacenze si aggiornano da sole con carichi, DDT e fatture.', '<button type="button" class="btn primary" data-gx="art-new">+ Aggiungi il primo articolo</button>');
     else if (mgTab === 'art') {
       const SL = mgSupList(A), SV = SRV(), nSrv = SV.length;

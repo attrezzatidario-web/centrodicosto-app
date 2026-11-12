@@ -4362,3 +4362,38 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 
 /* v254: barra blu in alto durante il salvataggio rimossa */
 #mv-prog { display: none !important; }
+
+/* v255: Magazzino — barra strumenti ordinata e schede KPI con icona e barra */
+.gx-bar:has(.mg-act) { gap: 10px 12px; }
+.mg-act { flex-wrap: nowrap; align-items: center; gap: 8px; }
+.mg-sel select { height: 32px; min-width: 170px; max-width: 220px; padding: 0 30px 0 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.mg-more { position: relative; }
+.mg-more > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.mg-more > summary::-webkit-details-marker { display: none; }
+.mg-more > summary svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s; }
+.mg-more[open] > summary svg { transform: rotate(180deg); }
+.mg-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 210px; padding: 6px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); box-shadow: 0 18px 40px -16px rgba(20, 30, 60, .35); display: grid; animation: mgmenu .16s ease-out; }
+@keyframes mgmenu { from { opacity: 0; transform: translateY(-4px); } }
+.mg-menu button { text-align: left; padding: 9px 12px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--ink); cursor: pointer; }
+.mg-menu button:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.mg-kpis { gap: 14px; }
+.mg-k { position: relative; padding: 16px 18px 18px; gap: 4px; overflow: hidden; }
+.mg-k .mg-ki { position: absolute; right: 14px; top: 14px; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent); }
+.mg-k.warn .mg-ki { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+.mg-k.ok .mg-ki { background: color-mix(in srgb, #1f9d6b 12%, transparent); color: #1f9d6b; }
+.mg-ki svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mg-k > span { padding-right: 40px; }
+.mg-k b { font-size: 28px; margin-top: 2px; }
+.mg-kb { display: block; height: 4px; margin-top: 10px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 7%, transparent); overflow: hidden; }
+.mg-kb u { display: block; height: 100%; width: calc(var(--p) * 100%); border-radius: 4px; background: var(--accent); transform-origin: 0 50%; animation: mgbar .9s calc(.25s + var(--i, 0) * 80ms) cubic-bezier(.2, .8, .2, 1) both; }
+.mg-k.warn .mg-kb u { background: var(--warn); }
+@keyframes mgbar { from { transform: scaleX(0); } }
+@media (max-width: 900px) {
+  .mg-act { width: 100%; flex-wrap: wrap; }
+  .mg-sel { flex: 1 1 100%; } .mg-sel select { width: 100%; max-width: none; }
+  .mg-act > .btn { flex: 1 1 auto; }
+  .mg-more { flex: 0 0 auto; }
+  .mg-menu { right: auto; left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .mg-kb u, .mg-menu { animation: none !important; } }
+.mg-k { align-content: start; }
