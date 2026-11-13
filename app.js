@@ -259,7 +259,7 @@
   /* ================= v95: settore di attività, moduli e nomi ================= */
   const SET = window.CDC_SETTORI || { list: [], moduli: [], sempre: [], piani: {}, get: () => null };
   const SET_DEF = { id: 'veicoli', n: 'Allestimento veicoli e attrezzature', sede: ['Piazzale', 'Piazzali'], acq: 'Attrezzatura', mod: {}, cat: null };
-  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti', 'notespese', 'preventivi'];
+  const MOD_K = ['piazzali', 'gls', 'gasolio', 'lyreco', 'amazon', 'torental', 'fischer', 'incassi', 'clienti', 'fornitori', 'magazzino', 'interni', 'vendite', 'dipendenti', 'notespese', 'cantieri', 'preventivi'];
   /* v127: permessi per sezione — un dipendente vede solo le sezioni che il titolare gli ha dato ('r' vede, 'w' modifica) */
   const isDip = () => !!(me && !DEMO && me.ruolo === 'dipendente');
   const isOwnerU = () => !!(DEMO || !me || me.admin || me.ruolo === 'utente');
@@ -272,7 +272,7 @@
     return 'w';
   }
   const SHEET_SEC = { Movimenti: 'attrezzatura', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyreco', Amazon: 'amazon', AmazonArticoli: 'amazon', Clienti: 'clienti', Articoli: 'magazzino', MagMov: 'magazzino', DDT: 'vendite', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'fornitori', Dipendenti: 'dipendenti', Presenze: 'dipendenti', Assenze: 'dipendenti', Carte: 'notespese', Fondi: 'notespese', Spese: 'notespese', Estratti: 'notespese' };
-  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fif?:|^fiFatt$/.test(k) ? 'fischer' : 'impostazioni'; };
+  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fif?:|^fiFatt$/.test(k) ? 'fischer' : /^cnt/.test(k) ? 'cantieri' : 'impostazioni'; };
   const opSec = op => op.sheet === 'Config' ? cfgSec(op.row ? op.row.chiave : op.id) : (SHEET_SEC[op.sheet] || 'impostazioni');
   const AREA_MOD = { gls: 'gls', gas: 'gasolio', ly: 'lyreco', am: 'amazon' };
   // la demo ricorda sul dispositivo il settore scelto; gli altri gestionali lo prendono dal registro «Gestionali»
@@ -679,7 +679,7 @@
   const rowsSoc = () => soc ? db.movimenti.filter(r => (r.societa || 'Soluzione Veicolare') === soc) : db.movimenti;
 
   /* ================= Router ================= */
-  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', fischer: 'Fischer', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti', notespese: 'Nota spese' };
+  const TITLES = { home: 'Dashboard', piazzali: 'Piazzali', preventivi: 'Preventivi', attrezzatura: 'Attrezzatura', movimenti: 'Attrezzatura', articoli: 'Attrezzatura', gls: 'GLS Attrezzati', gasolio: 'Gasolio', fatture: 'Fatture', torental: 'Torental', fischer: 'Fischer', lyreco: 'Lyreco', amazon: 'Amazon', impostazioni: 'Impostazioni', utenti: 'Utenti e gestionali', clienti: 'Clienti', interni: 'Documenti interni', magazzino: 'Magazzino', vendite: 'DDT e fatture', incassi: 'Incassi', fornitori: 'Fornitori', analisi: 'Analisi', dipendenti: 'Dipendenti', notespese: 'Nota spese', cantieri: 'Preventivi lavori' };
   let prevView = '', gKeep = false;
   function go() {
     prevView = view;
@@ -708,8 +708,8 @@
     $$('.sub-tabs a').forEach(x => x.classList.toggle('on', x.dataset.st === view));
     $('#title').textContent = ['attrezzatura', 'movimenti', 'articoli'].includes(view) ? (settore().acq || 'Acquisti') : TITLES[view];
     { const at = $('#add-top span'), acqV = ['attrezzatura', 'movimenti', 'articoli'].includes(view); if (at) at.textContent = acqV ? 'Registra DDT o fattura' : view === 'gasolio' ? 'Nuovo rifornimento' : view === 'fatture' ? 'Nuova fattura' : 'Nuovo movimento'; }
-    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti', 'notespese'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon';
-    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti', 'notespese'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
+    $('#fab').hidden = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti', 'notespese', 'cantieri'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'piazzali' || view === 'impostazioni' || view === 'gls' || view === 'home' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon';
+    $('#add-top').style.visibility = secPerm(view) !== 'w' || ['clienti', 'magazzino', 'interni', 'vendite', 'incassi', 'fornitori', 'analisi', 'dipendenti', 'notespese', 'cantieri'].includes(view) || view === 'preventivi' || view === 'utenti' || view === 'impostazioni' || view === 'piazzali' || view === 'gls' || view === 'gasolio' || view === 'home' || view === 'fatture' || view === 'torental' || view === 'fischer' || view === 'lyreco' || view === 'amazon' ? 'hidden' : '';
     if (view !== 'movimenti') { sel.clear(); selMode = false; $('#selbar').hidden = true; document.body.classList.remove('has-sel'); }
     render();
     window.scrollTo(0, 0);
@@ -740,7 +740,7 @@
     applySettore();
     if (!navEd) navApply(); // la Config del menu può arrivare con una sincronizzazione successiva
     ivaUI();
-    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, fischer: renderFi, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip, notespese: renderNs }[view];
+    const fn = { home: renderOverview, piazzali: renderPz, preventivi: renderPv, attrezzatura: renderHome, movimenti: renderMov, articoli: renderArt, gls: renderGls, gasolio: renderGas, fatture: renderFat, torental: renderTor, fischer: renderFi, lyreco: renderLy, amazon: renderAm, impostazioni: renderSettings, clienti: renderCli, magazzino: renderMag, interni: renderInt, vendite: renderVen, incassi: renderInc, fornitori: renderForn, analisi: renderAn, dipendenti: renderDip, notespese: renderNs, cantieri: renderCn }[view];
     fn && fn();
   }
   const sub = t => { $('#subtitle').textContent = t || ''; };
@@ -789,7 +789,7 @@
   }
 
   /* v127: Dipendenti e presenze (dipendenti.js, caricato quando serve) */
-  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'fischer', 'analisi', 'dipendenti', 'notespese', 'impostazioni'];
+  const PERM_SEC = ['home', 'piazzali', 'attrezzatura', 'gls', 'gasolio', 'fatture', 'incassi', 'vendite', 'clienti', 'fornitori', 'magazzino', 'interni', 'lyreco', 'amazon', 'preventivi', 'torental', 'fischer', 'analisi', 'dipendenti', 'notespese', 'cantieri', 'impostazioni'];
   const secTitle = k => k === 'piazzali' ? (settore().sede || [, 'Sedi'])[1] : k === 'attrezzatura' ? (settore().acq || 'Acquisti') : k === 'impostazioni' ? 'Impostazioni dell\'azienda' : TITLES[k];
   async function renderDip() {
     const el = $('#dp-body'); if (!el) return;
@@ -813,6 +813,19 @@
     if (!window.CDC_NS) return; // un altro caricamento è già in corso
     window.CDC_NS.render(el, {
       db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, centri, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,
+      orgName: () => ORG.n, me: () => me, DEMO: () => DEMO, isOwner: () => isOwnerU(), secPerm, online: () => !DEMO && !isLocal() && navigator.onLine, isLocal
+    });
+  }
+
+  /* v260: Cantieri — sopralluogo, rilievo misure e foto, computo con listino, preventivo PDF e avanzamento lavori (cantieri.js, caricato quando serve) */
+  async function renderCn() {
+    const el = $('#cn-body'); if (!el) return;
+    if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.47') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare cantieri e sopralluoghi serve lo script versione cdc-5.47 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
+    if (!window.CDC_CN) { el.innerHTML = '<div class="card"><div class="empty">Carico i cantieri…</div></div>'; try { await loadLib('cantieri.js?v=260'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'cantieri') return; }
+    if (!window.CDC_CN) return;
+    window.CDC_CN.render(el, {
+      db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,
+      pdfKit: async () => { const [jsPDF, logo, fonts] = await Promise.all([loadPdf(), logoPng(), loadFonts()]); return { jsPDF, logo, fonts }; },
       orgName: () => ORG.n, me: () => me, DEMO: () => DEMO, isOwner: () => isOwnerU(), secPerm, online: () => !DEMO && !isLocal() && navigator.onLine, isLocal
     });
   }

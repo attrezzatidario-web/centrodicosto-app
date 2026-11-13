@@ -114,7 +114,7 @@
     { id: 'impresa', n: 'Impresa edile', s: 'Impresa edile', d: 'Costruzioni, ristrutturazioni, impiantisti e artigiani',
       ic: '<path d="M4 18h16M6 18v-5a6 6 0 0 1 12 0v5M12 7V4M9.5 7.5 8 5M14.5 7.5 16 5"/><path d="M3 21h18"/>',
       sede: ['Cantiere', 'Cantieri'], acq: 'Acquisti',
-      mod: { piazzali: true, gls: false, gasolio: true, lyreco: false, amazon: false, incassi: true, clienti: true, fornitori: true, magazzino: true, vendite: false },
+      mod: { piazzali: true, gls: false, gasolio: true, lyreco: false, amazon: false, incassi: true, clienti: true, fornitori: true, magazzino: true, vendite: false, cantieri: true },
       cat: [
         ['Subappalti e manodopera', ['SUBAPPALT', 'MANODOPERA', 'LAVORAZIONE', 'LAVORAZIONI', 'POSA IN OPERA', 'PRESTAZIONE', ' SAL ', 'STATO AVANZAMENTO']],
         ['Noleggi mezzi e attrezzature', ['NOLEGGIO', 'NOLO', 'ESCAVATORE', 'MINIESCAVATORE', 'PONTEGGI', 'AUTOGRU', 'GRU ', 'PIATTAFORMA', 'BETONIERA', 'BAGNO CHIMICO', 'MARTELLO DEMOLITORE']],
@@ -195,6 +195,7 @@
     { k: 'vendite', t: () => 'DDT e fatture ai clienti', d: () => 'DDT durante il mese e fatture di fine mese, con PDF e file XML per lo SdI' },
     { k: 'dipendenti', t: () => 'Dipendenti e presenze', d: () => 'Anagrafica del personale, timbrature dall\'app Presenze, ferie, permessi, scadenze e accessi con permessi per sezione' },
     { k: 'notespese', t: () => 'Nota spese', d: () => 'Carte aziendali e contanti assegnati al personale, spese registrate dall\'app Presenze con foto dello scontrino, approvazione e controllo dell\'estratto conto', },
+    { k: 'cantieri', t: () => 'Sopralluoghi e preventivi lavori', d: () => 'Sopralluogo con misure e foto, lista dei controlli, computo con il tuo listino, preventivo PDF per il cliente e avanzamento dei lavori' },
     { k: 'torental', t: () => 'Torental', d: () => 'Listino, ordini e clienti Torental', only: 'veicoli' },
     { k: 'fischer', t: () => 'Fischer', d: () => 'Ordini del fornitore Fischer (PDF o zip): letti, controllati e divisi per piazzale, con consegne (DDT), scadenze e spunta «fatturato» al piazzale', only: 'veicoli' }
   ];
@@ -203,6 +204,9 @@
   const FORNITORI = [['payper', 'Payper'], ['jrc', 'JRC'], ['dewalt', 'DeWalt'], ['stanley', 'Stanley'], ['usag', 'USAG'], ['milwaukee', 'Milwaukee'], ['cofra', 'Cofra'], ['portwest', 'Portwest'], ['ffg', 'FFG'], ['benman', 'Benman'], ['hugo', 'Hugo'], ['sola', 'Sola'], ['activegear', 'Active Gear'], ['maxilia', 'Maxilia'], ['promit', 'Promit'], ['lavor', 'Lavor'], ['propac', 'Propac'], ['kerakoll', 'Kerakoll'], ['telwin', 'Telwin'], ['bihui', 'Bihui'], ['fischer', 'Fischer'], ['electraline', 'Electraline'], ['vibac', 'Vibac'], ['krino', 'Krino'], ['qbrick', 'Qbrick Regular'], ['bullvit', 'Bull-Vit'], ['gierre', 'Gierre Scale'], ['akifix', 'Akifix'], ['cmt', 'CMT Orange Tools'], ['ambrovit', 'Ambrovit'], ['mustad', 'Mustad'], ['dueci', 'Duecì Grafica'], ['prodyver', 'Prodyver'], ['fermec', 'Fermec'], ['tecfi', 'Tecfi'], ['vorpa', 'Vorpa'], ['neri', 'Neri Safety'], ['1aid', '1AID'], ['facal', 'Facal Scale'], ['bluemaster', 'Bluemaster'], ['cenigomma', 'Cenigomma'], ['svelt', 'Svelt'], ['centroreti', 'Centro Reti'], ['valex', 'Valex'], ['elepacking', 'Elepacking'], ['barbero', 'Barbero'], ['italfeltri', 'Italfeltri'], ['kemipol', 'Kemipol'], ['mark', 'Mark Compressors'], ['ariex', 'Ariex'], ['rurmec', 'Rurmec'], ['scar', 'SCAR'], ['tesa', 'tesa'], ['stayer', 'Stayer'], ['tyrolit', 'Tyrolit'], ['upower', 'U-Power'], ['ingco', 'INGCO'], ['hikoki', 'HiKOKI'], ['globe', 'Globe'], ['flex', 'FLEX'], ['qbricksys', 'Qbrick System'], ['kapro', 'Kapro'], ['ryobi', 'Ryobi'], ['ribimex', 'Ribimex'], ['vinco', 'Vinco'], ['saintgobain', 'Saint-Gobain'], ['vbelectric', 'VB Electric'], ['mobilplastic', 'Mobil Plastic'], ['lyreco', 'Lyreco'], ['zimaro', 'Zimaro Pro'], ['metrica', 'Metrica'], ['lotto', 'Lotto Works'], ['cieffeplast', 'Cieffeplast'], ['doc', 'DOC'], ['stellabianca', 'Stella Bianca'], ['sigill', 'Sigill']].map(([k, n]) => ({ k, n }));
 
   const PIANI = { prova: 'Prova gratuita', base: 'Base', pro: 'Pro' };
+
+  // Cantieri è acceso di partenza solo per l'impresa edile (gli altri settori lo trovano tra le sezioni da accendere)
+  L.forEach(s => { if (s.mod && !('cantieri' in s.mod)) s.mod.cantieri = false; });
 
   window.CDC_SETTORI = {
     list: L, moduli: MODULI, sempre: SEMPRE, piani: PIANI, forn: FORNITORI, maxUt: 5,
