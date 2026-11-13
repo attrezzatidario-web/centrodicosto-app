@@ -821,7 +821,7 @@
   async function renderCn() {
     const el = $('#cn-body'); if (!el) return;
     if (!DEMO && !isLocal() && db.v && db.v < 'cdc-5.47') { el.innerHTML = '<div class="card dp-empty"><h3>Aggiorna lo script Google</h3><p>Per salvare cantieri e sopralluoghi serve lo script versione cdc-5.47 o successiva: senza aggiornamento i dati inseriti spariscono alla sincronizzazione successiva.</p></div>'; return; }
-    if (!window.CDC_CN) { el.innerHTML = '<div class="card"><div class="empty">Carico i cantieri…</div></div>'; try { await loadLib('cantieri.js?v=264'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'cantieri') return; }
+    if (!window.CDC_CN) { el.innerHTML = '<div class="card"><div class="empty">Carico i cantieri…</div></div>'; try { await loadLib('cantieri.js?v=265'); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non disponibile: controlla la connessione e riprova</div></div>'; return; } if (view !== 'cantieri') return; }
     if (!window.CDC_CN) return;
     window.CDC_CN.render(el, {
       db: () => db, write, api, num, esc, eur, eur0, fmtNum, dIt, uid, toast, busy, sub, cfg, openSheet, closeSheet, loadXlsx, loadLib, docView, countTo,

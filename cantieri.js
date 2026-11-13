@@ -377,7 +377,7 @@
   function setTab(t, first) {
     S.tab = t; $$('#cn-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     const pane = $('#cn-pane');
-    if (t === 'piantina' && !window.CDC_CAD) { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Carico il disegno…</b></div></div>'; C.loadLib('cantieri-cad.js?v=264').then(() => { if (S.tab === 'piantina') setTab('piantina', true); }).catch(() => { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Disegno non disponibile</b><p>Controlla la connessione e riprova.</p></div></div>'; }); requestAnimationFrame(moveInd); return; }
+    if (t === 'piantina' && !window.CDC_CAD) { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Carico il disegno…</b></div></div>'; C.loadLib('cantieri-cad.js?v=265').then(() => { if (S.tab === 'piantina') setTab('piantina', true); }).catch(() => { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Disegno non disponibile</b><p>Controlla la connessione e riprova.</p></div></div>'; }); requestAnimationFrame(moveInd); return; }
     pane.innerHTML = { dati: paneDati, rilievo: paneRilievo, piantina: panePiantina, computo: paneComputo, prev: panePrev, lavori: paneLavori }[t]();
     pane.firstElementChild && pane.firstElementChild.classList.add('cn-pane'); afterPane(); if (!first) window.scrollTo({ top: 0, behavior: 'smooth' });
     requestAnimationFrame(moveInd);
@@ -597,18 +597,32 @@
       return `<div class="cn-pl" style="--i:${Math.min(i, 8)}"><button type="button" class="cn-pl-th" data-act="pl-open" data-id="${id}" aria-label="Apri il disegno">${has ? CAD.thumb(pl, 440) : `<div class="cn-pl-e">${ic(IC.plan)}<span>${canW() ? 'Vuota: tocca per disegnare' : 'Vuota'}</span></div>`}</button>
         <div class="cn-pl-b"><h4>${esc(pl.n || 'Piantina')}</h4><p>${n} ${n === 1 ? 'locale' : 'locali'} · <b>${fmt(s.area / 10000)} mq</b> · ${fmt(s.wall / 100)} m di pareti</p>
         <div class="cn-chips"><span>${s.doors} ${s.doors === 1 ? 'porta' : 'porte'}</span><span>${s.wins} ${s.wins === 1 ? 'finestra' : 'finestre'}</span><span>${pl.s.length} elementi</span></div>
-        <div class="cn-acts"><button class="cn-btn pri sm" data-act="pl-open" data-id="${id}">${ic(IC.edit)}${canW() ? 'Disegna' : 'Apri'}</button>${canW() && n ? `<button class="cn-btn sm" data-act="pl-amb" data-id="${id}" title="Crea o aggiorna gli ambienti del rilievo con nome, misure e aperture">${ic(IC.ruler)}Genera ambienti</button>` : ''}<button class="cn-btn sm" data-act="pl-png" data-id="${id}">${ic(IC.pdf)}Immagine</button>${canW() ? `<button class="cn-ic" data-act="pl-dup" data-id="${id}" aria-label="Duplica">${ic(IC.copy)}</button><button class="cn-ic" data-act="pl-del" data-id="${id}" aria-label="Elimina">${ic(IC.trash)}</button>` : ''}</div>
+        <div class="cn-acts"><button class="cn-btn pri sm" data-act="pl-open" data-id="${id}">${ic(IC.edit)}${canW() ? 'Disegna' : 'Apri'}</button>${canW() && n ? `<button class="cn-btn sm" data-act="pl-amb" data-id="${id}" title="Crea o aggiorna gli ambienti del rilievo con nome, misure e aperture">${ic(IC.ruler)}Genera ambienti</button>` : ''}${canW() && n ? `<button class="cn-btn sm" data-act="pl-voci" data-id="${id}" title="Porta nel computo demolizioni, nuove pareti, pavimenti, tinteggiature, porte e finestre ricavati dal disegno">${ic(IC.plus)}Voci di computo</button>` : ''}<button class="cn-btn sm" data-act="pl-png" data-id="${id}">${ic(IC.pdf)}Immagine</button>${canW() ? `<button class="cn-ic" data-act="pl-dup" data-id="${id}" aria-label="Duplica">${ic(IC.copy)}</button><button class="cn-ic" data-act="pl-del" data-id="${id}" aria-label="Elimina">${ic(IC.trash)}</button>` : ''}</div>
         ${canW() ? `<label class="cn-plc"><input type="checkbox" data-plpdf="${id}" ${pl.pdf !== false ? 'checked' : ''}>Allega al PDF del preventivo</label>` : ''}</div></div>`;
     }).join('');
     return `<div class="cn-pane"><div class="cn-card"><h3>${ic(IC.plan)}Piantine del sopralluogo<span class="sp"></span><small>${L.length} ${L.length === 1 ? 'disegno' : 'disegni'}</small></h3>
-      <p class="cn-hint" style="margin:0 0 14px">Disegna pareti con le misure, aggiungi porte, finestre, arredi e impianti. I mq di ogni locale passano al rilievo con «Genera ambienti». Il disegno si salva da solo.</p>
+      <p class="cn-hint" style="margin:0 0 14px">Disegna come in un programma da architetti: pareti per tipo e spessore, locali con superficie netta, porte, finestre, arredi, impianti, quote. Segna in rosso ciò che si demolisce e in giallo ciò che si costruisce. I mq passano al rilievo con «Genera ambienti», le quantità al computo con «Voci di computo». Stampa in scala e DXF per AutoCAD dal disegno. Si salva da solo.</p>
       ${L.length ? `<div class="cn-pls">${cards}</div>` : `<div class="cn-empty">${EMPTY}<b>Nessuna piantina</b><p>Crea la piantina mentre sei sul posto: pareti, porte, finestre, impianti e quote.</p></div>`}
       ${canW() ? `<div class="cn-acts" style="margin-top:16px"><button class="cn-btn pri" data-act="pl-new">${ic(IC.plus)}Nuova piantina</button></div>` : ''}</div></div>`;
   }
+  const planMeta = () => { const p = S.p; return { studio: C.orgName(), cliente: (p.cli || {}).nome || '', cantiere: [(p.cant || {}).ind, (p.cant || {}).citta].filter(Boolean).join(', '), pratica: p.num || '', data: Date.now() }; };
   function openCad(id) {
     const pl = (S.p.piante || []).find(x => x.id === id); if (!pl || !window.CDC_CAD) return; const pid = S.id;
-    window.CDC_CAD.open(pl, { edit: canW(), names: AMB, onError: e => C.toast('Disegno non avviato: ' + ((e && e.message) || e)), onChange: () => { if (S.p && S.id === pid) touch(); }, onClose: () => { if (S.v === 'p' && S.id === pid && S.tab === 'piantina') refreshPane(); } });
+    window.CDC_CAD.open(pl, { edit: canW(), names: AMB, meta: planMeta(), pdfKit: () => C.pdfKit(), onError: e => C.toast('Disegno non avviato: ' + ((e && e.message) || e)), onChange: () => { if (S.p && S.id === pid) touch(); }, onClose: () => { if (S.v === 'p' && S.id === pid && S.tab === 'piantina') refreshPane(); } });
   }
+  function plToVoci(pl) {
+    const B = window.CDC_CAD.bom(pl), L = listino(), g = s2 => L.find(x => norm(x.d).includes(norm(s2)));
+    if (!B.length) return C.toast('Nel disegno non ci sono ancora quantità: segna le pareti da demolire o nuove, i pavimenti dei locali, le porte');
+    const SRC = { dem: ['Demolizione tramezz', 'Demolizioni e rimozioni'], par: ['Tramezz', 'Murature e massetti'], tin: ['Tinteggiatura pareti', 'Tinteggiature'], sof: ['Tinteggiatura soffitt', 'Tinteggiature'], rp: ['Rimozione porte', 'Demolizioni e rimozioni'], np: ['Fornitura e posa porte', 'Serramenti e porte'], rf: ['Rimozione serramenti', 'Demolizioni e rimozioni'], nf: ['Fornitura e posa serramenti', 'Serramenti e porte'], pav: ['Posa pavimento', 'Pavimenti e rivestimenti'], sym: ['', 'Varie'] };
+    let nn = 0, uu = 0;
+    B.forEach(b => {
+      const src = 'cad:' + pl.id + ':' + b.d, ex = p_().voci.find(v => v.src === src);
+      if (ex) { ex.q = String(r2(b.q)); uu++; return; }
+      const m = SRC[b.k] || ['', 'Varie'], x = m[0] ? g(m[0]) : null, v = x ? addVoce({ cat: x.cat, d: x.d, um: x.um, pr: x.pr, cs: x.cs, q: r2(b.q) }) : addVoce({ cat: m[1], d: b.d, um: b.u, q: r2(b.q) }); v.src = src; if (x && x.d !== b.d) v.amb = ''; nn++;
+    });
+    touch(); live(); refreshPane(); C.toast(`${nn ? nn + (nn === 1 ? ' voce aggiunta' : ' voci aggiunte') : ''}${nn && uu ? ' · ' : ''}${uu ? uu + (uu === 1 ? ' aggiornata' : ' aggiornate') : ''} dal disegno: controlla prezzi e quantità nel Computo`);
+  }
+  const p_ = () => S.p;
   function plToAmb(pl) {
     const St = window.CDC_CAD.stats(pl), p = S.p; if (!St.rooms.length) return C.toast('Disegna almeno un locale (Locale da misure o Area)');
     const hh = dec(pl.h || '2,70'); let nn = 0, uu = 0; const T = { p: 'Porta', pd: 'Porta doppia', ps: 'Porta scorrevole', pi: 'Porta ingresso', f: 'Finestra', pf: 'Portafinestra', v: 'Varco' };
@@ -618,7 +632,7 @@
       r.ops.forEach(o => { const k = `${T[o.k] || 'Apertura'}|${o.l}|${o.h}`; g[k] = (g[k] || 0) + 1; });
       const ap = Object.keys(g).map(k => { const [t, w, h] = k.split('|'); return { id: 'o' + C.uid(), t, l: dec(r2(w / 100)), h: dec(r2(h / 100)), q: String(g[k]) }; });
       const src = pl.id + ':' + r.i, ex = p.amb.find(a => a.src === src);
-      if (ex) { Object.assign(ex, { n: r.n, l: dec(r2(l)), p: dec(r2(pp)), ap }); if (!ex.h) ex.h = hh; uu++; } else { p.amb.push({ id: 'a' + C.uid(), n: r.n, l: dec(r2(l)), p: dec(r2(pp)), h: hh, ap, note: '', src }); nn++; }
+      if (ex) { Object.assign(ex, { n: r.n, l: dec(r2(l)), p: dec(r2(pp)), ap }); if (!ex.h) ex.h = hh; uu++; } else { p.amb.push({ id: 'a' + C.uid(), n: r.n, l: dec(r2(l)), p: dec(r2(pp)), h: r.h ? dec(r2(r.h / 100)) : hh, ap, note: '', src }); nn++; }
     });
     touch(); live(); refreshPane(); C.toast(`${nn ? nn + (nn === 1 ? ' ambiente creato' : ' ambienti creati') : ''}${nn && uu ? ' · ' : ''}${uu ? uu + (uu === 1 ? ' aggiornato' : ' aggiornati') : ''}: controlla in Rilievo`);
   }
@@ -783,13 +797,13 @@
 
       /* piantine */
       const pls = (p.piante || []).filter(x => x.pdf !== false && (x.w || []).length);
-      if (pls.length && !window.CDC_CAD) { try { await C.loadLib('cantieri-cad.js?v=264'); } catch { } }
+      if (pls.length && !window.CDC_CAD) { try { await C.loadLib('cantieri-cad.js?v=265'); } catch { } }
       if (window.CDC_CAD) for (const pl of pls) {
         try {
-          const im = await window.CDC_CAD.png(pl, 1800, { title: pl.n || 'Piantina' }), s2 = window.CDC_CAD.stats(pl), nr = s2.rooms.length;
+          const s2 = window.CDC_CAD.stats(pl), nr = s2.rooms.length;
           doc.addPage(); y = 26; h2('Planimetria del rilievo' + (pl.n ? ' - ' + pl.n : ''));
-          const maxH = H - 22 - y - (nr ? 22 + nr * 7 : 6); let iw = CW, ih = iw * im.h / im.w; if (ih > maxH) { ih = maxH; iw = ih * im.w / im.h; }
-          doc.addImage(im.url, 'PNG', M + (CW - iw) / 2, y, iw, ih); y += ih + 6;
+          const maxH = Math.max(80, H - 22 - y - (nr ? 22 + nr * 7 : 6)), im = await window.CDC_CAD.sheetPng(pl, { paper: [CW, maxH], dpi: 200, meta: planMeta() });
+          doc.addImage(im.url, 'PNG', M, y, im.pw, im.ph); y += im.ph + 6;
           if (nr) doc.autoTable({ startY: y, margin: { left: M, right: M, bottom: 22 }, theme: 'plain', styles: { font: FF, fontSize: 8.6, cellPadding: 2, textColor: K.ink, lineColor: K.line, lineWidth: { bottom: .2 } }, headStyles: { fillColor: K.navy, textColor: K.white, fontStyle: 'bold', fontSize: 8 },
             head: [['Locale', ...['Superficie', 'Perimetro', 'Porte', 'Finestre'].map(x => ({ content: x, styles: { halign: 'right' } }))]], body: s2.rooms.map(r => [clean(r.n), fmt(r.area / 10000) + ' mq', fmt(r.per / 100) + ' m', String(r.ops.filter(o => o.k !== 'f' && o.k !== 'pf' && window.CDC_CAD.isDoor(o.k)).length), String(r.ops.filter(o => o.k === 'f' || o.k === 'pf').length)]), columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' } } });
         } catch { }
@@ -830,10 +844,11 @@
       case 'ap-del': { const a2 = p.amb.find(x => x.id === id); if (a2) { a2.ap = a2.ap.filter(x => x.id !== b.dataset.ap); touch(); refreshPane(); } return; }
       case 'pl-new': { const pl = window.CDC_CAD.newPlan(p.piante.length ? 'Piano ' + (p.piante.length + 1) : 'Piano terra'); p.piante.push(pl); touch(); return openCad(pl.id); }
       case 'pl-open': return openCad(id);
+      case 'pl-voci': { const pl = p.piante.find(x => x.id === id); if (pl) plToVoci(pl); return; }
       case 'pl-amb': { const pl = p.piante.find(x => x.id === id); return pl && plToAmb(pl); }
       case 'pl-dup': { const pl = p.piante.find(x => x.id === id); if (pl) { const c = clone(pl); c.id = 'pl' + C.uid(); c.n = (pl.n || 'Piantina') + ' (copia)'; p.piante.push(c); touch(); refreshPane(); } return; }
       case 'pl-del': { const pl = p.piante.find(x => x.id === id); if (!pl || !confirm('Eliminare questa piantina?')) return; p.piante = p.piante.filter(x => x.id !== id); touch(); return refreshPane(); }
-      case 'pl-png': { const pl = p.piante.find(x => x.id === id); if (!pl) return; if (!pl.w.length) return C.toast('La piantina è vuota'); C.busy('Preparo l’immagine…'); return window.CDC_CAD.png(pl, 2000, { title: pl.n }).then(r => { const a = document.createElement('a'); a.href = r.url; a.download = 'piantina-' + String(pl.n || p.num).replace(/[^\w]+/g, '-').toLowerCase() + '.png'; document.body.appendChild(a); a.click(); a.remove(); }).catch(e => C.toast(e.message)).finally(() => C.busy()); }
+      case 'pl-png': { const pl = p.piante.find(x => x.id === id); if (!pl) return; if (!pl.w.length) return C.toast('La piantina è vuota'); C.busy('Preparo l’immagine…'); return window.CDC_CAD.png(pl, 2000, { title: pl.n, meta: planMeta() }).then(r => { const a = document.createElement('a'); a.href = r.url; a.download = 'piantina-' + String(pl.n || p.num).replace(/[^\w]+/g, '-').toLowerCase() + '.png'; document.body.appendChild(a); a.click(); a.remove(); }).catch(e => C.toast(e.message)).finally(() => C.busy()); }
       case 'foto-cam': return $('#cn-fc').click();
       case 'foto-gal': return $('#cn-fg').click();
       case 'mic': return dictate(b);
