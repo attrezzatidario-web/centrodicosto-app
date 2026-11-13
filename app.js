@@ -278,7 +278,7 @@
   // la demo ricorda sul dispositivo il settore scelto; gli altri gestionali lo prendono dal registro «Gestionali»
   const settoreId = () => DEMO ? (LS.get('cdc_demo_set', '') || 'veicoli') : ((me && me.wsSettore) || (isMain() ? 'veicoli' : 'altro'));
   const settore = () => SET.get(settoreId()) || SET_DEF;
-  const modAvail = k => { const m = SET.moduli.find(x => x.k === k); return !(m && m.only) || (settoreId() === m.only && isMain() && !DEMO); }; // v116: Torental è un cliente vero: non compare nella demo
+  const modAvail = k => { if (k === 'cantieri' && settoreId() === 'veicoli') return !!(isMain() && !DEMO && me && me.admin && me.ruolo !== 'dipendente'); const m = SET.moduli.find(x => x.k === k); return !(m && m.only) || (settoreId() === m.only && isMain() && !DEMO); }; // v116: Torental è un cliente vero: non compare nella demo
   function modOn(k) {
     if (!MOD_K.includes(k)) return true;
     if (!modAvail(k)) return false;

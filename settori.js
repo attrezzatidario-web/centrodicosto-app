@@ -206,7 +206,7 @@
   const PIANI = { prova: 'Prova gratuita', base: 'Base', pro: 'Pro' };
 
   // Cantieri è acceso di partenza solo per l'impresa edile (gli altri settori lo trovano tra le sezioni da accendere)
-  L.forEach(s => { if (s.mod && !('cantieri' in s.mod)) s.mod.cantieri = false; });
+  L.forEach(s => { if (s.mod && !('cantieri' in s.mod)) s.mod.cantieri = s.id === 'veicoli'; });
 
   window.CDC_SETTORI = {
     list: L, moduli: MODULI, sempre: SEMPRE, piani: PIANI, forn: FORNITORI, maxUt: 5,
