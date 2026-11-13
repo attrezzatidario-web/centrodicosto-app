@@ -7,6 +7,7 @@ Regola d'oro: NON leggere app.js intero (9.500 righe). Usa `grep -n` sul nome qu
 |---|---|
 | app.js | tutto il gestionale (una IIFE). Sezioni sotto |
 | dipendenti.js | sezione Dipendenti (caricata con loadLib) |
+| cantieri.js, cantieri-cad.js | Preventivi lavori (loadLib da renderCn) e piantina 2D del sopralluogo (editor SVG a tutto schermo, dati in p.piante) |
 | analisi.js | sezione Analisi |
 | settori.js | settori di attività e moduli (MOD) |
 | demo.js | dati della versione demo (addStaff ecc.) |
