@@ -235,6 +235,9 @@
 .cn-pl-th{display:block;width:100%;height:220px;border:0;border-bottom:1px solid var(--line);padding:16px;cursor:pointer;background-color:#fbfcfe;background-image:linear-gradient(#e9edf5 1px,transparent 1px),linear-gradient(90deg,#e9edf5 1px,transparent 1px);background-size:22px 22px;transition:filter .2s}.cn-pl-th:hover{filter:brightness(.96)}.cn-pl-th svg.cad-th{width:100%;height:100%}
 .cn-pl-e{display:grid;place-items:center;gap:8px;height:100%;color:#7a8399;font-size:13px}.cn-pl-e .cn-i{width:34px;height:34px}
 .cn-pl-b{padding:14px 16px 16px}.cn-pl-b h4{margin:0;font-size:15px}.cn-pl-b p{margin:4px 0 10px;color:var(--muted);font-size:13px}.cn-plc{display:flex;gap:9px;align-items:center;margin-top:12px;font-size:13px;cursor:pointer}.cn-plc input{width:17px;height:17px}.cn-pl-b .cn-chips{margin-bottom:12px;flex-wrap:wrap}.cn-pl-b .cn-chips span{flex:none;height:26px;display:inline-flex;align-items:center;padding:0 10px;border-radius:99px;background:color-mix(in srgb,var(--ink) 6%,transparent);font-size:12px;font-weight:600;color:var(--ink-2)}
+.cn-pc-x{position:absolute;right:12px;top:12px;z-index:2;display:grid;place-items:center;width:30px;height:30px;border-radius:9px;color:var(--muted);background:var(--surface);border:1px solid var(--line);opacity:0;transition:opacity .15s,color .15s,background .15s}.cn-pc:hover .cn-pc-x,.cn-pc:focus-within .cn-pc-x{opacity:1}.cn-pc-x:hover{color:#d63a3a;background:#fdecee;border-color:#f3c3c8}.cn-pc-x .cn-i{width:16px;height:16px}@media(hover:none){.cn-pc-x{opacity:1}}.cn-pc-t{padding-right:38px}
+.cn-hdel{color:var(--muted);flex:none}.cn-hdel:hover{color:#d63a3a}
+.cn-pt{position:relative}.cn-pt-x{position:absolute;top:6px;right:6px;z-index:2;width:26px;height:26px;border-radius:50%;border:0;display:grid;place-items:center;background:rgba(10,18,36,.62);color:#fff;cursor:pointer;opacity:0;transition:opacity .15s,background .15s}.cn-pt:hover .cn-pt-x{opacity:1}.cn-pt-x:hover{background:#d63a3a}.cn-pt-x .cn-i{width:14px;height:14px}@media(hover:none){.cn-pt-x{opacity:1}}
 .cn-mo{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:18px;background:rgba(10,18,36,.5);backdrop-filter:blur(6px);animation:cn-fi .25s ease both}.cn-mo.out{animation:cn-fo .2s ease both}
 .cn-mb{width:min(760px,100%);max-height:calc(100vh - 36px);display:flex;flex-direction:column;background:var(--surface);color:var(--ink);border-radius:20px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5);animation:cn-pop .38s var(--cn-ease) both;overflow:hidden}.cn-mb.wide{width:min(980px,100%)}
 @keyframes cn-fi{from{opacity:0}}@keyframes cn-fo{to{opacity:0}}@keyframes cn-pop{from{opacity:0;transform:translateY(18px) scale(.97)}}
@@ -335,7 +338,7 @@
   }
   const cardP = (p, tot, i) => {
     const idx = stIdx(p.stato), perso = p.stato === 'perso', col = stCol(p.stato), lastN = (p.voci || []).length;
-    return `<button class="cn-pc" style="--c:${col};--i:${Math.min(i, 12)}" data-open="${esc(p.id)}"><div class="cn-pc-t"><span class="cn-num">${esc(p.num)}</span><span class="cn-chip" style="--c:${col}">${esc(stName(p.stato))}</span></div>
+    return `<button class="cn-pc" style="--c:${col};--i:${Math.min(i, 12)}" data-open="${esc(p.id)}">${canW() ? `<span class="cn-pc-x" role="button" tabindex="0" data-pdel="${esc(p.id)}" title="Elimina la pratica" aria-label="Elimina la pratica">${ic(IC.trash)}</span>` : ''}<div class="cn-pc-t"><span class="cn-num">${esc(p.num)}</span><span class="cn-chip" style="--c:${col}">${esc(stName(p.stato))}</span></div>
       <h4>${esc(p.cli.nome || 'Cliente da inserire')}</h4><p>${ic(IC.pin)}${esc([p.cant.ind, p.cant.citta].filter(Boolean).join(', ') || 'Indirizzo da inserire')}</p>
       <div class="cn-seg" style="--c:${col}">${ST.map((s, j) => `<i class="${!perso && j <= idx ? 'on' : ''}" style="--j:${j}"></i>`).join('')}</div>
       <div class="cn-pc-b"><div><b>${tot ? eur(tot) : '—'}</b></div><small>${esc(p.cant.tipo || '')}<br>${p.stato === 'sopralluogo' ? 'Sopralluogo ' + dIt(p.sopr && p.sopr.data) : lastN + (lastN === 1 ? ' voce' : ' voci')}</small></div></button>`;
@@ -349,13 +352,18 @@
     S.p = ex || newP(); S.id = S.p.id; S.v = 'p'; S.tab = ex ? tabFor(ex.stato) : 'dati'; S.dirty = false; S.mod = null;
     paintEditor(); window.scrollTo({ top: 0 });
   }
+  function delPratica(id) {
+    const p = getP(id); if (!p || !canW()) return;
+    if (!confirm(`Eliminare la pratica ${p.num}${p.cli && p.cli.nome ? ' di ' + p.cli.nome : ''}? Non si può annullare.`)) return;
+    C.write([{ action: 'delete', sheet: 'Config', id: keyOf(id) }]); C.toast('Pratica eliminata'); if (S.v === 'home') paintHome();
+  }
   function goHome() { save(); S.v = 'home'; S.p = null; S.seen = false; paintHome(); window.scrollTo({ top: 0 }); }
   function paintEditor() {
     const p = S.p, t = calc(p), lost = p.stato === 'perso';
     root.innerHTML = `<div class="cn${canW() ? '' : ' cn-ro'}" id="cn-r"><div class="cn-top"><div class="cn-top-r">
       <button class="cn-back" data-act="home" aria-label="Torna alle pratiche">${ic(IC.back)}</button>
       <div style="min-width:0"><div class="sub">${esc(p.num)}${lost ? ' · NON ACCETTATO' : ''}</div><h2 id="cn-ht">${esc(p.cli.nome || 'Nuova pratica')}</h2></div>
-      <span class="cn-sv" id="cn-sv"></span><div class="cn-tot"><small>Totale IVA inclusa</small><b id="cn-htot">${eur(t.tot)}</b></div></div>
+      <span class="cn-sv" id="cn-sv"></span>${canW() ? `<button type="button" class="cn-ic cn-hdel" data-act="del" title="Elimina la pratica" aria-label="Elimina la pratica">${ic(IC.trash)}</button>` : ''}<div class="cn-tot"><small>Totale IVA inclusa</small><b id="cn-htot">${eur(t.tot)}</b></div></div>
       <div class="cn-step" id="cn-step">${ST.map(([k, n, c]) => `<button type="button" data-st="${k}" style="--c:${c}"><i></i><span>${n}</span></button>`).join('')}</div></div>
       <div class="cn-tw"><div class="cn-tabs" id="cn-tabs">${TABS.map(([k, n, i]) => `<button type="button" data-tab="${k}">${ic(i)}${n}</button>`).join('')}<span class="ind"></span></div></div><div id="cn-pane"></div></div>`;
     paintStep(); setTab(S.tab, true);
@@ -369,7 +377,7 @@
   function setTab(t, first) {
     S.tab = t; $$('#cn-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     const pane = $('#cn-pane');
-    if (t === 'piantina' && !window.CDC_CAD) { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Carico il disegno…</b></div></div>'; C.loadLib('cantieri-cad.js?v=263').then(() => { if (S.tab === 'piantina') setTab('piantina', true); }).catch(() => { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Disegno non disponibile</b><p>Controlla la connessione e riprova.</p></div></div>'; }); requestAnimationFrame(moveInd); return; }
+    if (t === 'piantina' && !window.CDC_CAD) { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Carico il disegno…</b></div></div>'; C.loadLib('cantieri-cad.js?v=264').then(() => { if (S.tab === 'piantina') setTab('piantina', true); }).catch(() => { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Disegno non disponibile</b><p>Controlla la connessione e riprova.</p></div></div>'; }); requestAnimationFrame(moveInd); return; }
     pane.innerHTML = { dati: paneDati, rilievo: paneRilievo, piantina: panePiantina, computo: paneComputo, prev: panePrev, lavori: paneLavori }[t]();
     pane.firstElementChild && pane.firstElementChild.classList.add('cn-pane'); afterPane(); if (!first) window.scrollTo({ top: 0, behavior: 'smooth' });
     requestAnimationFrame(moveInd);
@@ -454,7 +462,7 @@
         <div style="margin-top:14px"><button class="cn-btn pri" data-tab="computo">Passa al computo ${ic(IC.chev)}</button></div></div></div>`;
   }
   const micBtn = () => (window.SpeechRecognition || window.webkitSpeechRecognition) && canW() ? `<button type="button" class="cn-ic" data-act="mic" aria-label="Detta le note">${ic(IC.mic)}</button>` : '';
-  const photosHtml = () => S.p.foto.map((f, i) => `<div class="cn-pt sk" data-ph="${esc(f.id)}" style="--i:${Math.min(i, 14)}"><img alt=""><span>${esc(f.cap || '')}</span></div>`).join('') + (canW() ? `<button type="button" class="cn-add" data-act="foto-gal">${ic(IC.plus)}Aggiungi</button>` : '');
+  const photosHtml = () => S.p.foto.map((f, i) => `<div class="cn-pt sk" data-ph="${esc(f.id)}" style="--i:${Math.min(i, 14)}"><img alt=""><span>${esc(f.cap || '')}</span>${canW() ? `<button type="button" class="cn-pt-x" data-phdel="${esc(f.id)}" aria-label="Elimina la foto">${ic(IC.x)}</button>` : ''}</div>`).join('') + (canW() ? `<button type="button" class="cn-add" data-act="foto-gal">${ic(IC.plus)}Aggiungi</button>` : '');
 
   /* ---------- foto ---------- */
   const useMem = () => C.DEMO() || C.isLocal();
@@ -775,7 +783,7 @@
 
       /* piantine */
       const pls = (p.piante || []).filter(x => x.pdf !== false && (x.w || []).length);
-      if (pls.length && !window.CDC_CAD) { try { await C.loadLib('cantieri-cad.js?v=263'); } catch { } }
+      if (pls.length && !window.CDC_CAD) { try { await C.loadLib('cantieri-cad.js?v=264'); } catch { } }
       if (window.CDC_CAD) for (const pl of pls) {
         try {
           const im = await window.CDC_CAD.png(pl, 1800, { title: pl.n || 'Piantina' }), s2 = window.CDC_CAD.stats(pl), nr = s2.rooms.length;
@@ -857,6 +865,8 @@
   }
   function onClick(e) {
     let b; const t = e.target;
+    if ((b = t.closest('[data-pdel]'))) { e.stopPropagation(); e.preventDefault(); return delPratica(b.dataset.pdel); }
+    if ((b = t.closest('[data-phdel]'))) { e.stopPropagation(); if (!canW() || !confirm('Eliminare questa foto?')) return; S.p.foto = S.p.foto.filter(x => x.id !== b.dataset.phdel); touch(); return refreshPane(); }
     if ((b = t.closest('[data-open]'))) return openP(b.dataset.open);
     if ((b = t.closest('[data-fs]'))) { S.fs = S.fs === b.dataset.fs ? '' : b.dataset.fs; return paintHome(); }
     if ((b = t.closest('[data-tab]'))) return setTab(b.dataset.tab);
