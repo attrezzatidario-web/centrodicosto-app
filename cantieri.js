@@ -369,7 +369,7 @@
   function setTab(t, first) {
     S.tab = t; $$('#cn-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
     const pane = $('#cn-pane');
-    if (t === 'piantina' && !window.CDC_CAD) { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Carico il disegno…</b></div></div>'; C.loadLib('cantieri-cad.js?v=262').then(() => { if (S.tab === 'piantina') setTab('piantina', true); }).catch(() => { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Disegno non disponibile</b><p>Controlla la connessione e riprova.</p></div></div>'; }); requestAnimationFrame(moveInd); return; }
+    if (t === 'piantina' && !window.CDC_CAD) { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Carico il disegno…</b></div></div>'; C.loadLib('cantieri-cad.js?v=263').then(() => { if (S.tab === 'piantina') setTab('piantina', true); }).catch(() => { pane.innerHTML = '<div class="cn-card"><div class="cn-empty"><b>Disegno non disponibile</b><p>Controlla la connessione e riprova.</p></div></div>'; }); requestAnimationFrame(moveInd); return; }
     pane.innerHTML = { dati: paneDati, rilievo: paneRilievo, piantina: panePiantina, computo: paneComputo, prev: panePrev, lavori: paneLavori }[t]();
     pane.firstElementChild && pane.firstElementChild.classList.add('cn-pane'); afterPane(); if (!first) window.scrollTo({ top: 0, behavior: 'smooth' });
     requestAnimationFrame(moveInd);
@@ -599,7 +599,7 @@
   }
   function openCad(id) {
     const pl = (S.p.piante || []).find(x => x.id === id); if (!pl || !window.CDC_CAD) return; const pid = S.id;
-    window.CDC_CAD.open(pl, { edit: canW(), names: AMB, onChange: () => { if (S.p && S.id === pid) touch(); }, onClose: () => { if (S.v === 'p' && S.id === pid && S.tab === 'piantina') refreshPane(); } });
+    window.CDC_CAD.open(pl, { edit: canW(), names: AMB, onError: e => C.toast('Disegno non avviato: ' + ((e && e.message) || e)), onChange: () => { if (S.p && S.id === pid) touch(); }, onClose: () => { if (S.v === 'p' && S.id === pid && S.tab === 'piantina') refreshPane(); } });
   }
   function plToAmb(pl) {
     const St = window.CDC_CAD.stats(pl), p = S.p; if (!St.rooms.length) return C.toast('Disegna almeno un locale (Locale da misure o Area)');
@@ -775,7 +775,7 @@
 
       /* piantine */
       const pls = (p.piante || []).filter(x => x.pdf !== false && (x.w || []).length);
-      if (pls.length && !window.CDC_CAD) { try { await C.loadLib('cantieri-cad.js?v=262'); } catch { } }
+      if (pls.length && !window.CDC_CAD) { try { await C.loadLib('cantieri-cad.js?v=263'); } catch { } }
       if (window.CDC_CAD) for (const pl of pls) {
         try {
           const im = await window.CDC_CAD.png(pl, 1800, { title: pl.n || 'Piantina' }), s2 = window.CDC_CAD.stats(pl), nr = s2.rooms.length;

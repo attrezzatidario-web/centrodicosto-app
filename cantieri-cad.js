@@ -180,7 +180,7 @@ text{font-family:Inter,system-ui,Arial,sans-serif;fill:${INK};paint-order:stroke
   };
   let cssDone = false;
   const CSS = `.cad-lock{overflow:hidden!important}
-.cad{--n1:#0d1730;--n2:#14284f;--n3:#1d3566;--am:#f2b13c;position:fixed;inset:0;z-index:300;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--n1);color:#e8eefc;font:14px/1.4 Inter,system-ui,sans-serif;animation:cad-in .35s cubic-bezier(.2,.8,.2,1) both;-webkit-user-select:none;user-select:none}
+.cad{--n1:#0d1730;--n2:#14284f;--n3:#1d3566;--am:#f2b13c;position:fixed;inset:0;z-index:300;display:grid;grid-template-rows:auto minmax(0,1fr);background:var(--n1);color:#e8eefc;font:14px/1.4 Inter,system-ui,sans-serif;-webkit-user-select:none;user-select:none}
 .cad *{box-sizing:border-box}.cad button{font:inherit;cursor:pointer}.cad svg{display:block}.cad input,.cad select{font:inherit}
 @keyframes cad-in{from{opacity:0;transform:scale(.985)}}@keyframes cad-pop{from{opacity:0;transform:translateY(6px) scale(.97)}}@keyframes cad-sl{from{opacity:0;transform:translateX(14px)}}
 .cad-top{display:flex;align-items:center;gap:6px;padding:8px 10px;background:linear-gradient(180deg,#18306a,var(--n2));border-bottom:1px solid rgba(255,255,255,.08);flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.cad-top::-webkit-scrollbar{display:none}
@@ -195,14 +195,14 @@ text{font-family:Inter,system-ui,Arial,sans-serif;fill:${INK};paint-order:stroke
 .cad-tools .cad-b::after{content:attr(data-t);position:absolute;left:58px;top:50%;transform:translateY(-50%);white-space:nowrap;background:#000c;color:#fff;font-size:12px;padding:5px 9px;border-radius:7px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:5}.cad-tools .cad-b:hover::after{opacity:1}
 .cad-stage{position:relative;min-width:0;min-height:0;background:#fbfcfe;overflow:hidden}.cad-svg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;background:#fbfcfe;cursor:default}
 .cad-svg.t-wall,.cad-svg.t-area,.cad-svg.t-room,.cad-svg.t-dim{cursor:crosshair}.cad-svg.t-pan,.cad-svg.grab{cursor:grab}.cad-svg.t-op,.cad-svg.t-sym,.cad-svg.t-txt{cursor:copy}
-.cad-hint{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:center;pointer-events:none}.cad-hint span{background:rgba(13,23,48,.88);color:#e8eefc;font-size:12.5px;padding:8px 14px;border-radius:99px;backdrop-filter:blur(8px);max-width:100%;text-align:center;animation:cad-pop .3s both}
+.cad-hint{position:absolute;left:12px;right:12px;bottom:12px;display:flex;justify-content:center;pointer-events:none}.cad-hint span{background:rgba(13,23,48,.88);color:#e8eefc;font-size:12.5px;padding:8px 14px;border-radius:99px;max-width:100%;text-align:center;animation:cad-pop .3s both}
 .cad-opt{position:absolute;left:12px;top:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 24px);animation:cad-pop .25s both}
 .cad-chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:99px;border:1px solid #d7dde9;background:#fff;color:#1d2433;font-size:12.5px;font-weight:600;box-shadow:0 4px 14px -8px rgba(20,40,80,.4)}.cad-chip.on{background:var(--n2);color:#fff;border-color:var(--n2)}.cad-chip.go{background:var(--am);border-color:var(--am);color:#2a1d00}
 .cad-chip svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .cad-len{position:absolute;right:12px;top:12px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d7dde9;border-radius:12px;padding:6px 8px 6px 12px;box-shadow:0 10px 30px -14px rgba(20,40,80,.5);animation:cad-pop .25s both;color:#1d2433;font-size:12.5px;font-weight:600}
 .cad-len input{width:84px;height:34px;border:1px solid #c9d1e0;border-radius:8px;padding:0 9px;font-weight:700;font-size:15px;color:#1d2433;background:#fff;outline:none;-webkit-user-select:text;user-select:text}.cad-len input:focus{border-color:${ACC}}
 .cad-sb{position:absolute;left:14px;bottom:56px;color:#1d2433;font-size:11.5px;font-weight:600;pointer-events:none}.cad-sb i{display:block;height:7px;border:2px solid #1d2433;border-top:0;margin-bottom:3px}
-.cad-fly{position:absolute;left:10px;top:54px;bottom:60px;width:276px;max-width:calc(100% - 20px);overflow-y:auto;background:rgba(255,255,255,.97);border:1px solid #d7dde9;border-radius:16px;padding:10px;box-shadow:0 24px 60px -24px rgba(10,20,50,.55);animation:cad-pop .25s both;color:#1d2433;backdrop-filter:blur(10px)}
+.cad-fly{position:absolute;left:10px;top:54px;bottom:60px;width:276px;max-width:calc(100% - 20px);overflow-y:auto;background:rgba(255,255,255,.97);border:1px solid #d7dde9;border-radius:16px;padding:10px;box-shadow:0 24px 60px -24px rgba(10,20,50,.55);animation:cad-pop .25s both;color:#1d2433}
 .cad-fly h5{margin:10px 4px 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#7a8399}.cad-fly h5:first-child{margin-top:2px}.cad-fg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .cad-it{display:grid;gap:3px;justify-items:center;padding:7px 4px 6px;border-radius:11px;border:1px solid #e4e9f2;background:#fff;color:#1d2433;font-size:11px;font-weight:600;line-height:1.15;text-align:center;transition:transform .15s,border-color .15s,box-shadow .15s}.cad-it svg{width:56px;height:46px}.cad-it:hover{transform:translateY(-2px);border-color:${ACC};box-shadow:0 8px 18px -10px rgba(37,99,235,.55)}.cad-it.on{border-color:${ACC};background:#eef3ff}
 .cad-side{background:var(--n2);border-left:1px solid rgba(255,255,255,.07);overflow-y:auto;padding:14px;min-height:0;animation:cad-sl .35s .1s both}
@@ -223,6 +223,13 @@ text{font-family:Inter,system-ui,Arial,sans-serif;fill:${INK};paint-order:stroke
   const prevSym = k => { const d = SYM[k], m = Math.max(d.w, d.h), sx = d.w / m * .92, sy = d.h / m * .92; return `<svg class="cdc-cad" viewBox="-60 -60 120 120"><style>${SCSS}</style><g class="sy" style="--c:${d.c || INK}" transform="scale(${sx * 1.1} ${sy * 1.1})">${d.d}</g></svg>`; };
 
   function open(plan, opts) {
+    const before = document.querySelectorAll('.cad').length;
+    try { return openRaw(plan, opts); } catch (e) {
+      document.querySelectorAll('.cad').forEach((n, i) => { if (i >= before) n.remove(); }); document.documentElement.classList.remove('cad-lock');
+      if (opts && opts.onError) opts.onError(e); else console.error(e); return null;
+    }
+  }
+  function openRaw(plan, opts) {
     opts = opts || {}; norm(plan); css(); const edit = !!opts.edit;
     const el = document.createElement('div'); el.className = 'cad' + (edit ? '' : ' ro');
     el.innerHTML = `<div class="cad-top"><button class="cad-b" data-a="close" aria-label="Chiudi">${I(IC.x)}</button><input class="nm" id="cad-nm" value="${esc(plan.n || '')}" placeholder="Nome piantina (es. Piano terra)" ${edit ? '' : 'disabled'} aria-label="Nome piantina">
