@@ -193,7 +193,6 @@
       ['neri', 'Neri Safety', 'Guanti, abbigliamento, calzature e DPI: protezione di mani, capo, vista, udito e anticaduta.', ['1.524 prodotti, 5.958 codici'], ['sez.preventivi']],
       ['ryobi', 'Ryobi', 'Elettroutensili, giardinaggio, pulizia, batterie e accessori Ryobi (791 modelli, 947 codici).', ['791 prodotti'], ['sez.preventivi']],
       ['sigill', 'Sigill', 'Sigillanti, adesivi, stucchi e prodotti per l\'edilizia Sigill (241 prodotti, 596 codici).', ['241 prodotti, 596 codici'], ['sez.preventivi']],
-      ['actionwear', 'Action Wear', 'Abbigliamento e accessori promozionali: t-shirt, polo, felpe, giacche, cappelli, borse (marchi B&C, Fruit of the Loom, Beechfield e altri); taglie e colori, senza prezzi.', ['3.548 prodotti, 79.133 codici'], ['sez.preventivi']],
       ['stellabianca', 'Stella Bianca', 'Punte multimateriali, foretti diamantati, portainserti e adattatori Stella Bianca (18 prodotti, 200 codici, con listino).', ['18 prodotti, 200 codici'], ['sez.preventivi']],
       ['doc', 'DOC', 'Pennarelli e kit per il ritocco del legno DOC (3 prodotti, 6 codici).', ['3 prodotti, 6 codici'], ['sez.preventivi']],
       ['cieffeplast', 'Cieffeplast', 'Fascette, tappi, clip e minuteria tecnica in plastica Cieffeplast (39 prodotti, 417 codici).', ['39 prodotti, 417 codici'], ['sez.preventivi']],
