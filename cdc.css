@@ -4397,3 +4397,42 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 }
 @media (prefers-reduced-motion: reduce) { .mg-kb u, .mg-menu { animation: none !important; } }
 .mg-k { align-content: start; }
+
+/* ===== v269: Dashboard ripulita (metodo unslop, @heydamir, CC BY 4.0) =====
+   Superfici neutre, un solo accento (l'utile), niente sfumature né bordi colorati, etichette in minuscolo, cifre a peso 600. */
+#v-home { --pl-r: #9ba4b2; --pl-c: #d5dae1; --pl-u: #3362ab; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #v-home { --pl-r: #6a7383; --pl-c: #363c47; --pl-u: #8fb0ec; } }
+:root[data-theme="dark"] #v-home { --pl-r: #6a7383; --pl-c: #363c47; --pl-u: #8fb0ec; }
+#v-home .pl-kr b { color: var(--ink); }
+#v-home .pl-k b, #v-home .db-av b, #v-home .gh-k b, #v-home .db-hero .gh-big { font-weight: 600 !important; }
+#v-home .pl-p { r: 3; }
+#v-home .pl-sdh, #v-home .gh-lbl, #v-home .ov-tag { text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; }
+#v-home .pl-sdh { font-size: 12px; }
+
+/* scheda «Spesa totale»: da blu sfumato a superficie neutra; la barra delle aree resta l'unico colore */
+#v-home .db-hero { background: var(--surface) !important; color: var(--ink) !important; border: 1px solid var(--line); box-shadow: none !important; }
+#v-home .db-hero .gh-art { display: none !important; }
+#v-home .db-hero .gh-lbl { color: var(--muted); opacity: 1; font-size: 13px; }
+#v-home .db-hero .gh-sub > span { background: var(--bg) !important; border: 1px solid var(--line) !important; color: var(--muted); -webkit-backdrop-filter: none; backdrop-filter: none; font-weight: 500; }
+#v-home .db-hr { background: var(--bg); border-color: var(--line); }
+#v-home .db-mix { background: var(--line); }
+#v-home .db-mr { color: var(--ink); }
+#v-home .db-mr:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+#v-home .db-mr b { font-weight: 600; }
+#v-home .h-att { background: var(--a-att, #3362ab); } #v-home .h-gls { background: #1baf7a; } #v-home .h-gas { background: #eda100; } #v-home .h-ly { background: #0e9fb4; } #v-home .h-am { background: #eb6834; }
+#v-home .db-hero .gh-kpis { border-top-color: var(--line); }
+#v-home .db-hero .gh-k + .gh-k { border-left-color: var(--line); }
+#v-home .db-hero .gh-k span, #v-home .db-hero .gh-k small { color: var(--muted); opacity: 1; }
+
+/* schede delle aree: niente striscia colorata, icone e mini grafici in grigio */
+#v-home .db-area::before { display: none; }
+#v-home .db-area:hover { transform: none; box-shadow: none; border-color: color-mix(in srgb, var(--ink) 20%, transparent); }
+#v-home .ov-ic, #v-home .ov-fi { color: var(--muted) !important; background: var(--bg) !important; }
+#v-home .db-area .ov-sl { stroke: color-mix(in srgb, var(--ink) 55%, transparent); stroke-width: 1.6; }
+#v-home .db-area .ov-sa { fill: var(--ink); opacity: .04; }
+#v-home .db-tops .ov-tr:first-child .ov-tn { background: var(--ink); color: var(--surface); }
+#v-home .ov-tn { font-weight: 600; }
+#v-home .db-area:hover .db-go, #v-home .db-mini:hover .db-go { stroke: var(--ink); transform: none; }
+#v-home .db-mini::before { display: none; }
+#v-home .db-mini:hover { transform: none; box-shadow: none; border-color: color-mix(in srgb, var(--ink) 20%, transparent); }
+#v-home .db-mv b { font-weight: 600 !important; }

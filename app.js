@@ -9744,6 +9744,18 @@
   }
   const plK = v => { const a = Math.abs(v), g = v < 0 ? '−' : '', d = x => fmtNum(x, Number.isInteger(Math.round(x * 10) / 10) ? 0 : 1);
     return g + (a >= 1e6 ? d(a / 1e6) + ' M' : a >= 1e3 ? d(a / 1e3) + ' k' : fmtNum(a, 0)); };
+  /* v269: linea dell'utile morbida (curva monotona: non supera mai i punti reali) */
+  function plSmooth(P) {
+    const f = q => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`, n = P.length;
+    if (n < 3) return P.map((q, i) => (i ? 'L' : 'M') + f(q)).join(' ');
+    const d = [], m = [];
+    for (let i = 0; i < n - 1; i++) d.push((P[i + 1][1] - P[i][1]) / ((P[i + 1][0] - P[i][0]) || 1));
+    m[0] = d[0]; m[n - 1] = d[n - 2];
+    for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+    let s = 'M' + f(P[0]);
+    for (let i = 0; i < n - 1; i++) { const h = (P[i + 1][0] - P[i][0]) / 3; s += ` C${(P[i][0] + h).toFixed(1)} ${(P[i][1] + m[i] * h).toFixed(1)} ${(P[i + 1][0] - h).toFixed(1)} ${(P[i + 1][1] - m[i + 1] * h).toFixed(1)} ${f(P[i + 1])}`; }
+    return s;
+  }
   function plChart(CH, W) {
     const small = W < 520, H = small ? 230 : 300, ml = small ? 42 : 56, mr = 8, mt = 14, mb = 28, pw = W - ml - mr, ph = H - mt - mb;
     const T = plNice(Math.max(1, ...CH.map(x => Math.max(x.ric, x.cost, x.ut))), Math.min(0, ...CH.map(x => x.ut))), a0 = T[0], a1 = T[T.length - 1];
@@ -9755,7 +9767,7 @@
       ${T.map(v => `<line class="pl-gl${v === 0 ? ' z' : ''}" x1="${ml}" x2="${W - mr}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text class="pl-yt" x="${ml - 8}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${plK(v)}</text>`).join('')}
       ${CH.map((x, i) => x.m === ovP ? `<rect class="pl-band" x="${(ml + i * bw + 2).toFixed(1)}" y="${mt}" width="${(bw - 4).toFixed(1)}" height="${ph}" rx="8"/>` : '').join('')}
       ${CH.map((x, i) => { const cx = ml + i * bw + bw / 2; return `<g class="pl-g${x.m === cur ? ' pl-part' : ''}" style="--d:${i * 40}ms">${bar(cx - gw - 1.5, x.ric, 'pl-r')}${bar(cx + 1.5, x.cost, 'pl-c')}</g>`; }).join('')}
-      <path class="pl-u" pathLength="1" d="${pts.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ')}"/>
+      <path class="pl-u" pathLength="1" d="${plSmooth(pts)}"/>
       ${pts.map((q, i) => `<circle class="pl-p${CH[i].ut < 0 ? ' neg' : ''}" cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4"/>`).join('')}
       ${CH.map((x, i) => `<text class="pl-xt${x.m === ovP ? ' on' : ''}" x="${(ml + i * bw + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${esc(MESI[Number(x.m.slice(5)) - 1].slice(0, 3))}${x.m.slice(5) === '01' && bw >= 52 ? ` '${x.m.slice(2, 4)}` : ''}</text>`).join('')}
       ${CH.map((x, i) => `<rect class="pl-hit" data-ovm="${x.m}" data-i="${i}" x="${(ml + i * bw).toFixed(1)}" y="${mt}" width="${bw.toFixed(1)}" height="${H - mt}"/>`).join('')}
