@@ -4436,3 +4436,6 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 #v-home .db-mini::before { display: none; }
 #v-home .db-mini:hover { transform: none; box-shadow: none; border-color: color-mix(in srgb, var(--ink) 20%, transparent); }
 #v-home .db-mv b { font-weight: 600 !important; }
+
+/* v270: la pillola «rispetto al mese prima» con classe .dn ereditava la rotazione del grafico a ciambella (.dn) */
+.ns-delta.dn { width: auto; height: auto; transform: none; }
