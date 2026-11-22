@@ -750,3 +750,111 @@ svg.il { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 @media (max-width: 640px) { .tr-bar .tr-btn.sm.tr-login { display: inline-flex; } .tr-bar-r { margin-left: auto; } }
 
 .tr-btn:hover, .tr-btn.glow:hover, .tr-btn.white:hover, .tr-btn.xl:hover { transform: none; translate: none; }
+
+/* ===== v268: pagina d'ingresso ripulita (metodo unslop di Damir Sokolovsky, @heydamir, CC BY 4.0) =====
+   Direzione: concreto, ordinato, di bottega. Mondo: la scrivania del titolare, fatture e DDT, inchiostro blu.
+   Fondi piatti (niente sfumature, bagliori, macchie), un solo accento, titoli 600, etichette in minuscolo.
+   Firma: la «fetta» rossa del logo come piccolo segno sulle etichette di sezione. */
+.tour { --u-e: cubic-bezier(.2, .7, .2, 1); --u-ink: #121418; --u-ink2: #1a1d23; --u-hl: rgba(255, 255, 255, .09); --u-t1: #f2f3f5; --u-t2: #aab0ba; --u-t3: #7d8490; --u-acc-d: #9db8e6; }
+
+/* movimento: niente loop, una sola curva, comparsa breve */
+.tour .th-bg i, .tour .tr-dm-bg i, .tr-wish::before, .tr-btn.glow::after, .calc-o::before, .ai-wrap::before, .tr-f::before, .tr-f::after { display: none !important; animation: none !important; }
+.rv { transform: translateY(12px); transition: opacity .45s var(--u-e) var(--d, 0ms), transform .45s var(--u-e) var(--d, 0ms); }
+.tr-hl > * { animation-duration: .5s; animation-timing-function: var(--u-e); }
+.ts-live::before, .ts-spark, .tr-dm h2 em, .tr-dm-f, .tr-hero .tr-eye i, .tr-dm .tr-eye i { animation: none !important; }
+.tr-btn, .tr-btn:hover, .tr-btn.glow:hover, .tr-btn.white:hover, .tr-btn.xl:hover, .tr-login:hover, .tr-f.in:hover, .pr-c:hover { transform: none !important; }
+.tr-btn { transition: background-color .15s var(--u-e), color .15s var(--u-e), border-color .15s var(--u-e); }
+.tr-btn:active { transform: scale(.98) !important; }
+
+/* fondi scuri: un inchiostro piatto */
+.tour .th-bg, .tour .tr-dm-bg { background: var(--u-ink) !important; }
+.tr-hero, .tr-dm { background: var(--u-ink) !important; color: var(--u-t1); }
+.tr-dm { border-top: 1px solid var(--u-hl); min-height: 0; padding-top: 96px !important; padding-bottom: 96px !important; }
+
+/* titoli: peso 600, gerarchia da dimensione e colore */
+.tour h1, .tour h2, .tour h3 { font-weight: 600 !important; }
+.tr-hero h1 { font-size: clamp(36px, 4.6vw, 56px); letter-spacing: -.03em; line-height: 1.08; }
+.tr-sec h2, .tr-dm h2 { letter-spacing: -.02em; }
+.tr-hero p, .tr-dm p { color: var(--u-t2) !important; }
+
+/* testo con gradiente → colore pieno */
+.tr-rot b, .tr-dm h2 em, .tr-num b, .calc-o b { background: none !important; -webkit-background-clip: border-box !important; background-clip: border-box !important; -webkit-text-fill-color: currentColor; font-weight: 600 !important; }
+.tr-rot b, .tr-dm h2 em { color: var(--u-acc-d) !important; }
+.tr-num b { color: var(--ink) !important; }
+.calc-o b { color: var(--u-t1) !important; }
+
+/* etichette: minuscolo, peso 500, firma = fetta rossa */
+.tr-eye, .pr-k, .tr-hero .tr-eye, .tr-dm .tr-eye, .calc-o small, .cl-h { text-transform: none !important; letter-spacing: 0 !important; font-weight: 500 !important; font-size: 13px !important; }
+.tr-eye { gap: 8px; color: var(--muted) !important; }
+.tr-eye::before { content: ''; width: 8px; height: 8px; border-radius: 8px 0 0 0; background: #e22726; flex: none; }
+.tr-eye > i { display: none !important; }
+.tr-hero .tr-eye, .tr-dm .tr-eye { padding: 0 !important; background: none !important; border: 0 !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; color: var(--u-t2) !important; }
+
+/* pulsanti: niente bagliori né ombre colorate */
+.tr-btn { height: 44px; border-radius: 10px; font-weight: 500; box-shadow: none !important; }
+.tr-btn.sm { height: 36px; border-radius: 8px; }
+.tr-btn.glow, .tr-card .tr-btn:not(.alt):not(.ghost), .sx-btn, .ai-chat .u, .tr-chip.on { background: var(--tr-a) !important; box-shadow: none !important; }
+.tr-chip.on { animation: none !important; }
+.tr-hero .tr-btn.glow, .tr-dm .tr-btn.glow { background: var(--u-t1) !important; color: var(--u-ink) !important; }
+.tr-hero .tr-btn.glow:hover, .tr-dm .tr-btn.glow:hover { background: #fff !important; }
+.tr-hero .tr-btn.white { background: transparent !important; color: var(--u-t1) !important; border: 1px solid rgba(255, 255, 255, .2) !important; }
+.tr-hero .tr-btn.white:hover { background: rgba(255, 255, 255, .06) !important; }
+.tr-btn.xl { height: 48px; padding: 0 24px; font-size: 15px; }
+.tr-login { background: var(--surface) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; box-shadow: none !important; }
+.tr-login:hover { background: var(--ink) !important; color: var(--bg) !important; }
+.tr-trust li { color: var(--u-t3) !important; }
+
+/* scena dell'apertura: una sola finestra solida, niente schede volanti */
+.ts-win { background: var(--u-ink2) !important; border: 1px solid var(--u-hl) !important; border-radius: 16px !important; box-shadow: 0 24px 48px -24px rgba(0, 0, 0, .6) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; right: 0 !important; }
+.ts-kpis > div { background: rgba(255, 255, 255, .03) !important; border-color: var(--u-hl) !important; border-radius: 10px !important; }
+.ts-kpis .u { background: rgba(255, 255, 255, .03) !important; border-color: var(--u-hl) !important; }
+.ts-kpis b { font-weight: 600 !important; font-variant-numeric: tabular-nums; }
+.ts-kpis .u small::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 7px 0 0 0; background: #e22726; }
+.tr-scene .ts-card, .tr-scene .ts-toast { display: none !important; }
+.tr-scene { transform: none !important; }
+
+/* demo: finestra dritta, niente rotazione 3D né etichette volanti */
+.tr-dm-s, .tr-dm-s .sx-win, .tr-dm-s.t3 { transform: none !important; }
+.tr-dm-s .sx-win { box-shadow: 0 24px 48px -24px rgba(0, 0, 0, .6) !important; border: 1px solid var(--u-hl); }
+.tr-dm-n { color: var(--u-t3) !important; }
+.tr-dm-l li { color: var(--u-t2) !important; }
+.tr-dm-l b { color: var(--u-t1) !important; font-weight: 500; }
+
+/* numeri: niente fascia colorata, figure su fondo pagina tra due righe sottili */
+.tr-scroll > .tr-num, .tr-num { background: none !important; color: var(--ink) !important; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); border-radius: 0 !important; box-shadow: none !important; }
+.tr-num > .th-bg { display: none !important; }
+.tr-num span { color: var(--muted) !important; }
+.tr-num b { font-variant-numeric: tabular-nums; }
+
+/* «Pensi a qualcosa che non c'è?»: superficie neutra */
+.tr-wish { background: var(--surface) !important; color: var(--ink) !important; border: 1px solid var(--line); box-shadow: none !important; }
+.tr-wish h3 { color: var(--ink) !important; }
+.tr-wl span { background: var(--bg) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.tr-wish-p, .tr-wish p { color: var(--muted) !important; }
+
+/* blocchi scuri (calcolo, IA, centro del flusso, chiusura): inchiostro piatto */
+.calc-o, .ai-wrap, .fl-hub, .tr-card { background: var(--u-ink) !important; box-shadow: none !important; }
+.tr-card > .th-bg { display: none !important; }
+.ai-chat { background: var(--u-ink2) !important; border-color: var(--u-hl) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.ai-q, .tr-card .tr-btn.ghost, .tr-card .tr-btn.alt { background: transparent !important; border-color: rgba(255, 255, 255, .2) !important; }
+.tr-card .tr-btn:not(.alt):not(.ghost) { background: var(--u-t1) !important; color: var(--u-ink) !important; }
+
+/* schede e illustrazioni: niente alone al passaggio */
+.tr-f { box-shadow: none !important; }
+.tr-f:hover { border-color: color-mix(in srgb, var(--ink) 18%, transparent) !important; }
+.tr-ill { background: color-mix(in srgb, var(--ink) 4%, var(--surface)) !important; }
+.sx-chip.ai { background: color-mix(in srgb, var(--tr-a) 12%, transparent) !important; color: var(--tr-a) !important; }
+
+/* ruoli: avatar pieni, una tinta ciascuno, senza sfumature */
+.ra.k-ok { background: #3362ab !important; } .ra.k-acc { background: #5b6472 !important; } .ra.k-ro { background: #2f8a6b !important; }
+
+/* prezzi */
+.pr-main { box-shadow: none !important; border-color: var(--tr-a) !important; }
+.pr-badge { box-shadow: none !important; font-weight: 500 !important; text-transform: none !important; letter-spacing: 0 !important; }
+.pr-v b { font-weight: 600 !important; font-variant-numeric: tabular-nums; }
+
+/* barra di avanzamento della lettura: tinta unica */
+.tr-prog { background: var(--tr-a) !important; }
+.tr-dm-s .tr-dm-f { display: none !important; }
+.tr-steps .n { box-shadow: none !important; background: var(--tr-a) !important; }
+.tr-dm h2 { font-size: clamp(32px, 4vw, 48px) !important; line-height: 1.1; }

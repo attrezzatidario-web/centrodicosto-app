@@ -89,7 +89,7 @@
       <div class="sx-box"><div class="sx-bh">Spese per ${esc(sd[1].toLowerCase())}</div>${SD.map((n, i) => `<div class="sx-hb" style="--i:${i}"><span>${esc(n)}</span><i style="--w:${[82, 58, 37][i]}%"></i><b>${eu0([12840, 9110, 5870][i])}</b></div>`).join('')}<div class="sx-bh" style="margin-top:12px">Categorie</div>${cats.slice(0, 3).map((c, i) => `<div class="sx-hb c" style="--i:${i + 3}"><span>${esc(c)}</span><i style="--w:${[64, 41, 27][i]}%"></i><b>${[34, 22, 15][i]}%</b></div>`).join('')}</div></div>`;
     if (k === 'acq') return `<div class="sx-tool"><div class="sx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="sx-type" data-type="${esc(ex[0][0].split(' ').slice(0, 2).join(' ').toLowerCase())}"></span></div><span class="sx-btn">+ Nuova spesa</span></div>
       <div class="sx-table"><div class="sx-tr th"><span>Data</span><span>Descrizione</span><span>Categoria</span><span>Importo</span></div>${ex.map(([t, c], i) => `<div class="sx-tr" style="--i:${i}"><span>${['24/10', '22/10', '21/10', '18/10'][i]}</span><span class="d">${esc(t)}</span><span><em class="sx-chip">${esc(c)}</em></span><span class="n">${eu(PRZ[i] * (i === 1 ? 1 : 4))}</span></div>`).join('')}
-      <div class="sx-tr new"><span>oggi</span><span class="d">${esc(ex[1][0])}</span><span><em class="sx-chip ai">✦ ${esc(ex[1][1])}</em></span><span class="n">${eu(PRZ[1])}</span></div></div>`;
+      <div class="sx-tr new"><span>oggi</span><span class="d">${esc(ex[1][0])}</span><span><em class="sx-chip ai">${esc(ex[1][1])}</em></span><span class="n">${eu(PRZ[1])}</span></div></div>`;
     if (k === 'fat') return `<div class="sx-split"><div class="sx-paper"><div class="pp-h"><i></i><i></i></div>${[80, 60, 90, 70, 85, 55].map((w, i) => `<span style="--w:${w}%;--i:${i}"></span>`).join('')}<div class="pp-t"><i></i></div><div class="sx-scan"></div></div>
       <div class="sx-fields">${[['Fornitore', 'Rossi Forniture S.r.l.'], ['Numero', 'FT 2026/1184'], ['Data', '24/10/2026'], ['Scadenza', '23/11/2026'], ['Totale', '€ 1.284,60']].map(([l, v], i) => `<div class="sx-fd" style="--i:${i}"><small>${l}</small><b>${v}</b></div>`).join('')}
         <div class="sx-lines">${ex.slice(0, 3).map(([t, c], i) => `<div style="--i:${i}"><span>${esc(t)}</span><em class="sx-chip">${esc(c)}</em></div>`).join('')}</div><div class="sx-ok">✓ Registrata · da pagare tra 30 giorni</div></div></div>`;
@@ -322,8 +322,8 @@
         <div class="tr-hl">
           <span class="tr-eye"><i></i>Gestionale aziendale su misura</span>
           <h1>Il gestionale su misura per <span class="tr-rot" data-word><b>${esc(word)}</b></span></h1>
-          <p>Quanto incassi, quanto spendi e quanto ti resta. Fornitori, preventivi, clienti, magazzino e fatture in un unico posto, su PC e telefono. Preparato su misura per come lavori, e personalizzabile quanto vuoi.</p>
-          <div class="tr-cta">${opts.demo ? '' : `<button type="button" class="tr-btn glow" data-tr="demo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Prova la demo</button>`}<button type="button" class="tr-btn ${opts.demo ? 'glow' : 'white'}" data-tr="req">Richiedi il tuo gestionale</button><a class="tr-btn glass" href="${esc(mail)}">Scrivimi</a></div>
+          <p>Quanto incassi, quanto spendi e quanto ti resta. Fornitori, preventivi, clienti, magazzino e fatture in un posto solo, da PC e telefono. Preparato su misura per come lavori.</p>
+          <div class="tr-cta">${opts.demo ? '' : `<button type="button" class="tr-btn glow" data-tr="demo"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Prova la demo</button>`}<button type="button" class="tr-btn ${opts.demo ? 'glow' : 'white'}" data-tr="req">Richiedi il tuo gestionale</button></div>
           <ul class="tr-trust"><li>Pronto in pochi giorni</li><li>I dati restano solo tuoi</li><li>PC, tablet e telefono</li></ul>
         </div>
         <div class="tr-hr">${heroScene(s, cats, ex)}</div>
