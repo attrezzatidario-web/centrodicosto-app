@@ -4439,3 +4439,7 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 
 /* v270: la pillola «rispetto al mese prima» con classe .dn ereditava la rotazione del grafico a ciambella (.dn) */
 .ns-delta.dn { width: auto; height: auto; transform: none; }
+
+/* v271 · pulsante Magazzino 3D nella barra del Magazzino */
+.mg-3d { display: inline-flex; align-items: center; gap: 6px; }
+.mg-3d svg { width: 16px; height: 16px; fill: none; stroke: #f47b20; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

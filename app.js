@@ -9124,7 +9124,7 @@
     const m0 = today().slice(0, 7), MM = GX.mov().filter(m => String(m.data).slice(0, 7) === m0), nLow = A.filter(low).length;
     const tabs = `<div class="gx-seg" role="tablist"><button type="button" data-mgtab="art" class="${mgTab === 'art' ? 'on' : ''}">Articoli</button><button type="button" data-mgtab="mov" class="${mgTab === 'mov' ? 'on' : ''}">Movimenti</button></div>`;
     let h = gxWarn() + `<div class="gx-bar">${tabs}<label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mg-q" placeholder="Cerca codice, codice a barre o descrizione…" value="${esc(mgQ)}"><button type="button" class="scan-ib" data-gx="mag-scan" title="Scansiona un codice a barre" aria-label="Scansiona un codice a barre">${SCAN_IC}</button></label>
-      <div class="gx-act mg-act">${magMulti() ? `<label class="mg-sel"><select id="mg-mag" aria-label="Magazzino"><option value="">Tutti i magazzini</option>${MAGS().map(x => `<option${x === mgMag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}<details class="mg-more"><summary class="btn sm" aria-label="Altre azioni">Altro<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary><div class="mg-menu">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona articoli'}</button>` : ''}<button type="button" data-gx="mag-imp">Importa da Excel</button><button type="button" data-gx="mag-xls">Esporta in Excel</button>${secPerm('magazzino') === 'w' ? '<button type="button" data-gx="mags">Gestisci magazzini</button>' : ''}</div></details><button type="button" class="btn sm" data-gx="mov-new">${magMulti() ? 'Movimento' : 'Carico / scarico'}</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
+      <div class="gx-act mg-act">${magMulti() ? `<label class="mg-sel"><select id="mg-mag" aria-label="Magazzino"><option value="">Tutti i magazzini</option>${MAGS().map(x => `<option${x === mgMag ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></label>` : ''}<details class="mg-more"><summary class="btn sm" aria-label="Altre azioni">Altro<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></summary><div class="mg-menu">${mgTab === 'art' && A.length && secPerm('magazzino') === 'w' ? `<button type="button" data-mgs="${mgMode ? 'off' : 'on'}">${mgMode ? 'Fine selezione' : 'Seleziona articoli'}</button>` : ''}<button type="button" data-gx="mag-imp">Importa da Excel</button><button type="button" data-gx="mag-xls">Esporta in Excel</button>${secPerm('magazzino') === 'w' ? '<button type="button" data-gx="mags">Gestisci magazzini</button>' : ''}</div></details><button type="button" class="btn sm mg-3d" data-gx="mag-3d" title="Vista 3D del magazzino"><svg viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>3D</button><button type="button" class="btn sm" data-gx="mov-new">${magMulti() ? 'Movimento' : 'Carico / scarico'}</button><button type="button" class="btn sm primary" data-gx="art-new">+ Articolo</button></div></div>
       ${xiMagNote()}${mgKpi([
         ['Articoli', fmtNum(A.length, 0), `${A.filter(a => (G.get(a.id) || 0) > 0).length} disponibili`, '', A.length ? A.filter(a => (G.get(a.id) || 0) > 0).length / A.length : 0, 'box'],
         ['Valore del magazzino', eur0(val), `giacenze al costo · ${ivaLbl()}`, '', 0, 'eur'],
@@ -9158,6 +9158,19 @@
     el.innerHTML = h;
     const mgm = $('#mg-mag'); if (mgm) mgm.onchange = () => { mgMag = mgm.value; renderMag(); };
     const qi = $('#mg-q'); if (qi) qi.oninput = () => { mgQ = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => { const p = qi.selectionStart; renderMag(); const x = $('#mg-q'); x.focus(); try { x.setSelectionRange(p, p); } catch {} }, 160); };
+    if (window.CDC_MG3D && window.CDC_MG3D.isOpen()) window.CDC_MG3D.refresh();
+  }
+  /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
+  async function mag3d() {
+    if (mag3d.busy) return; mag3d.busy = 1;
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=271'); }
+    catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
+    mag3d.busy = 0;
+    window.CDC_MG3D.open({
+      art: () => GX.art(), mov: () => GX.mov(), ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
+      mag: () => mgMag, setMag: m => { mgMag = m; renderMag(); }, num, esc, eur0, fmtNum, dIt, today, orgName: () => ORG.n || 'Magazzino', secPerm,
+      ivaOn: () => ivaOn, ivaRate, ivaLbl, xiTransito, xiNum, xiPz, onClose: () => {}
+    });
   }
   // v147: movimenti dell'articolo dentro la sua scheda (carichi, scarichi, inventari)
   function artMovHtml(a) {
@@ -9652,6 +9665,7 @@
       if (k === 'mov-new') return movForm();
       if (k === 'mags') return magsForm();
       if (k === 'mag-scan') return magScan();
+      if (k === 'mag-3d') return mag3d();
       if (k === 'srv-new') return srvForm(null);
       if (k === 'srv-edit') { const s = SRV().find(x => x.id === id); if (s) srvForm(s); return; }
       if (k === 'fo-tab') { foTab = id; return renderForn(); }
