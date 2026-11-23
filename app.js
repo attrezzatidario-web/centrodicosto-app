@@ -9163,13 +9163,14 @@
   /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
   async function mag3d() {
     if (mag3d.busy) return; mag3d.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=271'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=272'); }
     catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
     mag3d.busy = 0;
     window.CDC_MG3D.open({
       art: () => GX.art(), mov: () => GX.mov(), ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
       mag: () => mgMag, setMag: m => { mgMag = m; renderMag(); }, num, esc, eur0, fmtNum, dIt, today, orgName: () => ORG.n || 'Magazzino', secPerm,
-      ivaOn: () => ivaOn, ivaRate, ivaLbl, xiTransito, xiNum, xiPz, onClose: () => {}
+      ivaOn: () => ivaOn, ivaRate, ivaLbl, xiTransito, xiNum, xiPz, onClose: () => {},
+      cfg, write, isOwner: () => isOwnerU() // v272: disposizione e ubicazioni in Config «mg3d:<magazzino>»
     });
   }
   // v147: movimenti dell'articolo dentro la sua scheda (carichi, scarichi, inventari)
