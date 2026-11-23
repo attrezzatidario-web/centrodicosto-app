@@ -1,4 +1,4 @@
-/* Magazzino 3D (v275) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v276) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -261,6 +261,23 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-b6 i.c{background:${OR}}
 .m3-b6 small{font-size:10.5px;color:#9a9ca1;padding-bottom:6px}
 @keyframes m3g{from{transform:scaleY(0)}}
+.m3-b14{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;align-items:end;height:104px;padding:10px 8px 0;background:#f8f7f5;border-radius:13px;margin-bottom:4px}
+.m3-b14 div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.m3-b14 i{display:block;width:100%;height:var(--h);min-height:3px;border-radius:5px 5px 2px 2px;background:#f3c9a4;transform-origin:bottom;animation:m3g .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*35ms)}
+.m3-b14 i.c{background:${OR}}.m3-b14 div:hover i{background:#e9a25c}
+.m3-b14 small{font-size:10px;color:#9a9ca1;padding-bottom:6px;font-weight:600}.m3-b14 small.we{color:#c9c6c0}
+.m3-hb{display:flex;flex-direction:column;gap:9px;margin-bottom:4px}
+.m3-hb>div{display:flex;flex-direction:column;gap:5px;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*60ms)}
+.m3-hb span{display:flex;justify-content:space-between;gap:8px;font-size:12.5px}.m3-hb span b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m3-hb span small{color:#8a8d93;white-space:nowrap}
+.m3-hb u{display:block;height:6px;border-radius:4px;background:#f1efeb;overflow:hidden}
+.m3-hb u i{display:block;height:100%;width:var(--w);background:var(--c);border-radius:4px;transform-origin:left;animation:m3w .9s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*60ms + 120ms)}
+@keyframes m3w{from{transform:scaleX(0)}}
+.m3-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 4px;position:relative}
+.m3-steps>div{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:#f8f7f5;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-steps>div:nth-child(2){animation-delay:.08s}.m3-steps>div:nth-child(3){animation-delay:.16s}
+.m3-steps i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#e6f4ea;color:#2a8a4a}.m3-steps .w i{background:#fff1e3;color:${OR}}
+.m3-steps i svg{width:14px;height:14px}.m3-steps b{display:block;font-size:12px;font-weight:600}.m3-steps small{display:block;font-size:11px;color:#8a8d93;line-height:1.3}
+.m3-rcc{width:34px!important;height:30px!important;border-radius:9px!important;font:700 11px/30px Inter,system-ui!important;font-style:normal!important;color:#16181b!important;background:var(--c)!important;text-align:center;display:block!important;letter-spacing:.02em}
 .m3-tl2{border:0;margin:0;padding:0;gap:4px}
 .m3-tl2>div,.m3-tl2>button{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:11px;border:1px solid #eeece8;text-align:left;width:100%;background:#fff}
 .m3-tl2>button:hover{border-color:#f3c9a4;background:#fffaf5}
@@ -405,7 +422,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const ddt = C.ddt().slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || (parseInt(b.numero, 10) || 0) - (parseInt(a.numero, 10) || 0)).map(d => { const R2 = parse(d.righe).filter(l => !l.h), c = C.cliOf(d.cliente); return { d, R: R2, cli: c, cliN: c ? c.nome : (d.cliente || 'Cliente'), citta: c ? [c.citta, c.prov && '(' + c.prov + ')'].filter(Boolean).join(' ') : '', pz: R2.reduce((s, l) => s + C.num(l.q), 0) }; });
     const ddtM = ddt.filter(x => String(x.d.data).slice(0, 7) === m0);
     const pos = arts.map(x => x.g).filter(g => g > 0).sort((a, b) => a - b), refG = pos.length ? pos[Math.floor(pos.length * .75)] : 1;
-    return { mag, arts, cats, catOf, tot, disp, val, low, out, MM, car, car30, ret, ret90, scar, ddt, ddtM, trf: C.xiTransito(), t0, nArt: arts.length, cli: C.cli(), refG, gas: gasData() };
+    return { mag, arts, cats, catOf, tot, disp, val, low, out, MM, car, car30, ret, ret90, scar, ddt, ddtM, trf: C.xiTransito(), t0, nArt: arts.length, cli: C.cli(), refG, gas: gasData(), rcv: rcvData(car30) };
   }
 
   /* ---------------- disposizione del magazzino ---------------- */
@@ -610,7 +627,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function hit(g, w, h, d, y, k, it) { const m = new T.Mesh(G.box, M.hit); m.scale.set(w, h, d); m.position.y = y; m.userData.k = k; m.userData.eid = it.id; g.add(m); pick.push(m); return m; }
   function buildWH() {
     if (WH) { scene.remove(WH); WH.traverse(o => { if (o.isInstancedMesh) o.dispose(); }); }
-    WH = new T.Group(); scene.add(WH); RX = []; FOC = null; HOV = null; SCAN = null; BACK.length = 0; FADE.length = 0; if (root) { callout(false); const tp = $('.m3-tip'); tp && tp.classList.remove('on'); }
+    WH = new T.Group(); scene.add(WH); RX = []; FOC = null; RCV = null; RF = null; RH = null; HOV = null; SCAN = null; BACK.length = 0; FADE.length = 0; if (root) { callout(false); const tp = $('.m3-tip'); tp && tp.classList.remove('on'); }
     const W = L.W, Dd = L.D, hw = W / 2, hd = Dd / 2;
     // pavimento in cemento
     bx(WH, W, .48, Dd, 0xe2ded7, 0, 0, 0);
@@ -642,16 +659,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const edge = it.k === 'cq' ? 0x63b37a : it.k === 'uff' ? 0x7d98b8 : 0xf3a868;
     bx(g, w, .035, .14, edge, 0, .52, -d / 2 + .07, { ns: 1 }); bx(g, w, .035, .14, edge, 0, .52, d / 2 - .07, { ns: 1 }); bx(g, .14, .035, d, edge, -w / 2 + .07, .52, 0, { ns: 1 }); bx(g, .14, .035, d, edge, w / 2 - .07, .52, 0, { ns: 1 });
     const name = (it.name || z[0]).toUpperCase().slice(0, 22), fw = Math.min(w * .8, name.length * 1.35);
-    floorText(g, name, Math.max(4, fw), 0, d / 2 - fw / 11 - 1, d > w * 1.6 ? Math.PI / 2 : 0, it.k === 'cq' ? 'rgba(60,150,80,.45)' : 'rgba(244,123,32,.48)');
-    if (d > w * 1.6) { const m = g.children[g.children.length - 1]; m.position.set(w / 2 - 1.6, .56, 0); }
+    if (it.k !== 'ric') floorText(g, name, Math.max(4, fw), 0, d / 2 - fw / 11 - 1, d > w * 1.6 ? Math.PI / 2 : 0, it.k === 'cq' ? 'rgba(60,150,80,.45)' : 'rgba(244,123,32,.48)');
+    if (it.k !== 'ric' && d > w * 1.6) { const m = g.children[g.children.length - 1]; m.position.set(w / 2 - 1.6, .56, 0); }
     hit(g, w, .6, d, .5, { t: 'zone', z: it.k, id: it.id }, it);
-    if (it.k === 'ric') { // pallet in arrivo: uno per carico degli ultimi 30 giorni
-      const B = new Batch(g), cols = Math.max(1, Math.floor((w - 3) / 3.2)); let i = 0;
-      D.car30.slice(0, 30).forEach(m => { const c = i % cols, r = Math.floor(i / cols), x = -w / 2 + 2 + c * 3.2, zz = -d / 2 + 2.2 + r * 3.4; if (zz > d / 2 - 5) return; i++; palletStack(B, x, .505, zz, clamp(C.num(m.quantita) / 80, .25, 1), PAL[i % PAL.length], 3, null); });
-      const ims = B.flush(); Object.values(ims).forEach(im => { im.userData.k = { t: 'zone', z: 'ric', id: it.id }; im.userData.eid = it.id; pick.push(im); });
-      // transpallet
-      for (let k = 0; k < 2; k++) { const tg = new T.Group(); tg.position.set(w / 2 - 2.5, .5, -d / 2 + 4 + k * 5); g.add(tg); bx(tg, .55, .08, 1.15, 0x3a3f46, 0, .02, 0); bx(tg, .5, .5, .25, 0xf47b20, 0, .1, -.6); bx(tg, .05, .9, .05, 0x2b2f35, 0, .6, -.75, { rx: -.3 }); }
-    }
+    if (it.k === 'ric') buildRic(g, it, w, d);
     if (it.k === 'terra') { const B = new Batch(g), cols = Math.max(1, Math.floor((w - 1) / 1.6)), rows = Math.max(1, Math.floor((d - 1) / 2)); for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) if ((c * 7 + r * 3) % 5) palletStack(B, -w / 2 + 1.2 + c * 1.6, .505, -d / 2 + 1.4 + r * 2, .4 + ((c + r) % 3) * .2, PAL[(c + r) % PAL.length], 3, null); B.flush(); }
   }
 
@@ -822,7 +833,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const f = forklift(WH, a.x, a.z); movers.push({ o: f, t: 'path', a, b, sp: .18 + k * .03, ph: k * 1.3 });
     });
     // operatori che camminano nelle zone
-    L.items.filter(i => i.t === 'zone' && ['ric', 'pre', 'spe', 'cq'].includes(i.k)).forEach((z, k) => {
+    L.items.filter(i => i.t === 'zone' && ['pre', 'spe', 'cq'].includes(i.k)).forEach((z, k) => {
       const b2 = box2(z), n = z.k === 'ric' || z.k === 'spe' ? 2 : 1;
       for (let j = 0; j < n; j++) { const a = new T.Vector3(b2.x0 + 1.5 + rr() * (b2.x1 - b2.x0 - 3), 0, b2.z0 + 1.5 + rr() * (b2.z1 - b2.z0 - 3)), b = new T.Vector3(b2.x0 + 1.5 + rr() * (b2.x1 - b2.x0 - 3), 0, b2.z0 + 1.5 + rr() * (b2.z1 - b2.z0 - 3)); const p = person(WH, a.x, a.z, (k + j) % 2 ? 0xf47b20 : 0x39a85a); movers.push({ o: p, t: 'walk', a, b, sp: .05 + rr() * .04, ph: rr() * 6 }); }
       if (z.k === 'ric') { const c2 = new T.Vector3((b2.x0 + b2.x1) / 2, 0, (b2.z0 + b2.z1) / 2), f = forklift(WH, c2.x, c2.z); movers.push({ o: f, t: 'loop', cx: c2.x, cz: c2.z, rx: (b2.x1 - b2.x0) * .3, rz: (b2.z1 - b2.z0) * .3, sp: .25, ph: 0 }); }
@@ -836,6 +847,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (k === 'flotta') { if (!D.gas) return null; const F = FL(); return { x: F.cx, z: 2, dist: 118, az: -1.05, pol: .88 }; }
     if (k === 'stk') { const R2 = L.items.filter(i => i.t === 'rack'); if (!R2.length) return null; const bb = R2.map(box2).reduce((a, b) => ({ x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), z0: Math.min(a.z0, b.z0), z1: Math.max(a.z1, b.z1) })); return { x: (bb.x0 + bb.x1) / 2, z: (bb.z0 + bb.z1) / 2 + 2, dist: Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 1.9 + 20, az: -0.5, pol: .88 }; }
     const z = L.items.find(i => i.t === 'zone' && i.k === k); if (!z) return null; const f = foot(z);
+    if (k === 'ric') return { x: z.x + 3, z: z.z, dist: Math.max(f.w, f.d) * 1.42 + 18, az: -0.5, pol: .88 };
     return { x: z.x + (k === 'spe' ? 10 : 0), z: z.z, dist: Math.max(f.w, f.d) * 1.6 + 26, az: k === 'spe' ? .6 : -0.6, pol: .92 };
   }
   const zoneKinds = () => ['all', ...['ric', 'stk', 'pre', 'cq', 'spe', 'flotta'].filter(k => zoneTarget(k)), 'uffe'];
@@ -845,7 +857,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const add = (pos, html2, cls, k, maxD, obj) => { const el = document.createElement('div'); el.className = 'm3-lb ' + (cls || ''); el.innerHTML = html2; box.appendChild(el); const L2 = { p: new T.Vector3(...pos), el, k, maxD: maxD || 1e9, obj }; el.onclick = () => { if (!EDIT) select(k); }; labels.push(L2); return L2; };
     const R2 = L.items.filter(i => i.t === 'rack'), nv = R2.reduce((s, r) => s + r.bays * r.lv, 0), used = P.byArt.size;
     const st = zoneTarget('stk'); if (st) add([st.x, 9, st.z - 2], `Scaffalature <em>${R2.length} scaffali · ${N(used)}/${N(nv)} ubicazioni</em>`, '', { t: 'zone', z: 'stk' }, 1e9);
-    const sub = { ric: `${D.car30.length} carichi in 30 gg`, pre: `${D.ddtM.length} DDT nel mese`, cq: `${D.ret90.length} rettifiche`, spe: `${trucks.filter(t => !t.road && t.d).length} in banchina`, terra: 'stoccaggio a terra', uff: 'ufficio', free: '' };
+    const sub = { ric: `${D.rcv.length} arrivi in 30 gg`, pre: `${D.ddtM.length} DDT nel mese`, cq: `${D.ret90.length} rettifiche`, spe: `${trucks.filter(t => !t.road && t.d).length} in banchina`, terra: 'stoccaggio a terra', uff: 'ufficio', free: '' };
     L.items.filter(i => i.t === 'zone').forEach(z => add([z.x, 4.5, z.z], `${esc(z.name || ZONE[z.k][0])}${sub[z.k] ? ` <em>${sub[z.k]}</em>` : ''}`, '', { t: 'zone', z: z.k, id: z.id }, 340));
     add([L.W / 4, 8.6, L.D / 2 + 13], `Uffici <em>${D.cli.length} clienti</em>`, 'wh', { t: 'zone', z: 'uffe' }, 240);
     if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 6.6, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
@@ -1106,6 +1118,208 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
 
 
+  /* ---------------- ricevimento merci (v276): banchine fornitori, corsie di sosta, accettazione ---------------- */
+  const hashS = s => { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+  const dAgoN = d => { const a = new Date(String(d).slice(0, 10) + 'T12:00:00'), b = new Date(C.today() + 'T12:00:00'); return Math.round((b - a) / 864e5); };
+  const agoTxt = d => { const n = dAgoN(d); return n <= 0 ? 'Oggi' : n === 1 ? 'Ieri' : n < 7 ? n + ' giorni fa' : C.dIt(d); };
+  // un arrivo = i carichi dello stesso documento, oppure dello stesso giorno e dello stesso fornitore
+  function rcvData(car30) {
+    const G2 = new Map();
+    car30.forEach(m => {
+      const a = C.artOf(m.articolo), sup = String((a && a.fornitore) || '').trim() || (m.doc ? String(m.causale || '').trim() : '') || 'Fornitore non indicato';
+      const key = m.doc ? 'd:' + m.doc : 'k:' + String(m.data).slice(0, 10) + '|' + sup.toLowerCase();
+      let r = G2.get(key); if (!r) G2.set(key, r = { key, data: String(m.data).slice(0, 10), sup, caus: String(m.causale || '').trim(), L: [], pz: 0, val: 0, cr: '' });
+      const q = C.num(m.quantita), cu = C.num(m.costo) || (a ? C.num(a.costo) : 0);
+      r.L.push({ m, a, q }); r.pz += q; r.val += q * cu; if (String(m.creato || '') > r.cr) r.cr = String(m.creato || '');
+    });
+    const out = [...G2.values()].sort((a, b) => b.data.localeCompare(a.data) || b.cr.localeCompare(a.cr));
+    out.forEach((r, i) => { r.i = i; r.col = PAL[hashS(r.sup) % PAL.length]; r.code = 'R' + String(i + 1).padStart(2, '0'); r.age = dAgoN(r.data); });
+    return out;
+  }
+  let RCV = null; // { q, rot, lanes: Map(key → {x,z,w,d}), zone }
+  function buildRic(g, it, w, d) {
+    const hw = L.W / 2, hd = L.D / 2, b2 = { x0: it.x - w / 2, x1: it.x + w / 2, z0: it.z - d / 2, z1: it.z + d / 2 };
+    const gaps = [['L', b2.x0 + hw], ['R', hw - b2.x1], ['B', b2.z0 + hd]].sort((a, b) => a[1] - b[1]);
+    const side = gaps[0][1] > -.5 && gaps[0][1] < 2.6 ? gaps[0] : null, rot = !side ? 0 : { L: 0, R: Math.PI, B: -Math.PI / 2 }[side[0]];
+    const W = side && side[0] === 'B' ? d : w, Dl = side && side[0] === 'B' ? w : d;
+    const q = new T.Group(); q.rotation.y = rot; g.add(q);
+    const wallX = side ? -W / 2 - side[1] + .16 : -W / 2, R2 = D.rcv, B = new Batch(q), lanes = new Map();
+    RCV = { q, rot, lanes, zone: it.id };
+    const face = { ry: -rot, ds: true };
+    const sign = (tex, sw, sh, x, y, z) => planeT(tex, sw, sh, q, x, y, z, face);
+    const frontRes = Dl > 22 && W > 13 ? 7.2 : 0, AP = 4.4;
+    // ---- banchine di scarico sul muro (porte, rampe, semafori, camion dei fornitori)
+    const nd = side ? clamp(Math.floor((Dl - frontRes - 1) / 6.2), 1, 4) : 0, doors = [];
+    for (let i = 0; i < nd; i++) {
+      const zc = -Dl / 2 + 3.4 + i * 6.2, r = R2[i] && R2[i].age <= 7 ? R2[i] : null; doors.push({ zc, r });
+      for (const s of [-1, 1]) { bx(q, .3, 3.3, .26, 0x1b1d20, wallX + .15, .5, zc + s * 1.95); B.add('bol', G.cyl, mat(0xf2c418), m4(wallX + .55, 1.05, zc + s * 2.35, .2, 1.1, .2)); B.add('bolc', G.cyl, mat(0x2b2f35), m4(wallX + .55, 1.62, zc + s * 2.35, .21, .06, .21)); }
+      bx(q, .32, .32, 4.2, 0x1b1d20, wallX + .16, 3.55, zc);
+      mesh(G.cyl, mat(0xd8dbe0), wallX + .4, 3.62, zc, q, { s: [.46, 3.7, .46], rx: Math.PI / 2 });
+      if (r) { bx(q, .04, 3.0, 3.5, 0x23262b, wallX + .05, .52, zc, { ns: 1 }); // portone alzato: si vede il rimorchio
+        const P0 = new Batch(q); palletStack(P0, wallX + .2 - .55, .62, zc - .5, .9, r.col, 3, r.key); palletStack(P0, wallX + .2 - .55, .62, zc + .5, .55, r.col, 3, r.key); const pi = P0.flush(); Object.values(pi).forEach(im => { im.userData.k = { t: 'ricl', key: r.key, id: it.id }; im.userData.eid = it.id; pick.push(im); });
+      } else mesh(G.box, M.door, wallX + .05, .5 + 1.5, zc, q, { s: [.04, 3.0, 3.5] });
+      // rampa livellatrice con bordi gialli e neri
+      bx(q, 2.4, .06, 2.3, 0x9ba1a8, wallX + 1.35, .5, zc, { ns: 1 }); for (const s of [-1, 1]) bx(q, 2.4, .07, .14, M.haz, wallX + 1.35, .5, zc + s * 1.08, { ns: 1 });
+      bx(q, .16, .07, 2.3, M.haz, wallX + 2.6, .5, zc, { ns: 1 });
+      if (r) bx(q, .5, .05, 2.2, 0x7d848d, wallX + .05, .52, zc, { ns: 1, rz: .08 });
+      // semaforo e cartello a bandiera con il numero della porta
+      bx(q, .18, .5, .28, 0x2b2f35, wallX + .2, 2.2, zc - 2.35, { ns: 1 });
+      B.add(r ? 'lgOn' : 'lgOff', G.sph, MB(r ? 0x2cbf5d : 0x5b6068), m4(wallX + .31, 2.55, zc - 2.35, .1, .1, .1));
+      B.add(r ? 'lrOff' : 'lrOn', G.sph, MB(r ? 0x5b6068 : 0xe8432a), m4(wallX + .31, 2.32, zc - 2.35, .1, .1, .1));
+      sign(textTex([['R' + (i + 1), 92, 800, 70, null, '#fff'], [r ? 'IN SCARICO' : 'LIBERA', 26, 700, 140, null, 'rgba(255,255,255,.88)']], { bg: r ? '#f47b20' : '#3a3f46', w: 256, h: 180, round: 22 }), .95, .67, wallX + (side[0] === 'B' ? .1 : .9), 3.35, zc - 2.6);
+      // corsia gialla davanti alla porta e freccia verso le corsie di sosta
+      for (const s of [-1, 1]) B.add('dl', G.box, mat(0xf2c418), m4(wallX + AP / 2 + .6, .553, zc + s * 1.75, AP - .4, .012, .1));
+      const ar = planeT(arrowTex(), 1.1, 1.1, q, wallX + AP - .2, .561, zc, {}); ar.rotation.x = -Math.PI / 2; ar.rotation.z = -Math.PI / 2;
+      if (r) { // rimorchio del fornitore fuori dal muro
+        const tg = new T.Group(); tg.position.set(wallX - .32, 0, zc); q.add(tg);
+        bx(tg, 3.4, 3.55, 2.5, 0xfbfbfa, -1.7, .78, 0); bx(tg, 3.42, .42, 2.52, 0x3a3f46, -1.7, .45, 0); bx(tg, .08, 3.55, 2.5, 0x9aa0a8, -.04, .78, 0); bx(tg, 3.42, .36, 2.53, 0xf47b20, -1.7, 1.05, 0, { ns: 1 });
+        for (const s of [-1, 1]) { bx(tg, .9, 3.4, .06, 0xeef0f2, -.47, .85, s * 1.3, { ry: s * .25 }); mesh(G.cyl, mat(0x1d1f22), -2.4, .52, s * 1.05, tg, { s: [1.05, .36, 1.05], rx: Math.PI / 2 }); mesh(G.cyl, mat(0x1d1f22), -3.3, .52, s * 1.05, tg, { s: [1.05, .36, 1.05], rx: Math.PI / 2 }); }
+        const sup = r.sup.toUpperCase().slice(0, 20), st = textTex([[sup, Math.min(64, Math.floor(1400 / Math.max(8, sup.length))), 800]], { color: '#2b2f35', w: 768, h: 128 });
+        const pl = planeT(st, 3.2, .53, tg, -1.7, 4.35, 0, {}); pl.rotation.x = -Math.PI / 2; pl.rotation.z = Math.PI / 2;
+        tg.traverse(o => { if (o.isMesh) { o.userData.k = { t: 'ricl', key: r.key, id: it.id }; o.userData.eid = it.id; pick.push(o); } });
+      }
+      const hb = new T.Mesh(G.box, M.hit); hb.scale.set(3, 3.4, 4.4); hb.position.set(wallX + 1.5, 2.2, zc); hb.userData.k = r ? { t: 'ricl', key: r.key, id: it.id } : { t: 'zone', z: 'ric', id: it.id }; hb.userData.eid = it.id; q.add(hb); pick.push(hb);
+    }
+    if (side) { bx(q, .22, .013, Dl - frontRes - .6, M.haz, wallX + AP + .55, .542, -frontRes / 2, { ns: 1 }); }
+    // ---- corsie di sosta: un arrivo per corsia (pallet, cartello, codice a terra)
+    const LW = 2.5, LD = 3.0, xL0 = wallX + AP + 1.6, xL1 = W / 2 - .7, zL0 = -Dl / 2 + 1.1, zL1 = Dl / 2 - frontRes - .6;
+    const cols = Math.max(1, Math.floor((xL1 - xL0 + .8) / (LW + .8))), rows = Math.max(1, Math.floor((zL1 - zL0 + .9) / (LD + .9)));
+    const flab = [], nL = Math.min(R2.length, cols * rows, 28);
+    for (let i = 0; i < cols * rows; i++) {
+      const c = Math.floor(i / rows), rw = i % rows, lx = xL0 + LW / 2 + c * (LW + .8), lz = zL0 + LD / 2 + rw * (LD + .9), r = i < nL ? R2[i] : null;
+      const ln = r ? 0xf2c418 : 0xd9d2c4;
+      B.add('lnY', G.box, mat(0xffffff), m4(lx, .552, lz - LD / 2, LW, .012, .07), ln); B.add('lnY', G.box, mat(0xffffff), m4(lx, .552, lz + LD / 2, LW, .012, .07), ln);
+      B.add('lnY', G.box, mat(0xffffff), m4(lx - LW / 2, .552, lz, .07, .012, LD), ln); B.add('lnY', G.box, mat(0xffffff), m4(lx + LW / 2, .552, lz, .07, .012, LD), ln);
+      flab.push({ x: lx, y: .562, z: lz + LD / 2 + .26, w: .62, h: .22, bg: !r ? '#ece9e3' : r.age <= 0 ? '#ffb27a' : r.age <= 2 ? '#ffd84a' : '#f3ecd8', t: r ? r.code : 'R--' });
+      if (!r) continue;
+      B.add('tab', G.box, mat(0xffffff), m4(lx, .554, lz - LD / 2 + .2, LW - .2, .014, .26), r.age <= 0 ? 0xf47b20 : r.age <= 2 ? 0xf3a868 : 0xc9c4bb);
+      const np = clamp(Math.ceil(r.L.length / 3), 1, 4), f = clamp(r.pz / np / 45, .22, 1), P4 = [[-.5, -.68], [.5, -.68], [-.5, .68], [.5, .68]];
+      for (let k = 0; k < np; k++) { const [dx, dz] = P4[k], fk = k === np - 1 ? clamp(f * (.6 + (r.i % 3) * .2), .2, 1) : f, n = palletStack(B, lx + dx, .505, lz + dz, fk, r.col, 3, r.key), ly = Math.ceil(n / 6); B.add('pls', G.box, mat(0xffffff), m4(lx + dx + .12, .505 + .145 + ly * .31 + .006, lz + dz - .2, .22, .01, .3), null, r.key); }
+      // cartello della corsia: fornitore, data, pezzi
+      sign(laneCard(r), 1.5, .52, lx + LW / 2 - .6, 1.5, lz - LD / 2 + .05);
+      B.add('pst', G.box, mat(0x2b2f35), m4(lx + LW / 2 - .6, .5 + .6, lz - LD / 2 + .02, .05, 1.2, .05)); B.add('pstb', G.cyl, mat(0x2b2f35), m4(lx + LW / 2 - .6, .55, lz - LD / 2 + .02, .4, .04, .4));
+      const hb = new T.Mesh(G.box, M.hit); hb.scale.set(LW + .3, 1.6, LD + .3); hb.position.set(lx, 1.2, lz); hb.userData.k = { t: 'ricl', key: r.key, id: it.id }; hb.userData.eid = it.id; q.add(hb); pick.push(hb);
+      lanes.set(r.key, { x: lx, z: lz, w: LW, d: LD });
+    }
+    if (flab.length) q.add(quadsMesh(flab, labelAtlas(flab), true));
+    // portale con l'insegna sopra le corsie
+    { const gx = (xL0 + xL1) / 2, span = Math.min(xL1 - xL0, 11); for (const s of [-1, 1]) { B.add('gp', G.box, mat(0x2b2f35), m4(gx + s * span / 2, .5 + 2.6, -Dl / 2 + .55, .16, 5.2, .16)); B.add('gpb', G.box, M.haz, m4(gx + s * span / 2, .5 + .45, -Dl / 2 + .55, .22, .9, .22)); }
+      B.add('gb', G.box, mat(0x2b2f35), m4(gx, 5.3, -Dl / 2 + .55, span, .14, .14));
+      sign(textTex([['RICEVIMENTO MERCI', 62, 800, 62, null, '#fff'], [`${R2.length} arrivi negli ultimi 30 giorni`, 26, 600, 118, null, 'rgba(255,255,255,.86)']], { bg: '#f47b20', w: 768, h: 160, round: 18 }), Math.min(span - .4, 6.4), Math.min(span - .4, 6.4) / 4.8, gx, 4.35, -Dl / 2 + .65); }
+    // ---- accettazione: bancone, bilancia a pavimento, pallet vuoti, pressa per cartoni, roll
+    if (frontRes) {
+      const zF = Dl / 2 - frontRes / 2 - .2, xA = wallX + AP + 2.6;
+      bx(q, W - 1.2, .012, .9, 0x4caf6a, (wallX + W / 2) / 2 + .4, .542, Dl / 2 - frontRes + .2, { ns: 1 });
+      for (let x = wallX + 1; x < W / 2 - 1; x += 1.4) B.add('wk', G.box, mat(0xffffff), m4(x, .558, Dl / 2 - frontRes + .2, .55, .01, .12));
+      // bancone con monitor, stampante etichette e lettore
+      bx(q, 3.2, .08, 1.3, 0xfafafa, xA, 1.32, zF); for (const sx of [-1.5, 1.5]) for (const sz of [-.55, .55]) bx(q, .07, .82, .07, 0x8e959e, xA + sx, .5, zF + sz);
+      bx(q, 3.1, .5, .05, 0xf47b20, xA, .85, zF + .6, { ns: 1 });
+      bx(q, .07, .3, .07, 0x2b2f35, xA - .6, 1.4, zF - .35); const mon = textTex([['ACCETTAZIONE', 30, 800, 34, null, '#f47b20'], [String(R2.filter(r => r.age <= 0).length), 64, 800, 92, null, '#ffffff'], ['arrivi oggi', 22, 600, 140, null, 'rgba(255,255,255,.7)']], { bg: '#1d2025', w: 256, h: 170, round: 10 });
+      bx(q, .95, .62, .05, 0x1d2025, xA - .6, 1.62, zF - .38); sign(mon, .86, .55, xA - .6, 1.93, zF - .35);
+      bx(q, .34, .26, .32, 0xeeeeec, xA + .55, 1.4, zF - .3); bx(q, .24, .02, .14, 0xffffff, xA + .55, 1.66, zF - .18, { ns: 1 });
+      bx(q, .1, .06, .26, 0x2b2f35, xA + 1.05, 1.4, zF); bx(q, .08, .16, .08, 0xf47b20, xA + 1.05, 1.44, zF + .12);
+      bx(q, .5, .32, .4, 0xe3b073, xA + .1, 1.4, zF + .15);
+      const op = person(q, xA - .2, zF + 1.05, 0x39a85a); op.rotation.y = Math.PI; movers.push({ o: op, t: 'bob', ph: 1.3 });
+      // bilancia a pavimento
+      const xS = xA + 4.2; bx(q, 1.7, .07, 1.7, 0x8e959e, xS, .5, zF, { ns: 1 }); for (const s of [-1, 1]) { bx(q, 1.9, .08, .12, M.haz, xS, .5, zF + s * .91, { ns: 1 }); bx(q, .12, .08, 1.9, M.haz, xS + s * .91, .5, zF, { ns: 1 }); }
+      bx(q, .07, 1.3, .07, 0x2b2f35, xS + 1.25, .5, zF - .7); bx(q, .5, .32, .14, 0x2b2f35, xS + 1.25, 1.75, zF - .7);
+      sign(textTex([['0,0 kg', 50, 700, 40, null, '#ff5a3c']], { bg: '#121416', w: 192, h: 80, round: 8 }), .42, .18, xS + 1.25, 1.92, zF - .62);
+      // pallet vuoti impilati, pressa per cartoni, roll
+      const xP = W / 2 - 1.6; for (let k = 0; k < 9; k++) palletStack(B, xP, .505 + k * .145, zF - 1.2, 0, 0, 1, null);
+      bx(q, 1.5, 2.3, 1.2, 0x8e959e, xP - 2.6, .5, zF + 1.1); bx(q, 1.52, .3, 1.22, 0xf47b20, xP - 2.6, 2.5, zF + 1.1); bx(q, .9, .7, .03, 0x2b3440, xP - 2.6, 1.3, zF + 1.71, { ns: 1 });
+      bx(q, 1.1, .8, .75, 0xc9a273, xP - 2.6, .5, zF - .6); for (const s of [-.25, .25]) bx(q, 1.12, .82, .04, 0x3a3f46, xP - 2.6, .49, zF - .6 + s, { ns: 1 });
+      for (let k = 0; k < 3; k++) { const rx = xP - 5.2 - k * .95, rz = zF + 1.2; B.add('rcb', G.box, mat(0x8e959e), m4(rx, .6, rz, .8, .08, .7)); for (const sx of [-.38, .38]) for (const sz of [-.33, .33]) B.add('rcp', G.box, mat(0xb7bcc3), m4(rx + sx, 1.35, rz + sz, .03, 1.5, .03)); for (let y = .9; y < 2.1; y += .3) { B.add('rcw', G.box, mat(0xc5cad1), m4(rx, 0 + y + .5, rz - .33, .78, .015, .015)); B.add('rcw', G.box, mat(0xc5cad1), m4(rx - .38, y + .5, rz, .015, .015, .66)); } if (k < 2) B.add('rcc', G.box, M.carton, m4(rx, .95, rz, .6, .6, .5), mixC(0xffffff, PAL[k + 2], .35)); }
+      for (const [cx, cc] of [[wallX + 1.2, 0x2f6db4], [wallX + 2, 0xf2c418]]) { B.add('bin2', G.cyl, mat(0xffffff), m4(cx, .5 + .5, Dl / 2 - 1, .6, 1, .6), cc); B.add('bin2l', G.cyl, mat(0x2b2f35), m4(cx, 1.03, Dl / 2 - 1, .64, .06, .64)); }
+      const hb = new T.Mesh(G.box, M.hit); hb.scale.set(W - 1, 2, frontRes - 1); hb.position.set(0, 1, zF); hb.userData.k = { t: 'zone', z: 'ric', id: it.id }; hb.userData.eid = it.id; q.add(hb); pick.push(hb);
+    }
+    const ims = B.flush(); ['ctn', 'palT', 'palB', 'palS', 'wrap', 'pls'].forEach(k => { const im = ims[k]; if (im && im.userData.ids) { im.userData.k = { t: 'ricl', id: it.id }; im.userData.eid = it.id; pick.push(im); } });
+    if (ims.wrap) ims.wrap.castShadow = false;
+    // ---- carrello elevatore che porta i pallet dalla porta alla corsia, transpallet con operatore
+    const V = (x, z) => new T.Vector3(x, 0, z);
+    const lane0 = R2.length ? lanes.get(R2[0].key) : null, dz0 = doors.length ? doors[0].zc : -Dl / 2 + 3;
+    const ax = wallX + AP + .2;
+    if (lane0) { const pts = [V(wallX + 2.6, dz0), V(ax, dz0), V(ax, lane0.z), V(lane0.x - LW / 2 - .7, lane0.z), V(ax, lane0.z), V(ax, dz0)]; const f = forklift(q, pts[0].x, pts[0].z); movers.push(route(f, pts, 1.6, 0)); }
+    else { const pts = [V(ax, -Dl / 2 + 3), V(ax, zL1 - 1), V(W / 2 - 2, zL1 - 1), V(W / 2 - 2, -Dl / 2 + 3)]; const f = forklift(q, pts[0].x, pts[0].z); movers.push(route(f, pts, 1.4, 0)); }
+    if (doors.length > 1 || R2.length > 1) { const dz1 = doors.length > 1 ? doors[1].zc : dz0, l1 = R2[1] ? lanes.get(R2[1].key) : null, tz = l1 ? l1.z : dz1 + 3, tx = l1 ? l1.x - LW / 2 - .6 : ax + 2;
+      const jg = new T.Group(); q.add(jg); person(jg, 0, -.55, 0xf47b20); bx(jg, .55, .07, 1.15, 0x3a3f46, 0, .52, .45); bx(jg, .5, .45, .22, 0xf47b20, 0, .55, -.15); bx(jg, .05, .85, .05, 0x2b2f35, 0, .9, -.32, { rx: -.35 });
+      const pj = new Batch(jg); palletStack(pj, 0, .6, .45, .5, R2[1] ? R2[1].col : PAL[1], 2, null); pj.flush();
+      movers.push(route(jg, [V(wallX + 2.4, dz1), V(ax - .6, dz1), V(ax - .6, tz), V(tx, tz), V(ax - .6, tz), V(ax - .6, dz1)], .95, 4)); }
+    // controllore con il terminale vicino all'ultimo arrivo
+    if (lane0) { const p = person(q, lane0.x + LW / 2 + .45, lane0.z + .6, 0x39a85a); p.rotation.y = -Math.PI / 2; bx(p, .22, .3, .05, 0x1d2025, 0, 1.15, .35, { rx: -.6 }); movers.push({ o: p, t: 'bob', ph: 2.1 }); }
+  }
+  const MB = c => M['mb' + c] || (M['mb' + c] = new T.MeshBasicMaterial({ color: c }));
+  function laneCard(r) {
+    const sup = r.sup, sub = `${r.code} · ${agoTxt(r.data)} · ${N(r.pz)} pz`, col = '#' + new T.Color(r.col).getHexString();
+    const t = cvTex(384, 132, (gx, w, h) => { gx.fillStyle = '#ffffff'; gx.beginPath(); gx.roundRect(0, 0, w, h, 16); gx.fill(); gx.fillStyle = col; gx.beginPath(); gx.roundRect(0, 0, 16, h, [16, 0, 0, 16]); gx.fill();
+      gx.textAlign = 'left'; gx.textBaseline = 'middle'; let fs = 36; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; while (fs > 20 && gx.measureText(sup).width > w - 52) { fs -= 2; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; } let s2 = sup; while (gx.measureText(s2).width > w - 52 && s2.length > 3) s2 = s2.slice(0, -2); if (s2 !== sup) s2 += '…';
+      gx.fillStyle = '#16181b'; gx.fillText(s2, 34, 46); gx.font = '600 24px Inter, system-ui, sans-serif'; gx.fillStyle = '#8a8d93'; gx.fillText(sub, 34, 96); });
+    OWN.push(t); return t;
+  }
+  function arrowTex() { if (TX.arrow) return TX.arrow; TX.arrow = cvTex(128, 128, (gx, w, h) => { gx.fillStyle = 'rgba(255,255,255,.9)'; gx.beginPath(); gx.moveTo(w / 2, 8); gx.lineTo(w - 14, h / 2); gx.lineTo(w / 2 + 18, h / 2); gx.lineTo(w / 2 + 18, h - 8); gx.lineTo(w / 2 - 18, h - 8); gx.lineTo(w / 2 - 18, h / 2); gx.lineTo(14, h / 2); gx.closePath(); gx.fill(); }); return TX.arrow; }
+  // percorso a velocità costante, con curve morbide
+  function route(o, pts, sp, ph) { const segL = []; let tot = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length], l = Math.max(.01, a.distanceTo(b)); segL.push(l); tot += l; } return { o, t: 'route', pts, segL, tot, sp, ph: ph || 0 }; }
+  function routeTick(m, t, dt) {
+    let s = ((t * m.sp + m.ph) % m.tot + m.tot) % m.tot, i = 0; while (s > m.segL[i]) { s -= m.segL[i]; i++; }
+    const a = m.pts[i], b = m.pts[(i + 1) % m.pts.length], u = s / m.segL[i]; m.o.position.x = a.x + (b.x - a.x) * u; m.o.position.z = a.z + (b.z - a.z) * u;
+    let tg = Math.atan2(b.x - a.x, b.z - a.z), cur = m.o.rotation.y, df = tg - cur; while (df > Math.PI) df -= 2 * Math.PI; while (df < -Math.PI) df += 2 * Math.PI;
+    m.o.rotation.y = cur + df * Math.min(1, dt * 7);
+  }
+  // messa a fuoco di una corsia: staffe, pallet che si sollevano, volo della camera
+  let RF = null, RH = null;
+  function laneW(key) { if (!RCV) return null; const ln = RCV.lanes.get(key); if (!ln) return null; RCV.q.updateWorldMatrix(true, false); return { ln, p: RCV.q.localToWorld(new T.Vector3(ln.x, 1.05, ln.z)) }; }
+  function ricFocus(key) {
+    ricUnfocus(); const w = laneW(key); if (!w) return null; const br = brackets(0xf47b20, 1); br.set(w.ln.w + .3, 1.3, w.ln.d + .3); br.grp.position.copy(w.p); br.grp.rotation.y = RCV.rot; br.grp.visible = true;
+    RF = { key, br, insts: cellInsts(RCV.q, key), u: 0 }; return w;
+  }
+  function ricUnfocus() { if (!RF) return; const F = RF; RF = null; if (F.insts.length) BACK.push({ insts: F.insts, from: F.cur || { dy: 0, dz: 0 }, t: 0 }); WH && WH.remove(F.br.grp); }
+  function ricTick(t, dt) {
+    if (RF) { RF.u = Math.min(1, RF.u + dt / .9); const e = easeOut(RF.u), dy = .32 * Math.sin(Math.PI * Math.min(1, RF.u * 1.15)) * (1 - RF.u * .3) + .06 * e; RF.cur = { dy, dz: 0 }; if (RF.insts.length) setOff(RF.insts, dy, 0);
+      const s = 1 + (1 - easeOut(Math.min(1, RF.u * 1.4))) * .3 + Math.sin(t * 3) * .012; RF.br.grp.scale.set(s, s, s); RF.br.im.material.opacity = Math.min(1, RF.u * 2); RF.br.fill.material.opacity = .05 + Math.sin(t * 3) * .025; }
+  }
+  function hoverRic(key, cx, cy) {
+    const tip = $('.m3-tip'); if (!tip) return;
+    if (!key || EDIT || (RF && RF.key === key)) { if (RH) { WH && WH.remove(RH.br.grp); RH = null; } if (!key) return; tip.classList.remove('on'); return; }
+    const r = D.rcv.find(x => x.key === key); if (!r) return;
+    if (!RH || RH.key !== key) { if (RH) WH.remove(RH.br.grp); RH = null; const w = laneW(key); if (w) { const br = brackets(0xffffff, .95); br.set(w.ln.w + .3, 1.3, w.ln.d + .3); br.grp.position.copy(w.p); br.grp.rotation.y = RCV.rot; br.grp.visible = true; RH = { key, br }; }
+      tip.innerHTML = `<b>${esc(r.sup)}</b><span><i class="m3-loc">${esc(r.code)}</i>${esc(agoTxt(r.data))} · ${r.L.length} ${r.L.length === 1 ? 'riga' : 'righe'} · ${N(r.pz)} pz</span>`; }
+    const rc = root.getBoundingClientRect(); tip.style.transform = `translate(${cx - rc.left + 16}px,${cy - rc.top + 18}px)`; tip.classList.add('on');
+  }
+  function ricView(key) {
+    const w = ricFocus(key); if (!w) { const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); if (z) flyT(zoneTarget('ric')); return; }
+    fly({ tx: w.p.x, ty: .6, tz: w.p.z, dist: 19, az: -0.42, pol: .94 });
+  }
+  // pannelli
+  const chipAge = r => `<span class="m3-chip ${r.age <= 0 ? 'a' : r.age <= 2 ? 'g' : 'n'}"><i></i>${esc(agoTxt(r.data))}</span>`;
+  const rcvRow = (r, hl) => `<button type="button" class="m3-row${hl ? ' k' : ''}" data-rcv3="${esc(r.key)}"><i class="m3-pi m3-rcc" style="--c:#${new T.Color(r.col).getHexString()}">${esc(r.code)}</i><span class="tx"><b>${esc(r.sup)}</b><small>${esc([C.dIt(r.data), r.L.length + (r.L.length === 1 ? ' riga' : ' righe'), r.caus].filter(Boolean).join(' · '))}</small></span><span class="m3-chip g">+${N(r.pz)}</span></button>`;
+  function ricPanel(Pn) {
+    const R2 = D.rcv, pz = R2.reduce((s, r) => s + r.pz, 0), val = R2.reduce((s, r) => s + r.val, 0), sups = new Map();
+    R2.forEach(r => { const s = sups.get(r.sup) || { n: 0, pz: 0, col: r.col }; s.n++; s.pz += r.pz; sups.set(r.sup, s); });
+    if (Pn.t === 'ricl') {
+      const r = R2.find(x => x.key === Pn.key); if (!r) return '';
+      const stocked = r.L.filter(l => P.byArt.get(l.m.articolo)).length, cr = r.cr ? new Date(r.cr) : null;
+      const lines = r.L.slice().sort((a, b) => b.q - a.q).map(l => { const p2 = P.byArt.get(l.m.articolo), x = D.arts.find(y => y.id === l.m.articolo); return `<button type="button" class="m3-row" ${p2 ? `data-art3="${esc(l.m.articolo)}"` : ''}><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('box')}</i><span class="tx"><b>${esc(l.a ? l.a.descrizione : 'Articolo eliminato')}</b><small>${esc([l.a && l.a.codice, x ? 'giacenza ' + N(x.g) + ' ' + (l.a.um || 'pz') : ''].filter(Boolean).join(' · '))}</small></span><span class="m3-chip g">+${N(l.q)}</span>${p2 ? `<span class="m3-loc m3-go2">${ic('pin', ' style="width:11px;height:11px"')}${esc(p2.code)}</span>` : '<span class="m3-chip n">a terra</span>'}</button>`; }).join('');
+      return head(ic('dock'), 'or', `Arrivo · corsia ${esc(r.code)}`, esc(r.sup), esc([C.dIt(r.data), r.caus].filter(Boolean).join(' · ')), 1) + `<div class="m3-pb">
+        <div class="m3-chips">${chipAge(r)}<span class="m3-chip n">${r.L.length} ${r.L.length === 1 ? 'riga' : 'righe'}</span></div>
+        <div class="m3-grid">${stat('Pezzi ricevuti', N(r.pz), '', `${r.L.length} ${r.L.length === 1 ? 'articolo' : 'articoli'}`)}${stat('Valore a costo', r.val ? C.eur0(r.val) : '—', '', 'IVA esclusa')}</div>
+        <div class="m3-steps"><div class="d"><i>${ic('truck')}</i><span><b>Arrivato</b><small>${esc(C.dIt(r.data))}</small></span></div><div class="d"><i>${ic('check')}</i><span><b>Caricato a sistema</b><small>${cr && !isNaN(cr) ? esc(cr.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) : 'movimento registrato'}</small></span></div><div class="${stocked === r.L.length ? 'd' : 'w'}"><i>${ic('rack')}</i><span><b>A scaffale</b><small>${stocked}/${r.L.length} con ubicazione</small></span></div></div>
+        ${canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('plus')}Nuovo carico</button>` : ''}
+        <div class="m3-h4">Righe dell'arrivo <em>tocca per andare allo scaffale</em></div><div class="m3-rows">${lines}</div></div>`;
+    }
+    // giorni: pezzi ricevuti negli ultimi 14 giorni
+    const days = []; for (let i = 13; i >= 0; i--) { const dd = new Date(C.today() + 'T12:00:00'); dd.setDate(dd.getDate() - i); const k = dd.toISOString().slice(0, 10); days.push({ k, v: R2.filter(r => r.data === k).reduce((s, r) => s + r.pz, 0), n: R2.filter(r => r.data === k).length, w: dd.getDay() }); }
+    const mx = Math.max(1, ...days.map(x => x.v)), GG = ['D', 'L', 'M', 'M', 'G', 'V', 'S'];
+    const top = [...sups.entries()].sort((a, b) => b[1].pz - a[1].pz).slice(0, 5), tmx = Math.max(1, ...top.map(x => x[1].pz));
+    const today = R2.filter(r => r.age <= 0);
+    return head(ic('dock'), '', 'Zona', 'Ricevimento merci', 'Banchine fornitori · corsie di sosta · accettazione', 1) + `<div class="m3-pb"><div class="m3-grid">
+      ${stat('Arrivi in 30 giorni', R2.length, '', `${today.length} oggi`)}${stat('Pezzi ricevuti', N(pz), '', `${D.car30.length} righe di carico`)}
+      ${stat('Valore a costo', val ? C.eur0(val) : '—', '', 'IVA esclusa')}${stat('Fornitori', sups.size, '', R2[0] ? 'ultimo ' + agoTxt(R2[0].data).toLowerCase() : 'nessun arrivo')}</div>
+      ${canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('plus')}Nuovo carico</button>` : ''}
+      <div class="m3-h4">Pezzi ricevuti · ultimi 14 giorni</div>
+      <div class="m3-b14">${days.map((x, i) => `<div title="${esc(C.dIt(x.k))}: ${x.n} arrivi, ${N(x.v)} pezzi"><i style="--h:${(x.v / mx * 100).toFixed(1)}%;--k:${i}"${i === 13 ? ' class="c"' : ''}></i><small${x.w === 0 || x.w === 6 ? ' class="we"' : ''}>${GG[x.w]}</small></div>`).join('')}</div>
+      ${top.length ? `<div class="m3-h4">Fornitori principali <em>${sups.size}</em></div><div class="m3-hb">${top.map(([n, s], i) => `<div style="--k:${i}"><span><b>${esc(n)}</b><small>${s.n} ${s.n === 1 ? 'arrivo' : 'arrivi'} · ${N(s.pz)} pz</small></span><u><i style="--w:${(s.pz / tmx * 100).toFixed(1)}%;--c:#${new T.Color(s.col).getHexString()}"></i></u></div>`).join('')}</div>` : ''}
+      <div class="m3-h4">Arrivi <em>${R2.length}</em></div><div class="m3-rows">${R2.slice(0, 30).map(r => rcvRow(r)).join('') || '<div class="m3-empty">Nessun carico negli ultimi 30 giorni</div>'}</div></div>`;
+  }
+
   /* ---------------- messa a fuoco di un vano (v275): volo, estrazione, raggi X, scheda ancorata, verifica ---------------- */
   const ease = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
   const easeOut = u => 1 - Math.pow(1 - u, 3);
@@ -1261,6 +1475,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       if (m.t === 'path') { const u = (Math.sin(s) + 1) / 2, dir = Math.cos(s) >= 0 ? 1 : -1; m.o.position.lerpVectors(m.a, m.b, u); m.o.rotation.y = Math.atan2((m.b.x - m.a.x) * dir, (m.b.z - m.a.z) * dir); }
       else if (m.t === 'loop') { m.o.position.x = m.cx + Math.cos(s) * m.rx; m.o.position.z = m.cz + Math.sin(s) * m.rz; m.o.rotation.y = -s; }
       else if (m.t === 'walk') { const u = (Math.sin(s) + 1) / 2, dir = Math.cos(s) >= 0 ? 1 : -1; m.o.position.x = m.a.x + (m.b.x - m.a.x) * u; m.o.position.z = m.a.z + (m.b.z - m.a.z) * u; m.o.rotation.y = Math.atan2((m.b.x - m.a.x) * dir, (m.b.z - m.a.z) * dir); m.o.position.y = .5 + Math.abs(Math.sin(t * 6 + m.ph)) * .05; }
+      else if (m.t === 'route') routeTick(m, t, dt);
       else if (m.t === 'bob') m.o.position.y = .5 + Math.abs(Math.sin(t * 2 + m.ph)) * .03;
       else if (m.t === 'spin') m.o.rotation.y = Math.sin(t * m.sp) * 1.3;
       else if (m.t === 'float') m.o.position.y = m.y + Math.sin(t * 1.2) * .25;
@@ -1269,7 +1484,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       else if (m.t === 'belt') { for (let i = 0; i < m.n; i++) { const u = (t * m.sp + i / m.n) % 1; o3.position.set(-m.len / 2 + .5 + u * (m.len - 1), 1.22 + .2, 0); o3.rotation.set(0, (i % 3) * .2, 0); o3.scale.set(.55, .4, .5); o3.updateMatrix(); m.im.setMatrixAt(i, o3.matrix); } m.im.instanceMatrix.needsUpdate = true; }
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
-    focusTick(t, dt);
+    focusTick(t, dt); ricTick(t, dt);
   }
 
   /* ---------------- interfaccia ---------------- */
@@ -1358,12 +1573,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
           ${L.loc[x.id] ? `<button type="button" class="m3-go ghost" data-m3="locauto" data-art="${esc(x.id)}">${ic('auto')}Torna automatica</button>` : ''}</div>`;
         sel = { t: 'loc', art: x.id, r: rk.id, b, l }; highlightCell(rk, b, l);
       }
-    } else if (Pn.t === 'zone' && Pn.z === 'ric') {
-      const pz = D.car30.reduce((s, m) => s + C.num(m.quantita), 0);
-      h = head(ic('dock'), '', 'Zona', 'Ricevimento merci', 'Arrivi dai fornitori · scarico · controllo colli', 1) + `<div class="m3-pb"><div class="m3-grid">
-        ${stat('Carichi in 30 giorni', D.car30.length, '', `${N(pz)} pezzi`)}${stat('Ultimo arrivo', D.car[0] ? C.dIt(D.car[0].data) : '—', '', D.car[0] ? esc(D.car[0].causale || '') : 'nessun carico')}</div>
-        ${canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('plus')}Nuovo carico</button>` : ''}
-        <div class="m3-h4">Ultimi arrivi <em>${D.car.length}</em></div><div class="m3-rows">${D.car.slice(0, 20).map(mvRow).join('') || '<div class="m3-empty">Nessun carico registrato</div>'}</div></div>`;
+    } else if (Pn.t === 'ricl' || (Pn.t === 'zone' && Pn.z === 'ric')) {
+      h = ricPanel(Pn); if (!h) return panel({ t: 'zone', z: 'ric' });
     } else if ((Pn.t === 'zone' && Pn.z === 'pre') || Pn.t === 'belt' || Pn.t === 'desk') {
       const pz = D.ddtM.reduce((s, x) => s + x.pz, 0);
       h = head(ic('hand'), '', Pn.t === 'belt' ? 'Nastro trasportatore' : Pn.t === 'desk' ? 'Bancone di preparazione' : 'Zona', 'Preparazione ordini', 'Prelievo dagli scaffali · imballo · DDT', 1) + `<div class="m3-pb"><div class="m3-grid">
@@ -1415,16 +1626,17 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function zoneChip(z) {
     const n = ZN(z); $('.m3-zc').textContent = n[1]; $('.m3-zt b').textContent = n[0];
     const nv = P.racks.reduce((s, r) => s + r.bays * r.lv, 0);
-    const sub = { flotta: D.gas ? `${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L` : '', all: `${pc(D.disp, D.nArt)} % · ${N(D.tot)} pezzi`, ric: `${D.car30.length} carichi · 30 gg`, stk: `${N(P.byArt.size)}/${N(nv)} ubicazioni`, pre: `${D.ddtM.length} DDT · mese`, cq: `${D.ret90.length} rettifiche · 90 gg`, spe: `${D.ddt.filter(x => !x.d.fattura).length} da fatturare`, uffe: `${D.cli.length} clienti` }[z] || '';
+    const sub = { flotta: D.gas ? `${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L` : '', all: `${pc(D.disp, D.nArt)} % · ${N(D.tot)} pezzi`, ric: `${D.rcv.length} arrivi · 30 gg`, stk: `${N(P.byArt.size)}/${N(nv)} ubicazioni`, pre: `${D.ddtM.length} DDT · mese`, cq: `${D.ret90.length} rettifiche · 90 gg`, spe: `${D.ddt.filter(x => !x.d.fattura).length} da fatturare`, uffe: `${D.cli.length} clienti` }[z] || '';
     $('.m3-zt small').textContent = sub;
     $$('.m3-fs button[data-fgo]').forEach(b => b.classList.toggle('on', b.dataset.fgo === z && b.dataset.on === '1'));
   }
   function select(k, noFly) {
     if (EDIT) return;
-    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
+    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
+    else if (k.t === 'ricl') { zoneChip('ric'); if (!k.key) return select({ t: 'zone', z: 'ric', id: k.id }, noFly); if (!noFly) ricView(k.key); else ricFocus(k.key); }
     else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x - 2, ty: 1.5, tz: F.st.z, dist: 40, az: -0.85, pol: 1.02 }); } }
     else if (k.t === 'veh') { zoneChip('flotta'); const f = fleetVeh.find(x => x.v.p === k.p); if (f && !noFly) { const p2 = new T.Vector3(); f.o.getWorldPosition(p2); fly({ tx: p2.x, ty: 1, tz: p2.z, dist: 21, az: f.o.rotation.y + Math.PI / 2 - .7, pol: .86 }); } }
     else if (k.t === 'truck') { zoneChip('spe'); const t = trucks[k.i]; if (t && !noFly) { const p2 = new T.Vector3(); t.g.getWorldPosition(p2); fly({ tx: p2.x, tz: p2.z, dist: 62, az: t.road ? -0.35 : 0.65, pol: .96 }); } }
@@ -1636,11 +1848,13 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function doPick(p) {
     if (!ray.r) ray.r = new T.Raycaster();
     const rc = R.domElement.getBoundingClientRect(), v = new T.Vector2((p.x - rc.left) / rc.width * 2 - 1, -(p.y - rc.top) / rc.height * 2 + 1);
-    ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, truck: 1, veh: 1, rack: 2, dock: 3, belt: 3, desk: 3, fuel: 3, wall: 4, zone: 5 };
+    ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, ricl: 1, truck: 1, veh: 1, rack: 2, dock: 3, belt: 3, desk: 3, fuel: 3, wall: 4, zone: 5 };
     const hit2 = H.slice(0, 8).filter(h2 => h2.object.userData.k).sort((a, b) => (PR[a.object.userData.k.t] - PR[b.object.userData.k.t]) || a.distance - b.distance)[0];
-    if (p.hover) { R.domElement.classList.toggle('hov', !!hit2 || !!EDIT); const kk = hit2 && hit2.object.userData.k; hoverArt(kk && kk.t === 'art' && matchMedia('(hover:hover)').matches ? hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId] : null, p.x, p.y); return; }
+    const rk2 = hit2 && hit2.object.userData.k && hit2.object.userData.k.t === 'ricl' ? (hit2.object.userData.k.key || (hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId]) || null) : null;
+    if (p.hover) { R.domElement.classList.toggle('hov', !!hit2 || !!EDIT); const kk = hit2 && hit2.object.userData.k; if (matchMedia('(hover:hover)').matches) hoverRic(rk2, p.x, p.y); if (!(kk && kk.t === 'ricl')) hoverArt(kk && kk.t === 'art' && matchMedia('(hover:hover)').matches ? hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId] : null, p.x, p.y); return; }
     if (EDIT || !hit2) return;
     const k = hit2.object.userData.k;
+    if (k.t === 'ricl') return select({ t: 'ricl', key: rk2, id: k.id });
     if (k.t === 'art') { const id = hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId]; if (id) select({ t: 'rack', id: k.rack, art: id }); else select({ t: 'rack', id: k.rack }); return; }
     select({ ...k });
   }
@@ -1689,6 +1903,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const zs = t.closest('[data-zsel]'); if (zs) { $('.m3-res').classList.remove('on'); select({ t: 'zone', z: zs.dataset.zsel }); return; }
     const fg = t.closest('[data-fgo]'); if (fg) { select({ t: 'zone', z: fg.dataset.fgo }); return; }
     const sh = t.closest('[data-shot]'); if (sh) { stopTour(); const k = sh.dataset.shot, z = zoneTarget('stk'); ({ all: () => select({ t: 'zone', z: 'all' }), top: () => fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.2, az: 0, pol: .12 }), stk: () => { const r = P.racks.find(x => x.k === 'pallet') || P.racks[0]; if (r) { const g = rackG(r.id); g.updateMatrixWorld(); const p2 = g.localToWorld(new T.Vector3(-rackLen(r) / 2 - 3, 0, rackDep(r) / 2 + 1.7)); fly({ tx: p2.x + 6, ty: 2.5, tz: p2.z, dist: 12, az: r.r * Math.PI / 2 - 1.3, pol: 1.3 }); } }, spe: () => flyT(zoneTarget('spe')), pre: () => flyT(zoneTarget('pre')), low: () => fly({ tx: 0, tz: 4, dist: Math.max(L.W, L.D) * 1.6, az: -0.75, pol: 1.22 }) })[k](); return; }
+    const rv = t.closest('[data-rcv3]'); if (rv) { $('.m3-res').classList.remove('on'); const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); select({ t: 'ricl', key: rv.dataset.rcv3, id: z && z.id }); return; }
     const tb = t.closest('[data-tab3]'); if (tb) { table(tb.dataset.tab3); return; }
     const rw = t.closest('[data-rack3]'); if (rw) { $('.m3-res').classList.remove('on'); select({ t: 'rack', id: rw.dataset.rack3 }); return; }
     const ar = t.closest('[data-art3]'); if (ar) { $('.m3-res').classList.remove('on'); focusArt(ar.dataset.art3); return; }
@@ -1782,7 +1997,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const zt = zoneTarget('all'); Object.assign(CAM, { ty: 0, tx: zt.x, tz: zt.z, dist: zt.dist * 1.6, az: -0.1, pol: .7 }); Object.assign(GOAL, { tx: zt.x, tz: zt.z, dist: zt.dist, az: zt.az, pol: zt.pol }); applyCam();
     const cv = R.domElement;
     cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointermove', onMove); cv.addEventListener('pointerup', onUp); cv.addEventListener('pointercancel', onUp);
-    cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => { cv.classList.remove('hov'); hoverArt(null); });
+    cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => { cv.classList.remove('hov'); hoverArt(null); hoverRic(null); });
     root.addEventListener('click', onClick); root.addEventListener('change', onChange);
     const inp = $('.m3-search input'); inp.addEventListener('input', () => search(inp.value)); inp.addEventListener('focus', () => { if (inp.value) search(inp.value); });
     const ms = $('.m3-sel'); if (ms) ms.addEventListener('change', () => { C.setMag(ms.value); });
