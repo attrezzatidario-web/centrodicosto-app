@@ -1,4 +1,4 @@
-/* Magazzino 3D (v273) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v274) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -527,7 +527,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     bx(P2, W + 26, .12, Dd + 20, 0xe7e6e2, 2, 0, 2, { ns: 1 });
     const yardW = 30, rz = hd + 31;
     const yard = mesh(G.box, new T.MeshLambertMaterial({ color: 0x575c64 }), hw + yardW / 2 + .5, .08, 0, P2, { s: [yardW, .16, Dd + 18], ns: 1 }); OWN.push(yard.material);
-    bx(P2, 11, .15, rz - hd - 9, 0x575c64, hw + 18, 0, (hd + 9 + rz) / 2, { ns: 1 });
+    bx(P2, 11, .15, rz - 5.7 - hd - 9, 0x575c64, hw + 18, 0, (hd + 9 + rz - 5.7) / 2, { ns: 1 });
     const road = mesh(G.box, new T.MeshLambertMaterial({ map: TX.road }), 0, .07, rz, P2, { s: [1600, .14, 11], ns: 1 }); OWN.push(road.material);
     const B2 = new Batch(P2), dsh = (x, z, w, d) => B2.add('dash', G.box, mat(0xf4f4f2), m4(x, .16, z, w, .04, d));
     for (let x = -360; x < 360; x += 9) dsh(x, rz, 4, .3);
@@ -536,12 +536,12 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     for (let i = 0; i < 7; i++) dsh(hw + 20, -hd + 2 + i * (Dd - 4) / 6, 12, .22);
     // parcheggio con pensiline fotovoltaiche
     const px = -hw * .45, pz = hd + 13;
-    bx(P2, 34, .13, 18, 0x60666e, px, 0, pz, { ns: 1 });
+    bx(P2, 34, .2, 18, 0x60666e, px, 0, pz, { ns: 1 });
     for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++) { const x = px - 13.5 + i * 5.2, z = pz - 4.5 + r * 9; B2.add('pv', G.box, mat(0x27416e), m4(x, 3.3, z, 4.8, .16, 5.6, 0, r ? -.12 : .12)); B2.add('pvp', G.box, mat(0xdedfe1), m4(x, 1.6, z, .18, 3.2, .18)); for (let k = 0; k < 4; k++) B2.add('pvl', G.box, mat(0x6f8fb8), m4(x - 1.8 + k * 1.2, 3.42, z, .03, .02, 5.4, 0, r ? -.12 : .12)); if ((i + r) % 3 !== 2) B2.add('car', G.box, mat(0xffffff), m4(x, .75, z, 2, 1.1, 4.2), [0xffffff, 0xd0d4da, 0x2f3540, 0xc94b3c, 0x6f8fa8][(i * 2 + r) % 5]); }
     // uffici
     const ox = hw * .5, oz = hd + 13;
     const ofc = bx(P2, 26, 6.4, 11, 0xfdfdfc, ox, 0, oz); ofc.userData.k = { t: 'zone', z: 'uffe' }; pick.push(ofc);
-    for (const y of [1.3, 4.1]) { bx(P2, 26.1, 1.4, 11.1, 0x6f8fa8, ox, y, oz, { ns: 1 }); for (let i = 0; i < 7; i++) B2.add('mul', G.box, mat(0xfdfdfc), m4(ox - 12.4 + i * 4.13, y + .7, oz, .22, 1.42, 11.12)); }
+    for (const y of [1.3, 4.1]) { bx(P2, 26.1, 1.4, 11.1, 0x6f8fa8, ox, y, oz, { ns: 1 }); for (let i = 0; i < 7; i++) B2.add('mul', G.box, mat(0xfdfdfc), m4(ox - 12.4 + i * 4.13, y + .7, oz, .22, 1.42, 11.24)); }
     bx(P2, 26.4, .3, 11.4, 0xeeeeec, ox, 6.4, oz, { ns: 1 });
     for (let i = 0; i < 5; i++) for (let j = 0; j < 2; j++) B2.add('opv', G.box, mat(0x27416e), m4(ox - 9 + i * 4.4, 7, oz - 2.2 + j * 4.4, 3.6, .18, 2.2, 0, .15));
     bx(P2, 7, 3.4, 8, 0xf3f2f0, ox + 17, 0, oz + 1); bx(P2, 7.2, .3, 8.2, 0x7fbf5e, ox + 17, 3.4, oz + 1, { ns: 1 });
@@ -565,7 +565,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     WH = new T.Group(); scene.add(WH);
     const W = L.W, Dd = L.D, hw = W / 2, hd = Dd / 2;
     // pavimento in cemento
-    bx(WH, W, .5, Dd, 0xe2ded7, 0, 0, 0);
+    bx(WH, W, .48, Dd, 0xe2ded7, 0, 0, 0);
     const ct = TX.concrete.clone(); ct.needsUpdate = true; ct.wrapS = ct.wrapT = T.RepeatWrapping; ct.repeat.set(W / 6, Dd / 6); OWN.push(ct);
     const fm = new T.MeshLambertMaterial({ map: ct }); OWN.push(fm); const fl = new T.Mesh(G.plane, fm); fl.scale.set(W, Dd, 1); fl.rotation.x = -Math.PI / 2; fl.position.y = .505; fl.receiveShadow = true; WH.add(fl);
     // muri perimetrali a pannelli, con il bordo arancione
@@ -639,7 +639,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       }
       for (let l = 1; l < nl; l++) for (let b = 0; b < nb; b++) { const xc = x0 + b * bw + bw / 2, y = lvY(l) - .065; for (const s of [-1, 1]) B.add('bm', G.box, mat(0xf47b20), m4(xc, y, s * (dep / 2 + .01), bw - .1, .13, .055)); B.add('bmc', G.box, mat(0xc85f12), m4(x0 + b * bw + .09, y, dep / 2 + .02, .06, .17, .06)); B.add('bmc', G.box, mat(0xc85f12), m4(x0 + (b + 1) * bw - .09, y, dep / 2 + .02, .06, .17, .06)); }
       for (const e of [-1, 1]) { B.add('grd', G.box, M.haz, m4(e * (len / 2 + .16), y0 + .3, 0, .14, .6, dep + .3)); B.add('grd', G.box, M.haz, m4(e * (len / 2 + .05), y0 + .3, dep / 2 + .16, .3, .6, .14)); }
-      B.add('lineY', G.box, mat(0xf2c418), m4(0, y0 + .006, dep / 2 + .5, len + .4, .012, .09), null);
+      B.add('lineY', G.box, mat(0xf2c418), m4(0, y0 + .012, dep / 2 + .5, len + .4, .02, .09), null);
     } else {
       for (let b = 0; b <= nb; b++) { const x = x0 + b * bw; for (const s of [-1, 1]) B.add('post', G.box, mat(0x8e959e), m4(x, y0 + H / 2, s * dep / 2, .045, H, .045)); }
       for (let l = 0; l < nl; l++) for (let b = 0; b < nb; b++) B.add('deck', G.box, mat(0xb7bcc3), m4(x0 + b * bw + bw / 2, lvY(l), 0, bw - .05, .025, dep));
@@ -653,7 +653,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const bg = !x ? '#ece9e3' : x.out ? '#d9d6d0' : x.low ? '#ff9478' : '#ffd84a';
       if (pal) {
         if (x) { const c2 = D.catOf.get(x.cat), cc = c2 ? c2.col : col; palletStack(B, xc - bw * .25, yb, 0, f > .5 ? 1 : f * 2, cc, maxL, x.id, x.low); if (f > .5) palletStack(B, xc + bw * .25, yb, 0, (f - .5) * 2, cc, maxL, x.id, x.low); else B.add('palT', G.box, mat(0xcfa56f), m4(xc + bw * .25, yb + .13, 0, .8, .025, 1.2), null, x.id); }
-        if (l === 0) flab.push({ x: xc, y: y0 + .012, z: dep / 2 + .3, w: .5, h: .19, bg, t: code }); else lab.push({ x: xc, y: yb - .065, z: dep / 2 + .042, w: .42, h: .105, bg, t: code });
+        if (l === 0) flab.push({ x: xc, y: y0 + .018, z: dep / 2 + .3, w: .5, h: .19, bg, t: code }); else lab.push({ x: xc, y: yb - .065, z: dep / 2 + .05, w: .42, h: .105, bg, t: code });
       } else {
         const c2 = x && D.catOf.get(x.cat), bc = c2 ? c2.bin : binC;
         for (let k = 0; k < 3; k++) { const bxp = x0 + b * bw + bw * (1 / 6 + k / 3); B.add('bin', G.box, M.bin, m4(bxp, yb + .0125 + .11, .03, .29, .22, .5), x ? bc : 0xd8dbe0, x ? x.id : null); if (x && f > k / 3) B.add('binI', G.box, mat(0xd9b07a), m4(bxp, yb + .03 + .085 * Math.min(1, f * 1.4), .03, .24, .17 * Math.min(1, f * 1.4), .44), null, x.id); }
@@ -752,7 +752,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     b(13.4, 3.7, 2.55, 0xfbfbfa, -2.3, 2.55, 0); b(13.45, .5, 2.6, 0xf47b20, -2.3, .95, 0); b(13.4, .1, 2.56, 0xe1e2e4, -2.3, 4.45, 0);
     b(.08, 3.6, 2.5, 0xe3e5e8, -9.02, 2.55, 0); b(.1, 3.6, .06, 0x9aa0a8, -9.04, 2.55, 0);
     const lg = planeT(textTex([[C.orgName().toUpperCase().slice(0, 22), 58, 800]], { color: '#2b2f35', w: 768, h: 128 }), 6.5, 1.1, g, -2.3, 3, 1.285); const lg2 = lg.clone(); lg2.position.z = -1.285; lg2.rotation.y = Math.PI; g.add(lg2);
-    b(2.5, 2.9, 2.5, 0xffffff, 5.9, 2.25, 0); b(.08, 1.1, 2.2, 0x2b3440, 7.17, 3.05, 0); b(.6, 1.2, 2.3, 0xffffff, 6.9, 1.4, 0); b(.06, .5, 1.6, 0x2b2f35, 7.22, 1.3, 0);
+    b(2.5, 2.9, 2.5, 0xffffff, 5.9, 2.25, 0); b(.08, 1.1, 2.2, 0x2b3440, 7.17, 3.05, 0); b(.6, 1.2, 2.3, 0xffffff, 6.9, 1.4, 0); b(.05, .5, 1.6, 0x2b2f35, 7.235, 1.3, 0);
     b(2.52, .45, 2.52, 0xf47b20, 5.9, 1.25, 0); for (const s of [-1, 1]) { b(.1, .55, .12, 0x1d1f22, 6.9, 3, s * 1.42); b(.5, .1, .7, 0x2b2f35, 4.6, .9, s * 1.1); }
     b(2.2, .25, 2.2, 0x2b2f35, 4.2, .9, 0);
     [[-8, 1.05], [-6.9, 1.05], [-5.8, 1.05], [5.9, 1.05], [3.9, 1.05]].forEach(([wx, wz]) => { for (const s of [-1, 1]) { mesh(G.cyl, mat(0x1d1f22), wx, .58, s * wz, g, { s: [1.1, .38, 1.1], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xc5cad1), wx, .58, s * (wz + .2), g, { s: [.5, .02, .5], rx: Math.PI / 2, ns: 1 }); } });
@@ -901,45 +901,44 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const plateAt = (xx, y, rot, zz) => { const m = new T.Mesh(G.plane, pm); m.scale.set(.52, .115, 1); m.position.set(xx, y, zz || 0); m.rotation.y = rot; g.add(m); };
     const wheel = (xx, zz, r) => { const s = Math.sign(zz); mesh(G.cyl, mat(0x15171a), xx, r, zz, g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xbfc4cb), xx, r, zz + s * .14, g, { s: [r * 1.2, .02, r * 1.2], rx: Math.PI / 2, ns: 1 }); mesh(G.cyl, mat(0x7d838b), xx, r, zz + s * .155, g, { s: [r * .42, .02, r * .42], rx: Math.PI / 2, ns: 1 }); };
     const shell = (kind, color, P, ox) => {
-      const w = P.w, bev = kind === 'cab' ? .07 : .09, body = mesh(vgeo('vb_' + kind, P.body, w - 2 * bev, bev), mat(color), ox || 0, 0, 0, g);
-      mesh(vgeo('vg_' + kind, P.side, w + .02, 0), glass, ox || 0, 0, 0, g, { ns: 1 });
-      const wsl = (a, c) => { const dx = c[0] - a[0], dy = c[1] - a[1], ln = Math.hypot(dx, dy), nx = dy / ln, ny = -dx / ln, sgn = kind === 'cab' ? 1 : 1; const m = mesh(G.box, glass, (ox || 0) + (a[0] + c[0]) / 2 + nx * .05 * sgn, (a[1] + c[1]) / 2 + ny * .05 * sgn, 0, g, { s: [ln, .035, w - .16], rz: Math.atan2(dy, dx), ns: 1 }); return m; };
+      const w = P.w, bev = kind === 'cab' ? .07 : .09, xs = P.body.map(q => q[0]), fx = Math.max(...xs) + bev + .015, rx2 = Math.min(...xs) - bev - .015; P.fx = fx; P.rx = rx2; const body = mesh(vgeo('vb_' + kind, P.body, w - 2 * bev, bev), mat(color), ox || 0, 0, 0, g);
+      mesh(vgeo('vg_' + kind, P.side, w + .06, 0), glass, ox || 0, 0, 0, g, { ns: 1 });
+      const wsl = (a, c) => { const dx = c[0] - a[0], dy = c[1] - a[1], ln = Math.hypot(dx, dy), nx = dy / ln, ny = -dx / ln, sgn = kind === 'cab' ? 1 : 1; const m = mesh(G.box, glass, (ox || 0) + (a[0] + c[0]) / 2 + nx * .115 * sgn, (a[1] + c[1]) / 2 + ny * .115 * sgn, 0, g, { s: [ln, .035, w - .16], rz: Math.atan2(dy, dx), ns: 1 }); return m; };
       wsl(P.ws[0], P.ws[1]); if (P.rw) wsl(P.rw[1], P.rw[0]);
-      P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) mesh(G.cyl, mat(0x111316), (ox || 0) + wx, r + .02, s * (w / 2 - .02), g, { s: [r * 2 + .2, .02, r * 2 + .2], rx: Math.PI / 2, ns: 1 }); wheel((ox || 0) + wx, w / 2 - .12, r); wheel((ox || 0) + wx, -w / 2 + .12, r); });
-      for (const s of [-1, 1]) { b(.05, .13, .34, 0xfff3d1, (ox || 0) + P.hl[0], P.hl[1], s * (w / 2 - .3), { ns: 1 }); if (P.tl) b(.05, .26, .16, 0xd8322a, (ox || 0) + P.tl[0], P.tl[1], s * (w / 2 - .14), { ns: 1 }); }
-      plateAt((ox || 0) + P.plateF[0], P.plateF[1], Math.PI / 2); if (P.plateR) plateAt((ox || 0) + P.plateR[0], P.plateR[1], -Math.PI / 2);
+      P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) mesh(G.cyl, mat(0x111316), (ox || 0) + wx, r + .02, s * (w / 2 + .008), g, { s: [r * 2 + .2, .01, r * 2 + .2], rx: Math.PI / 2, ns: 1 }); wheel((ox || 0) + wx, w / 2 - .12, r); wheel((ox || 0) + wx, -w / 2 + .12, r); });
+      for (const s of [-1, 1]) { b(.05, .13, .34, 0xfff3d1, (ox || 0) + fx, P.hl[1], s * (w / 2 - .3), { ns: 1 }); if (P.tl) b(.05, .26, .16, 0xd8322a, (ox || 0) + rx2, P.tl[1], s * (w / 2 - .14), { ns: 1 }); }
+      plateAt((ox || 0) + fx + .03, P.plateF[1], Math.PI / 2); if (P.plateR) plateAt((ox || 0) + rx2 - .03, P.plateR[1], -Math.PI / 2);
       return body;
     };
     const livery = (len, xc, y, w) => { for (const s of [-1, 1]) b(len, .14, .02, 0xf47b20, xc, y, s * (w / 2 + .012), { ns: 1 }); const t = textTex([[C.orgName().toUpperCase().slice(0, 24), 54, 800]], { color: '#2b2f35', w: 768, h: 110 }); for (const s of [-1, 1]) { const m = planeT(t, Math.min(len * .8, 3.2), .45, g, xc, y + .5, s * (w / 2 + .016)); m.rotation.y = s > 0 ? 0 : Math.PI; } };
     const mirror = (xx, y, w) => { for (const s of [-1, 1]) { b(.05, .04, .22, dark, xx, y, s * (w / 2 + .1), { ns: 1 }); b(.07, .3, .12, dark, xx - .02, y - .05, s * (w / 2 + .24)); } };
     if (v.kind === 'truck') {
       const P = VP.cab, w = P.w; shell('cab', 0xfbfbfa, P, 2.85);
-      b(.06, .55, w - .4, dark, 3.93, .85, 0, { ns: 1 }); for (let i = 0; i < 4; i++) b(.07, .04, w - .5, 0x4a5059, 3.94, .65 + i * .13, 0, { ns: 1 });
-      b(.4, .32, w + .02, 0x2b2f35, 3.85, .4, 0); b(2.1, .28, w + .03, 0xf47b20, 2.85, 1.42, 0, { ns: 1 }); mirror(3.75, 2.6, w);
-      b(5.7, .28, 1.1, 0x2b2f35, -.4, .42, 0); b(5.6, 3.0, 2.42, 0xf3f3f1, -1.35, .78, 0); b(5.62, .09, 2.44, 0xe1e3e6, -1.35, 3.74, 0, { ns: 1 });
-      b(.05, 2.9, 2.38, 0xe6e8eb, -4.17, .82, 0, { ns: 1 }); b(.06, 2.9, .05, 0x9aa0a8, -4.2, .82, 0, { ns: 1 }); for (const s of [-1, 1]) b(.06, .22, .14, 0xd8322a, -4.2, .95, s * 1.05, { ns: 1 });
+      b(.04, .55, w - .4, dark, 2.85 + P.fx, 1.05, 0, { ns: 1 }); for (let i = 0; i < 4; i++) b(.04, .04, w - .5, 0x4a5059, 2.85 + P.fx + .02, .85 + i * .13, 0, { ns: 1 });
+      b(.4, .32, w + .02, 0x2b2f35, 2.85 + P.fx - .1, .4, 0); b(2.1, .28, w + .03, 0xf47b20, 2.85, 1.42, 0, { ns: 1 }); mirror(3.75, 2.6, w);
+      b(5.7, .28, 1.1, 0x2b2f35, -.4, .42, 0); b(5.6, 3.0, 2.42, 0xf3f3f1, -1.35, 2.28, 0); b(5.62, .08, 2.44, 0xe1e3e6, -1.35, 3.82, 0, { ns: 1 });
+      b(.04, 2.85, 2.36, 0xe6e8eb, -4.17, 2.28, 0, { ns: 1 }); b(.05, 2.85, .05, 0x9aa0a8, -4.2, 2.28, 0, { ns: 1 }); for (const s of [-1, 1]) b(.06, .22, .14, 0xd8322a, -4.2, .95, s * 1.05, { ns: 1 });
       livery(5.2, -1.35, 1.4, 2.42); plateAt(-4.21, .7, -Math.PI / 2);
       [[3.0, .5], [-2.3, .5], [-3.35, .5]].forEach(([wx, r]) => { for (const s of [-1, 1]) { mesh(G.cyl, mat(0x111316), wx, r + .03, s * 1.13, g, { s: [r * 2 + .22, .02, r * 2 + .22], rx: Math.PI / 2, ns: 1 }); wheel(wx, s * 1.05, r); } });
     } else if (v.kind === 'car') {
       const P = VP.car; shell('car', [0xe9ebee, 0xc8ccd2, 0x2f3540, 0x9fb3c8][v.p.charCodeAt(1) % 4], P);
-      b(.05, .2, P.w - .5, dark, 2.2, .55, 0, { ns: 1 }); mirror(.85, 1.02, P.w); for (const s of [-1, 1]) b(3.6, .06, .02, 0xf47b20, 0, .66, s * (P.w / 2 + .1), { ns: 1 });
-      b(.3, .14, P.w + .1, 0x2b2f35, 2.12, .34, 0); b(.3, .14, P.w + .1, 0x2b2f35, -2.12, .36, 0);
+      b(.04, .2, P.w - .5, dark, P.fx, .55, 0, { ns: 1 }); mirror(.85, 1.02, P.w); for (const s of [-1, 1]) b(3.6, .06, .02, 0xf47b20, 0, .66, s * (P.w / 2 + .1), { ns: 1 });
+      b(.3, .14, P.w + .1, 0x2b2f35, P.fx - .1, .36, 0); b(.3, .14, P.w + .1, 0x2b2f35, P.rx + .1, .38, 0);
     } else if (v.kind === 'pickup') {
       const P = VP.pickup; shell('pickup', 0xfbfbfa, P);
-      for (const s of [-1, 1]) b(2.05, .5, .06, 0xfbfbfa, -1.55, 1.18, s * (P.w / 2 - .03)); b(.06, .5, P.w, 0xfbfbfa, -2.57, 1.18, 0); b(1.9, .05, P.w - .1, 0x3a3f46, -1.55, 1.18, 0, { ns: 1 });
+      for (const s of [-1, 1]) b(2.05, .5, .06, 0xfbfbfa, -1.55, 1.18, s * (P.w / 2 - .03)); b(.06, .5, P.w, 0xfbfbfa, -2.57, 1.18, 0); b(1.9, .05, P.w - .1, 0x3a3f46, -1.55, 1.205, 0, { ns: 1 });
       b(1.4, .3, 1.0, 0xc79a68, -1.4, 1.23, 0); b(.6, .25, .5, 0x8aa36a, -2.1, 1.23, .3);
-      b(.05, .32, P.w - .5, dark, 2.62, .82, 0, { ns: 1 }); mirror(1.25, 1.55, P.w); livery(3.2, .4, .66, P.w);
+      b(.04, .32, P.w - .5, dark, P.fx, .82, 0, { ns: 1 }); mirror(1.25, 1.55, P.w); livery(3.2, .4, .66, P.w);
       b(.12, .5, .14, 0x2b2f35, -.55, 1.95, .6); b(.12, .5, .14, 0x2b2f35, -.55, 1.95, -.6); b(.12, .08, 1.3, 0x2b2f35, -.55, 2.2, 0);
-      b(.3, .16, P.w + .12, 0x2b2f35, 2.55, .42, 0); b(.25, .16, P.w + .12, 0x2b2f35, -2.6, .46, 0);
+      b(.3, .16, P.w + .12, 0x2b2f35, P.fx - .1, .46, 0); b(.25, .16, P.w + .12, 0x2b2f35, P.rx + .08, .5, 0);
     } else {
       const P = VP.van; shell('van', 0xfbfbfa, P);
-      b(.05, .34, P.w - .5, dark, 2.72, .82, 0, { ns: 1 }); for (let i = 0; i < 3; i++) b(.06, .03, P.w - .6, 0x4a5059, 2.73, .72 + i * .1, 0, { ns: 1 });
-      b(.3, .18, P.w + .1, 0x2b2f35, 2.6, .38, 0); b(.25, .18, P.w + .1, 0x2b2f35, -2.66, .42, 0);
-      b(.03, 1.9, .02, 0xd5d7da, -2.73, 1.38, 0, { ns: 1 }); b(.03, .04, .5, 0x9aa0a8, -2.74, 1.35, .35, { ns: 1 });
-      b(.02, 1.75, .03, 0xd5d7da, -.4, 1.4, P.w / 2 + .1, { ns: 1 }); mirror(1.62, 1.6, P.w); livery(3.4, -.65, .82, P.w);
+      b(.04, .34, P.w - .5, dark, P.fx, .82, 0, { ns: 1 }); for (let i = 0; i < 3; i++) b(.04, .03, P.w - .6, 0x4a5059, P.fx + .02, .72 + i * .1, 0, { ns: 1 });
+      b(.3, .18, P.w + .1, 0x2b2f35, P.fx - .1, .4, 0); b(.25, .18, P.w + .1, 0x2b2f35, P.rx + .08, .44, 0);
+      b(.02, 1.85, .025, 0xc9ccd0, P.rx, 1.42, 0, { ns: 1 }); b(.04, .06, .4, 0x7d848d, P.rx - .01, 1.35, .32, { ns: 1 });
+      b(1.1, .02, .01, 0xd0d3d7, -.95, 2.26, P.w / 2 + .012, { ns: 1 }); b(.02, 1.7, .01, 0xd0d3d7, -1.5, 1.4, P.w / 2 + .012, { ns: 1 }); mirror(1.62, 1.6, P.w); livery(3.4, -.65, .82, P.w);
       if (v.p.charCodeAt(0) % 2) { b(3.2, .05, .05, 0x8e959e, -.8, 2.62, .6); b(3.2, .05, .05, 0x8e959e, -.8, 2.62, -.6); for (let i = 0; i < 4; i++) b(.05, .05, 1.25, 0x8e959e, -2.2 + i * .9, 2.62, 0); }
     }
-    if (v.rent) b(.5, .1, .9, 0x1f6fd0, v.kind === 'truck' ? 2.8 : v.kind === 'van' ? -1 : -.3, v.kind === 'truck' ? 3.27 : v.kind === 'car' ? 1.5 : v.kind === 'pickup' ? 1.89 : 2.48, 0, { ns: 1 });
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.k = { t: 'veh', p: v.p }; pick.push(o); } });
     return g;
   }
@@ -956,7 +955,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const GD = D.gas; if (!GD) return; const F = FL(), g = new T.Group(); WH.add(g);
     const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2, B = new Batch(g);
     const asp = mesh(G.box, new T.MeshLambertMaterial({ map: TX.road }), cx, .08, cz, g, { s: [w, .16, d], ns: 1 }); OWN.push(asp.material);
-    bx(g, 9, .15, L.D / 2 + 31 - F.z1, 0x575c64, F.st.x, 0, (F.z1 + L.D / 2 + 31) / 2, { ns: 1 });
+    bx(g, 9, .15, L.D / 2 + 31 - 5.7 - F.z1, 0x575c64, F.st.x, 0, (F.z1 + L.D / 2 + 31 - 5.7) / 2, { ns: 1 });
     for (const xx of [F.x0, F.x1]) bx(g, .3, .22, d, 0xd9d6cf, xx, 0, cz, { ns: 1 });
     // stalli: due file di posti con strisce bianche e numeri
     const rowX = [F.x0 + 4.4, F.x1 - 4.4], sz = 3.9, z0 = F.z0 + 2.4, n = Math.max(1, Math.floor((F.st.z - 8 - z0) / sz)), slots = [];
@@ -968,20 +967,20 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const st = F.st, cw = 12, cd = 9.5;
     for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) mesh(G.cyl, mat(0xd7dadf), st.x + sx * (cw / 2 - 1.2), 2.75, st.z + sz2 * (cd / 2 - 1.5), g, { s: [.42, 5.2, .42] });
     bx(g, cw, .55, cd, 0xfbfbfa, st.x, 5.2, st.z); bx(g, cw + .1, .42, .12, 0xf47b20, st.x, 5.25, st.z + cd / 2); bx(g, cw + .1, .42, .12, 0xf47b20, st.x, 5.25, st.z - cd / 2); bx(g, .12, .42, cd, 0xf47b20, st.x - cw / 2, 5.25, st.z); bx(g, .12, .42, cd, 0xf47b20, st.x + cw / 2, 5.25, st.z);
-    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j += 2) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6 }); OWN.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.6, .5, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 3.6, 5.19, st.z + j * 2.2); g.add(lp); }
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j += 2) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6 }); OWN.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.6, .5, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 3.6, 5.16, st.z + j * 2.2); g.add(lp); }
     const sg = textTex([['GASOLIO', 78, 800, 60, null, '#ffffff'], [C.orgName().toUpperCase().slice(0, 26), 30, 700, 118, null, 'rgba(255,255,255,.9)']], { bg: '#f47b20', w: 768, h: 150 });
-    planeT(sg, 5.2, 1, g, st.x, 5.27, st.z + cd / 2 + .07);
+    planeT(sg, 5.2, 1, g, st.x, 5.27, st.z + cd / 2 + .1);
     pumpDraw(0, GD.price); pumpTex = new T.CanvasTexture(pumpCv); pumpTex.colorSpace = T.SRGBColorSpace; OWN.push(pumpTex);
     const isl = [-2.3, 2.3];
     isl.forEach((ix, k) => {
       bx(g, 1.3, .22, 4.4, 0xd8d5ce, st.x + ix, .16, st.z); bx(g, 1.3, .06, 4.4, 0xf2c418, st.x + ix, .38, st.z, { ns: 1 });
       const px = st.x + ix, pz = st.z; bx(g, .75, 1.75, .55, 0xf1f2f4, px, .44, pz); bx(g, .78, .32, .58, 0xf47b20, px, 2.19, pz); bx(g, .8, .08, .6, 0x2b2f35, px, 2.5, pz);
       for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.52, .35, 1); sc.position.set(px + s * .38, 1.75, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); bx(g, .06, .22, .1, 0x1d1f22, px + s * .4, 1.05, pz + .12); bx(g, .1, .08, .06, 0x2cbf5d, px + s * .41, 1.25, pz - .12, { ns: 1 }); }
-      for (const s of [-1, 1]) { mesh(G.cyl, mat(0xf2c418), px, .9, pz + s * 2.05, g, { s: [.22, .95, .22] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .9 + s * 0, pz + s * 2.05, .23, .12, .23)); }
+      for (const s of [-1, 1]) { mesh(G.cyl, mat(0xf2c418), px, .9, pz + s * 2.05, g, { s: [.22, .95, .22] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.1, pz + s * 2.05, .26, .12, .26)); }
     });
     // totem del prezzo
     const tot = textTex([['GASOLIO', 44, 800, 46, null, '#ffffff'], [GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', 84, 800, 140, null, '#f5c518'], ['€ / litro', 30, 600, 204, null, 'rgba(255,255,255,.85)'], [`${N(GD.lM)} L nel mese`, 26, 600, 262, null, 'rgba(255,255,255,.8)']], { bg: '#17191c', w: 320, h: 300, round: 18 });
-    bx(g, 1.7, 4.6, .45, 0xf47b20, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5); planeT(tot, 1.45, 1.36, g, st.x + cw / 2 + 2.2, 3.55, st.z + cd / 2 - .27); bx(g, 1.2, .6, .5, 0x2b2f35, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5);
+    bx(g, 1.7, 4.6, .45, 0xf47b20, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5); planeT(tot, 1.45, 1.36, g, st.x + cw / 2 + 2.2, 3.55, st.z + cd / 2 - .245); bx(g, 1.2, .6, .5, 0x2b2f35, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5);
     // cisterna del gasolio su selle, con vasca di contenimento e scaletta
     const tx = F.x0 + 5, tz = st.z + 1.5;
     bx(g, 3.6, .5, 7.4, 0xc9c6bf, tx, .16, tz); bx(g, 3.2, .1, 7, 0x9a978f, tx, .62, tz, { ns: 1 });
@@ -990,7 +989,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     for (const s of [-1, 1]) bx(g, 2.4, 1.1, .35, 0x7d848d, tx, .6, tz + s * 2);
     bx(g, .3, .25, .3, 0x2b2f35, tx, 3.45, tz + 1.5); mesh(G.cyl, mat(0x2b2f35), tx + .3, 3.5, tz - 1.2, g, { s: [.12, .6, .12] });
     const tl = textTex([['GASOLIO', 64, 800, 46, null, '#1d1f22'], ['infiammabile · non fumare', 22, 600, 96, null, '#55585e']], { bg: '#ffffff', w: 400, h: 120, round: 10 });
-    for (const s of [-1, 1]) planeT(tl, 2, .6, g, tx + s * 1.27, 2.3, tz, { ry: s * Math.PI / 2 });
+    for (const s of [-1, 1]) planeT(tl, 2, .6, g, tx + s * 1.3, 2.3, tz, { ry: s * Math.PI / 2 });
     for (let k = 0; k < 6; k++) B.add('lad', G.box, mat(0x9aa1a9), m4(tx - 1.45, .9 + k * .45, tz - 2.6, .05, .05, .5)); for (const s of [-1, 1]) B.add('lad', G.box, mat(0x9aa1a9), m4(tx - 1.45, 1.95, tz - 2.6 + s * .25, .05, 2.6, .05));
     // tubo dalla cisterna alle colonnine
     const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .4, tz - 2), new T.Vector3(tx + 4, .25, tz - 3), new T.Vector3(st.x - 2.3, .25, st.z + 1)]), 24, .07, 6); OWN.push(tube); mesh(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
@@ -1566,7 +1565,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (!document.getElementById('m3-css')) { const s = document.createElement('style'); s.id = 'm3-css'; s.textContent = CSS; document.head.appendChild(s); }
     root = document.createElement('div'); root.className = 'm3 np'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Magazzino 3D'); root.innerHTML = html();
     document.body.appendChild(root); document.documentElement.style.overflow = 'hidden'; open = true;
-    try { R = new T.WebGLRenderer({ canvas: $('.m3-c'), antialias: true, powerPreference: 'high-performance' }); }
+    try { R = new T.WebGLRenderer({ canvas: $('.m3-c'), antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true }); }
     catch { root.innerHTML = '<div class="m3-load"><b>Il 3D non è supportato su questo dispositivo</b></div>'; setTimeout(close, 2500); return; }
     R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap;
     setupScene();

@@ -9163,7 +9163,7 @@
   /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
   async function mag3d() {
     if (mag3d.busy) return; mag3d.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=273'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=274'); }
     catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
     mag3d.busy = 0;
     window.CDC_MG3D.open({
