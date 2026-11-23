@@ -1,4 +1,4 @@
-/* Magazzino 3D (v276) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v277) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -1149,14 +1149,17 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const sign = (tex, sw, sh, x, y, z) => planeT(tex, sw, sh, q, x, y, z, face);
     const frontRes = Dl > 22 && W > 13 ? 7.2 : 0, AP = 4.4;
     // ---- banchine di scarico sul muro (porte, rampe, semafori, camion dei fornitori)
+    const roomOut = !!side && !(side[0] === 'L' && D.gas); // a sinistra c'è il parco mezzi: niente camion fuori
     const nd = side ? clamp(Math.floor((Dl - frontRes - 1) / 6.2), 1, 4) : 0, doors = [];
+    if (roomOut && nd) { const z0 = -Dl / 2 + .2, z1 = -Dl / 2 + 3.4 + (nd - 1) * 6.2 + 3.1; const ap = mesh(G.box, mat(0x575c64), wallX - 9.6, .075, (z0 + z1) / 2, q, { s: [18.6, .15, z1 - z0], ns: 1 }); ap.receiveShadow = true;
+      for (let i = 0; i <= nd; i++) bx(q, 16, .012, .14, 0xf4f4f2, wallX - 9.2, .15, -Dl / 2 + 3.4 + (i - .5) * 6.2, { ns: 1 }); }
     for (let i = 0; i < nd; i++) {
       const zc = -Dl / 2 + 3.4 + i * 6.2, r = R2[i] && R2[i].age <= 7 ? R2[i] : null; doors.push({ zc, r });
       for (const s of [-1, 1]) { bx(q, .3, 3.3, .26, 0x1b1d20, wallX + .15, .5, zc + s * 1.95); B.add('bol', G.cyl, mat(0xf2c418), m4(wallX + .55, 1.05, zc + s * 2.35, .2, 1.1, .2)); B.add('bolc', G.cyl, mat(0x2b2f35), m4(wallX + .55, 1.62, zc + s * 2.35, .21, .06, .21)); }
       bx(q, .32, .32, 4.2, 0x1b1d20, wallX + .16, 3.55, zc);
       mesh(G.cyl, mat(0xd8dbe0), wallX + .4, 3.62, zc, q, { s: [.46, 3.7, .46], rx: Math.PI / 2 });
       if (r) { bx(q, .04, 3.0, 3.5, 0x23262b, wallX + .05, .52, zc, { ns: 1 }); // portone alzato: si vede il rimorchio
-        const P0 = new Batch(q); palletStack(P0, wallX + .2 - .55, .62, zc - .5, .9, r.col, 3, r.key); palletStack(P0, wallX + .2 - .55, .62, zc + .5, .55, r.col, 3, r.key); const pi = P0.flush(); Object.values(pi).forEach(im => { im.userData.k = { t: 'ricl', key: r.key, id: it.id }; im.userData.eid = it.id; pick.push(im); });
+        const P0 = new Batch(q); palletStack(P0, wallX + 1.05, .56, zc - .5, .9, r.col, 3, r.key); palletStack(P0, wallX + 1.05, .56, zc + .5, .55, r.col, 3, r.key); const pi = P0.flush(); Object.values(pi).forEach(im => { im.userData.k = { t: 'ricl', key: r.key, id: it.id }; im.userData.eid = it.id; pick.push(im); });
       } else mesh(G.box, M.door, wallX + .05, .5 + 1.5, zc, q, { s: [.04, 3.0, 3.5] });
       // rampa livellatrice con bordi gialli e neri
       bx(q, 2.4, .06, 2.3, 0x9ba1a8, wallX + 1.35, .5, zc, { ns: 1 }); for (const s of [-1, 1]) bx(q, 2.4, .07, .14, M.haz, wallX + 1.35, .5, zc + s * 1.08, { ns: 1 });
@@ -1170,14 +1173,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       // corsia gialla davanti alla porta e freccia verso le corsie di sosta
       for (const s of [-1, 1]) B.add('dl', G.box, mat(0xf2c418), m4(wallX + AP / 2 + .6, .553, zc + s * 1.75, AP - .4, .012, .1));
       const ar = planeT(arrowTex(), 1.1, 1.1, q, wallX + AP - .2, .561, zc, {}); ar.rotation.x = -Math.PI / 2; ar.rotation.z = -Math.PI / 2;
-      if (r) { // rimorchio del fornitore fuori dal muro
-        const tg = new T.Group(); tg.position.set(wallX - .32, 0, zc); q.add(tg);
-        bx(tg, 3.4, 3.55, 2.5, 0xfbfbfa, -1.7, .78, 0); bx(tg, 3.42, .42, 2.52, 0x3a3f46, -1.7, .45, 0); bx(tg, .08, 3.55, 2.5, 0x9aa0a8, -.04, .78, 0); bx(tg, 3.42, .36, 2.53, 0xf47b20, -1.7, 1.05, 0, { ns: 1 });
-        for (const s of [-1, 1]) { bx(tg, .9, 3.4, .06, 0xeef0f2, -.47, .85, s * 1.3, { ry: s * .25 }); mesh(G.cyl, mat(0x1d1f22), -2.4, .52, s * 1.05, tg, { s: [1.05, .36, 1.05], rx: Math.PI / 2 }); mesh(G.cyl, mat(0x1d1f22), -3.3, .52, s * 1.05, tg, { s: [1.05, .36, 1.05], rx: Math.PI / 2 }); }
-        const sup = r.sup.toUpperCase().slice(0, 20), st = textTex([[sup, Math.min(64, Math.floor(1400 / Math.max(8, sup.length))), 800]], { color: '#2b2f35', w: 768, h: 128 });
-        const pl = planeT(st, 3.2, .53, tg, -1.7, 4.35, 0, {}); pl.rotation.x = -Math.PI / 2; pl.rotation.z = Math.PI / 2;
-        tg.traverse(o => { if (o.isMesh) { o.userData.k = { t: 'ricl', key: r.key, id: it.id }; o.userData.eid = it.id; pick.push(o); } });
-      }
+      if (r && roomOut) supTruck(q, r, wallX - 9.34, zc, Math.PI, { t: 'ricl', key: r.key, id: it.id }, it.id);
       const hb = new T.Mesh(G.box, M.hit); hb.scale.set(3, 3.4, 4.4); hb.position.set(wallX + 1.5, 2.2, zc); hb.userData.k = r ? { t: 'ricl', key: r.key, id: it.id } : { t: 'zone', z: 'ric', id: it.id }; hb.userData.eid = it.id; q.add(hb); pick.push(hb);
     }
     if (side) { bx(q, .22, .013, Dl - frontRes - .6, M.haz, wallX + AP + .55, .542, -frontRes / 2, { ns: 1 }); }
@@ -1254,6 +1250,21 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       gx.textAlign = 'left'; gx.textBaseline = 'middle'; let fs = 36; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; while (fs > 20 && gx.measureText(sup).width > w - 52) { fs -= 2; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; } let s2 = sup; while (gx.measureText(s2).width > w - 52 && s2.length > 3) s2 = s2.slice(0, -2); if (s2 !== sup) s2 += '…';
       gx.fillStyle = '#16181b'; gx.fillText(s2, 34, 46); gx.font = '600 24px Inter, system-ui, sans-serif'; gx.fillStyle = '#8a8d93'; gx.fillText(sub, 34, 96); });
     OWN.push(t); return t;
+  }
+  // camion del fornitore (motrice + rimorchio) in retromarcia contro la porta
+  function supTruck(p, r, x, z, ry, k, eid) {
+    const g = new T.Group(); g.position.set(x, .1, z); g.rotation.y = ry; p.add(g);
+    const b = (w, h, dd, c, xx, y, zz) => mesh(G.box, mat(c), xx, y, zz, g, { s: [w, h, dd] }), band = mixC(r.col, 0x2b2f35, .15);
+    b(13.4, 3.7, 2.55, 0xfbfbfa, -2.3, 2.55, 0); b(13.45, .5, 2.6, band, -2.3, .95, 0); b(13.4, .1, 2.56, 0xe1e2e4, -2.3, 4.45, 0);
+    b(.1, 3.7, 2.62, 0x9aa0a8, -9.04, 2.55, 0); for (const s2 of [-1, 1]) b(1.24, 3.5, .05, 0xeef0f2, -8.4, 2.55, s2 * 1.33);
+    const sup = r.sup.toUpperCase().slice(0, 22), lt = textTex([[sup, Math.min(64, Math.floor(1500 / Math.max(8, sup.length))), 800]], { color: '#2b2f35', w: 768, h: 128 });
+    planeT(lt, 6.5, 1.08, g, -2.3, 3, 1.288); const l2 = planeT(lt, 6.5, 1.08, g, -2.3, 3, -1.288); l2.rotation.y = Math.PI;
+    b(2.5, 2.9, 2.5, 0xffffff, 5.9, 2.25, 0); b(.08, 1.1, 2.2, 0x2b3440, 7.17, 3.05, 0); b(.6, 1.2, 2.3, 0xffffff, 6.9, 1.4, 0); b(.05, .5, 1.6, 0x2b2f35, 7.235, 1.3, 0);
+    b(2.52, .45, 2.52, band, 5.9, 1.25, 0); for (const s2 of [-1, 1]) { b(.1, .55, .12, 0x1d1f22, 6.9, 3, s2 * 1.42); b(.5, .1, .7, 0x2b2f35, 4.6, .9, s2 * 1.1); }
+    b(2.2, .25, 2.2, 0x2b2f35, 4.2, .9, 0);
+    [[-8, 1.05], [-6.9, 1.05], [-5.8, 1.05], [5.9, 1.05], [3.9, 1.05]].forEach(([wx, wz]) => { for (const s2 of [-1, 1]) { mesh(G.cyl, mat(0x1d1f22), wx, .58, s2 * wz, g, { s: [1.1, .38, 1.1], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xc5cad1), wx, .58, s2 * (wz + .2), g, { s: [.5, .02, .5], rx: Math.PI / 2, ns: 1 }); } });
+    g.traverse(o => { if (o.isMesh) { o.userData.k = k; o.userData.eid = eid; pick.push(o); } });
+    return g;
   }
   function arrowTex() { if (TX.arrow) return TX.arrow; TX.arrow = cvTex(128, 128, (gx, w, h) => { gx.fillStyle = 'rgba(255,255,255,.9)'; gx.beginPath(); gx.moveTo(w / 2, 8); gx.lineTo(w - 14, h / 2); gx.lineTo(w / 2 + 18, h / 2); gx.lineTo(w / 2 + 18, h - 8); gx.lineTo(w / 2 - 18, h - 8); gx.lineTo(w / 2 - 18, h / 2); gx.lineTo(14, h / 2); gx.closePath(); gx.fill(); }); return TX.arrow; }
   // percorso a velocità costante, con curve morbide
