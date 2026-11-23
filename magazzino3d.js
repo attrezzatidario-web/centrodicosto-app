@@ -1,4 +1,4 @@
-/* Magazzino 3D (v274) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v275) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -269,6 +269,54 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-tl2 .tx2 small{display:block;font-weight:500;color:#9a9ca1;font-size:11px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .m3-kpis .m3-kpi:nth-child(3) i{background:#e8f4ec;color:#1f8a4b}
 @media (max-width:1180px){.m3-kpis .m3-kpi:nth-child(3){display:none}}
+.m3-lead{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0;transition:opacity .3s}
+.m3-lead line{stroke:${OR};stroke-width:1.6;stroke-dasharray:4 4;animation:m3dash 1s linear infinite}
+.m3-lead circle{fill:${OR}}.m3-lead circle+circle{fill:none;stroke:${OR};stroke-width:2}
+@keyframes m3dash{to{stroke-dashoffset:-16}}
+.m3-co{position:absolute;left:0;top:0;width:292px;z-index:4;background:rgba(255,255,255,.97);border-radius:18px;padding:14px 14px 12px;box-shadow:0 22px 50px rgba(20,24,18,.22),0 2px 6px rgba(0,0,0,.06);border:1px solid rgba(255,255,255,.9);pointer-events:auto;opacity:0;visibility:hidden;will-change:transform}
+.m3-co.on{visibility:visible;animation:m3co .55s cubic-bezier(.2,1.25,.3,1) both}
+@keyframes m3co{0%{opacity:0;scale:.86;filter:blur(4px)}60%{filter:blur(0)}100%{opacity:1;scale:1}}
+.m3-co>*{animation:m3in .5s cubic-bezier(.2,.8,.2,1) both}
+.m3-co>:nth-child(2){animation-delay:.06s}.m3-co>:nth-child(3){animation-delay:.1s}.m3-co>:nth-child(4){animation-delay:.14s}.m3-co>:nth-child(5){animation-delay:.18s}.m3-co>:nth-child(6){animation-delay:.22s}.m3-co>:nth-child(7){animation-delay:.27s}
+.m3-coh{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.m3-coh button{margin-left:auto;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;color:#8a8d93}
+.m3-coh button:hover{background:#f4f3f1}.m3-coh svg{width:14px;height:14px}
+.m3-cot{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.m3-cos{display:block;font-size:11.5px;color:#8a8d93;margin-top:2px;line-height:1.4}
+.m3-coq{display:flex;align-items:baseline;gap:6px;margin:10px 0 6px}
+.m3-coq b{font-size:30px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.m3-coq span{font-size:13px;color:#55585e;font-weight:600}.m3-coq em{margin-left:auto;font-style:normal;font-size:12.5px;color:#8a8d93;font-weight:600}
+.m3-cob{position:relative;height:8px;border-radius:4px;background:#efedea;overflow:visible}
+.m3-cob u{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,#f8a45c,${OR});width:var(--w);animation:m3bar 1s .15s cubic-bezier(.2,.8,.2,1) both}
+@keyframes m3bar{from{width:0}}
+.m3-cob i{position:absolute;top:-4px;width:2px;height:16px;background:#17191c;border-radius:1px}
+.m3-coa{display:flex;gap:6px;margin-top:12px}
+.m3-coa button{flex:1;height:38px;border-radius:11px;border:1px solid #e7e5e1;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:600;background:#fff;transition:transform .15s,background .2s,border-color .2s}
+.m3-coa button:hover{background:#faf8f5;transform:translateY(-1px)}.m3-coa button:active{transform:scale(.97)}
+.m3-coa button.pri{background:${OR};border-color:${OR};color:#fff;font-size:15px;flex:1.5;box-shadow:0 6px 14px rgba(244,123,32,.3)}
+.m3-coa button.pri span{font-size:12.5px}.m3-coa button.pri:hover{background:#e86e12}
+.m3-coa button.ok{background:#e7f5ea;border-color:#bfe3c9;color:#1f7a3b}
+.m3-coa svg{width:15px;height:15px}
+.m3-spin{width:14px;height:14px;border-radius:50%;border:2px solid #f3c9a4;border-top-color:${OR};animation:m3rot .7s linear infinite}
+@keyframes m3rot{to{transform:rotate(360deg)}}
+.m3-tip{position:absolute;left:0;top:0;z-index:6;pointer-events:none;background:rgba(23,25,28,.92);color:#fff;border-radius:11px;padding:8px 11px;font-size:12.5px;opacity:0;transition:opacity .15s;max-width:260px;backdrop-filter:blur(6px)}
+.m3-tip.on{opacity:1}.m3-tip b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-tip span{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.75);margin-top:3px}.m3-tip em{color:#ffb48a;font-style:normal}
+.m3-tip .m3-loc{font-style:normal}
+@keyframes m3in{from{opacity:0;transform:translateY(10px)}}
+@keyframes m3pop{from{opacity:0;transform:scale(.4)}}
+.m3-panel .m3-ph{animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-panel .m3-pb>*{animation:m3in .5s cubic-bezier(.2,.8,.2,1) both}
+.m3-panel .m3-pb>:nth-child(2){animation-delay:.05s}.m3-panel .m3-pb>:nth-child(3){animation-delay:.1s}.m3-panel .m3-pb>:nth-child(4){animation-delay:.14s}.m3-panel .m3-pb>:nth-child(5){animation-delay:.18s}.m3-panel .m3-pb>:nth-child(n+6){animation-delay:.22s}
+.m3-panel .m3-st{animation:m3in .5s cubic-bezier(.2,.8,.2,1) both}.m3-panel .m3-st:nth-child(2){animation-delay:.06s}.m3-panel .m3-st:nth-child(3){animation-delay:.12s}.m3-panel .m3-st:nth-child(4){animation-delay:.18s}
+.m3-panel .m3-rows>*{animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-panel .m3-rows>:nth-child(1){animation-delay:.16s}.m3-panel .m3-rows>:nth-child(2){animation-delay:.2s}.m3-panel .m3-rows>:nth-child(3){animation-delay:.24s}.m3-panel .m3-rows>:nth-child(4){animation-delay:.28s}.m3-panel .m3-rows>:nth-child(5){animation-delay:.32s}.m3-panel .m3-rows>:nth-child(6){animation-delay:.36s}.m3-panel .m3-rows>:nth-child(n+7){animation-delay:.4s}
+.m3-cells i{animation:m3pop .4s cubic-bezier(.2,1.3,.3,1) both;animation-delay:calc(var(--k,0) * 7ms + .15s)}
+.m3-cells i.k{animation:m3pop .4s cubic-bezier(.2,1.3,.3,1) both,m3pulse 1.6s 1s ease-in-out infinite}
+@keyframes m3pulse{50%{box-shadow:0 0 0 4px rgba(244,123,32,.25)}}
+.m3-row{transition:border-color .2s,background .2s,transform .15s}.m3-row:hover{transform:translateX(2px)}
+@media (prefers-reduced-motion:reduce){.m3-co,.m3-co>*,.m3-panel *,.m3-cells i,.m3-lead line{animation:none!important}}
+@media (max-width:760px){.m3-co{width:min(330px,calc(100% - 20px))}.m3-tip{display:none}}
 .m3-cells i.k{outline:2px solid ${OR};outline-offset:1px}
 @media (max-width:760px){.m3-pal{top:auto;bottom:10px;left:10px;right:10px;width:auto;max-height:150px;flex-direction:row;flex-wrap:wrap}.m3-pal h4,.m3-pal p{display:none}.m3-pal button{width:auto;flex:1 1 30%;padding:5px}.m3-pal button small{display:none}.m3-edbar{left:10px;right:10px;bottom:170px;font-size:12px}.m3.edit .m3-panel{top:60px;left:56px;max-height:calc(100% - 300px);min-height:0}.m3.edit .m3-tools{top:60px}.m3-edbar .k{display:none}.m3-edit span{display:none}}
 `;
@@ -562,7 +610,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function hit(g, w, h, d, y, k, it) { const m = new T.Mesh(G.box, M.hit); m.scale.set(w, h, d); m.position.y = y; m.userData.k = k; m.userData.eid = it.id; g.add(m); pick.push(m); return m; }
   function buildWH() {
     if (WH) { scene.remove(WH); WH.traverse(o => { if (o.isInstancedMesh) o.dispose(); }); }
-    WH = new T.Group(); scene.add(WH);
+    WH = new T.Group(); scene.add(WH); RX = []; FOC = null; HOV = null; SCAN = null; BACK.length = 0; FADE.length = 0; if (root) { callout(false); const tp = $('.m3-tip'); tp && tp.classList.remove('on'); }
     const W = L.W, Dd = L.D, hw = W / 2, hd = Dd / 2;
     // pavimento in cemento
     bx(WH, W, .48, Dd, 0xe2ded7, 0, 0, 0);
@@ -611,8 +659,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function palletStack(B, x, y, z, f, col, maxL, id, low, rot) {
     const tint = low ? mixC(0xffffff, 0xf0603a, .6) : mixC(0xffffff, col, .3);
     B.add('palT', G.box, mat(0xcfa56f), m4(x, y + .13, z, .8, .025, 1.2), null, id);
-    for (const dx of [-.35, 0, .35]) B.add('palB', G.box, mat(0xb98d58), m4(x + dx, y + .06, z, .1, .1, 1.2));
-    for (const dz of [-.55, 0, .55]) B.add('palS', G.box, mat(0xc49864), m4(x, y + .012, z + dz, .8, .022, .1));
+    for (const dx of [-.35, 0, .35]) B.add('palB', G.box, mat(0xb98d58), m4(x + dx, y + .06, z, .1, .1, 1.2), null, id);
+    for (const dz of [-.55, 0, .55]) B.add('palS', G.box, mat(0xc49864), m4(x, y + .012, z + dz, .8, .022, .1), null, id);
     if (f <= 0) return 0;
     const per = 6, n = Math.max(1, Math.round(f * maxL * per)); let k = 0;
     for (let l = 0; l < maxL && k < n; l++) for (let i = 0; i < per && k < n; i++, k++) {
@@ -828,9 +876,20 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     cam.position.set(CAM.tx + CAM.dist * sp * Math.sin(CAM.az), CAM.ty + CAM.dist * cp, CAM.tz + CAM.dist * sp * Math.cos(CAM.az));
     cam.lookAt(CAM.tx, CAM.ty, CAM.tz);
   }
-  function fly(o) { Object.assign(GOAL, { ty: 0 }, o); }
+  let FA = null;
+  function fly(o) {
+    Object.assign(GOAL, { ty: 0 }, o); const to = { ...GOAL }, d = Math.hypot(to.tx - CAM.tx, to.tz - CAM.tz), dz = Math.abs(Math.log(Math.max(1, to.dist) / Math.max(1, CAM.dist)));
+    let da = to.az - CAM.az; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    FA = { from: { ...CAM }, to, da, t: 0, dur: clamp(.85 + d / 140 + dz * .3 + Math.abs(da) * .15, .85, 2.3), arc: clamp(d * .22, 0, 45) * (to.dist < 40 || CAM.dist < 40 ? 1 : .4) };
+  }
+  const flyStop = () => { if (FA) { FA = null; Object.assign(GOAL, CAM); } };
   function flyT(t) { if (t) fly({ tx: t.x, tz: t.z, dist: t.dist, az: t.az, pol: t.pol }); }
   function stepCam(dt) {
+    if (FA) { FA.t = Math.min(1, FA.t + dt / FA.dur); const u = ease(FA.t), f = FA.from, t2 = FA.to;
+      CAM.tx = f.tx + (t2.tx - f.tx) * u; CAM.tz = f.tz + (t2.tz - f.tz) * u; CAM.ty = (f.ty || 0) + ((t2.ty || 0) - (f.ty || 0)) * u; CAM.az = f.az + FA.da * u; CAM.pol = f.pol + (t2.pol - f.pol) * u;
+      CAM.dist = Math.exp(Math.log(f.dist) + (Math.log(t2.dist) - Math.log(f.dist)) * u) + FA.arc * Math.sin(Math.PI * FA.t);
+      if (FA.t >= 1) { FA = null; Object.assign(CAM, { tx: t2.tx, tz: t2.tz, ty: t2.ty || 0, az: t2.az, pol: t2.pol, dist: t2.dist }); }
+      applyCam(); return; }
     const k = 1 - Math.exp(-dt * 3.2);
     let da = GOAL.az - CAM.az; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
     CAM.az += da * k; CAM.tx += (GOAL.tx - CAM.tx) * k; CAM.ty += ((GOAL.ty || 0) - CAM.ty) * k; CAM.tz += (GOAL.tz - CAM.tz) * k; CAM.dist += (GOAL.dist - CAM.dist) * k; CAM.pol += (GOAL.pol - CAM.pol) * k;
@@ -840,11 +899,12 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function rackView(it, cell) {
     const g = rackG(it.id); if (!g) return; g.updateMatrixWorld();
     const th = it.r * Math.PI / 2, len = rackLen(it);
-    if (cell) { const c = cell.clone(); c.y += .7; const p = g.localToWorld(c); fly({ tx: p.x, ty: p.y, tz: p.z, dist: 7.5, az: th - 1.22, pol: 1.32 }); }
-    else { const p = g.localToWorld(new T.Vector3(0, 0, rackDep(it) / 2 + 1.7)); fly({ tx: p.x, ty: 2.2, tz: p.z, dist: Math.max(16, len * .62), az: th - 1.05, pol: 1.2 }); }
+    if (cell) { const c = cell.clone(); c.y += .75; c.z += it.k === 'pallet' ? .55 : .25; const p = g.localToWorld(c); fly({ tx: p.x, ty: p.y, tz: p.z, dist: it.k === 'pallet' ? 8 : 5.5, az: th - 1.15, pol: 1.2 }); }
+    else { const p = g.localToWorld(new T.Vector3(0, 0, rackDep(it) / 2 + 1.7)); fly({ tx: p.x, ty: 2.4, tz: p.z, dist: Math.max(20, len * .95), az: th - .55, pol: 1.02 }); }
   }
   function cellLocal(it, b, l) { const bw = it.bw || KIND[it.k].bw, len = rackLen(it), lh = rackLh(it), pal = it.k === 'pallet'; const y = pal ? (l === 0 ? .5 : .6 + l * lh) : .6 + l * lh; return new T.Vector3(-len / 2 + b * bw + bw / 2, y, 0); }
-  function highlightCell(it, b, l) {
+  function highlightCell(it, b, l) { return focusCell(it, b, l, null, { pull: false, co: false }); }
+  function highlightCellOld(it, b, l) {
     const g = rackG(it.id); if (!g || !hiMesh) return; g.updateMatrixWorld();
     const bw = it.bw || KIND[it.k].bw, lh = rackLh(it), c = cellLocal(it, b, l); c.y += (it.k === 'pallet' ? Math.min(lh, 1.6) : lh) / 2;
     const p = g.localToWorld(c); hiMesh.position.copy(p); hiMesh.rotation.y = it.r * Math.PI / 2; hiMesh.scale.set(bw - .1, (it.k === 'pallet' ? Math.min(lh, 1.6) : lh) - .1, rackDep(it) + .2); hiMesh.visible = true;
@@ -1045,6 +1105,153 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       <div class="m3-h4">Rifornimenti <em>${v.s.length}</em></div><div class="m3-tl m3-tl2">${v.s.slice().reverse().slice(0, 12).map(r => `<div><b>${esc(C.dIt(r.data))}</b><span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></div>`).join('') || '<div class="m3-empty">Nessun rifornimento registrato</div>'}</div></div>`;
   }
 
+
+  /* ---------------- messa a fuoco di un vano (v275): volo, estrazione, raggi X, scheda ancorata, verifica ---------------- */
+  const ease = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+  const easeOut = u => 1 - Math.pow(1 - u, 3);
+  const easeBack = u => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2); };
+  let FOC = null, BACK = [], HOV = null, SCAN = null;
+  // istanze (pallet, colli, film, cassette) che appartengono a un articolo dentro uno scaffale
+  function cellInsts(g, artId) {
+    const out = []; g.children.forEach(im => { if (!im.isInstancedMesh || !im.userData.ids) return; im.userData.ids.forEach((id, i) => { if (id === artId) { const m = new T.Matrix4(); im.getMatrixAt(i, m); out.push({ im, i, m0: m }); } }); });
+    return out;
+  }
+  function setOff(list, dy, dz) { const m = new T.Matrix4(), done = new Set(); list.forEach(x => { m.copy(x.m0); m.elements[13] += dy; m.elements[14] += dz; x.im.setMatrixAt(x.i, m); done.add(x.im); }); done.forEach(im => { im.instanceMatrix.needsUpdate = true; im.boundingSphere = null; }); }
+  // staffe d'angolo che inquadrano il vano (sempre visibili, sopra a tutto)
+  function brackets(color, op) {
+    const im = new T.InstancedMesh(G.box, new T.MeshBasicMaterial({ color, transparent: true, opacity: op, depthTest: false, depthWrite: false }), 24); im.renderOrder = 20; im.frustumCulled = false;
+    const fill = new T.Mesh(G.box, new T.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthTest: false, depthWrite: false })); fill.renderOrder = 19;
+    const grp = new T.Group(); grp.add(im, fill); grp.visible = false; WH.add(grp); OWN.push(im.material, fill.material);
+    return { grp, im, fill, set(w, h, d) { const L2 = Math.min(.28, Math.min(w, h, d) * .32), t = .035; let k = 0; for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) { const x = sx * w / 2, y = sy * h / 2, z = sz * d / 2; im.setMatrixAt(k++, m4(x - sx * L2 / 2, y, z, L2, t, t)); im.setMatrixAt(k++, m4(x, y - sy * L2 / 2, z, t, L2, t)); im.setMatrixAt(k++, m4(x, y, z - sz * L2 / 2, t, t, L2)); } im.instanceMatrix.needsUpdate = true; fill.scale.set(w, h, d); } };
+  }
+  function cellBox(it, b, l) {
+    const bw = it.bw || KIND[it.k].bw, lh = rackLh(it), dep = rackDep(it), pal = it.k === 'pallet', c = cellLocal(it, b, l), h = pal ? Math.min(lh, 1.65) - .12 : lh - .08;
+    c.y += h / 2 + (pal ? .02 : .02); return { c, w: bw - .14, h, d: dep + .16 };
+  }
+  function focusCell(it, b, l, artId, o) {
+    o = o || {}; const g = rackG(it.id); if (!g) return;
+    if (FOC && FOC.it === it && FOC.b === b && FOC.l === l && FOC.art === artId) { if (o.co !== false) FOC.co = 1; return; }
+    unfocus(); g.updateMatrixWorld();
+    const bx2 = cellBox(it, b, l), br = brackets(0xf47b20, 1); br.set(bx2.w, bx2.h, bx2.d); br.grp.visible = true;
+    const pull = o.pull !== false && artId ? (it.k === 'pallet' ? .62 : .3) : 0;
+    FOC = { it, b, l, art: artId, g, br, bx: bx2, insts: artId ? cellInsts(g, artId) : [], u: 0, pull, co: o.co !== false && !!artId, t0: performance.now() / 1000, xr: [] };
+    placeFoc(0); if (FOC.co) callout(true);
+  }
+  function placeFoc(off) {
+    if (!FOC) return; const { g, it, bx } = FOC, p = bx.c.clone(); p.z += off; p.y += off * .08; g.updateMatrixWorld(); g.localToWorld(p);
+    FOC.br.grp.position.copy(p); FOC.br.grp.rotation.y = it.r * Math.PI / 2; FOC.wp = p;
+  }
+  function unfocus() {
+    if (!FOC) return; const F = FOC; FOC = null;
+    if (F.insts.length && F.cur) BACK.push({ insts: F.insts, from: F.cur, t: 0 });
+    WH && WH.remove(F.br.grp); xrayOff(F.xr); callout(false);
+  }
+  // scaffali tra la camera e il vano: diventano trasparenti
+  let RX = [];
+  function xrayRack(it) {
+    xrayOff(RX); RX = []; const g = rackG(it.id); if (!g) return; g.updateMatrixWorld(); const c = g.localToWorld(new T.Vector3(0, 2, 0));
+    RX = xrayList(c, g);
+  }
+  function xrayList(tgtW, skip) {
+    const out = [], sp = Math.sin(GOAL.pol), cp = Math.cos(GOAL.pol), camP = new T.Vector3(GOAL.tx + GOAL.dist * sp * Math.sin(GOAL.az), (GOAL.ty || 0) + GOAL.dist * cp, GOAL.tz + GOAL.dist * sp * Math.cos(GOAL.az));
+    const dir = tgtW.clone().sub(camP), len = dir.length(); dir.normalize(); const ray = new T.Ray(camP, dir), hitP = new T.Vector3();
+    WH.children.forEach(c => { if (!c.userData.eid || c === skip) return; const it = L.items.find(i => i.id === c.userData.eid); if (!it || it.t !== 'rack') return; const hm = c.children.find(x => x.userData.k && x.userData.k.t === 'rack'); if (!hm) return; hm.updateMatrixWorld(); const bb = new T.Box3().setFromObject(hm); bb.expandByScalar(.3); if (ray.intersectBox(bb, hitP) && hitP.distanceTo(camP) < len - .3) out.push(xrayOn(c)); });
+    return out;
+  }
+  function xrayFor() {
+    if (!FOC) return; xrayOff(FOC.xr); FOC.xr = []; xrayOff(RX); RX = []; FOC.xr = xrayList(FOC.wp.clone(), FOC.g); return;
+    const sp = Math.sin(GOAL.pol), cp = Math.cos(GOAL.pol), camP = new T.Vector3(GOAL.tx + GOAL.dist * sp * Math.sin(GOAL.az), (GOAL.ty || 0) + GOAL.dist * cp, GOAL.tz + GOAL.dist * sp * Math.cos(GOAL.az));
+    const tgt = FOC.wp.clone(), dir = tgt.clone().sub(camP), len = dir.length(); dir.normalize(); const ray = new T.Ray(camP, dir), hitP = new T.Vector3();
+    WH.children.forEach(c => { if (!c.userData.eid || c === FOC.g) return; const it = L.items.find(i => i.id === c.userData.eid); if (!it || it.t !== 'rack') return; const hm = c.children.find(x => x.userData.k && x.userData.k.t === 'rack'); if (!hm) return; hm.updateMatrixWorld(); const bb = new T.Box3().setFromObject(hm); bb.expandByScalar(.3); if (ray.intersectBox(bb, hitP) && hitP.distanceTo(camP) < len - .3) FOC.xr.push(xrayOn(c)); });
+  }
+  function xrayOn(grp) {
+    const ex = FADE.findIndex(r => r.grp === grp); if (ex >= 0) { const r = FADE.splice(ex, 1)[0]; r.dir = 1; return r; }
+    const rec = { grp, mats: [], u: 0, dir: 1 };
+    grp.traverse(o => { if (!o.isMesh || o.material === M.hit || o.userData.xr0) return; const src = o.material, arr = Array.isArray(src) ? src : [src]; const cl = arr.map(m => { const c = m.clone(); c.transparent = true; c.depthWrite = false; c.opacity = m.opacity; c.userData.o0 = m.opacity; return c; }); o.userData.xr0 = src; o.material = Array.isArray(src) ? cl : cl[0]; rec.mats.push(...cl); o.castShadow = false; });
+    return rec;
+  }
+  function xrayOff(list) { (list || []).forEach(r => { r.dir = -1; FADE.push(r); }); }
+  const FADE = [];
+  function xrayRestore(r) { r.grp.traverse(o => { if (o.userData.xr0) { o.material = o.userData.xr0; delete o.userData.xr0; o.castShadow = true; } }); r.mats.forEach(m => m.dispose()); }
+  function focusTick(t, dt) {
+    if (FOC) {
+      FOC.u = Math.min(1, FOC.u + dt / .75); const e = easeBack(FOC.u);
+      if (FOC.insts.length && FOC.pull) { const dz = FOC.pull * e, dy = .05 * Math.sin(Math.PI * Math.min(1, FOC.u * 1.2)); FOC.cur = { dy, dz }; setOff(FOC.insts, dy, dz); placeFoc(dz); }
+      const s = 1 + (1 - easeOut(Math.min(1, FOC.u * 1.4))) * .35 + Math.sin(t * 3) * .012; FOC.br.grp.scale.set(s, s, s);
+      FOC.br.im.material.opacity = Math.min(1, FOC.u * 2); FOC.br.fill.material.opacity = .06 + Math.sin(t * 3) * .03;
+      FOC.xr.forEach(r => { r.u = Math.min(1, r.u + dt / .45); r.mats.forEach(m => { m.opacity = 1 - .86 * easeOut(r.u); }); });
+    }
+    RX.forEach(r => { r.u = Math.min(1, r.u + dt / .45); r.mats.forEach(m => { m.opacity = 1 - .8 * easeOut(r.u); }); });
+    for (let i = BACK.length - 1; i >= 0; i--) { const x = BACK[i]; x.t = Math.min(1, x.t + dt / .4); const e = 1 - ease(x.t); setOff(x.insts, x.from.dy * e, x.from.dz * e); if (x.t >= 1) BACK.splice(i, 1); }
+    for (let i = FADE.length - 1; i >= 0; i--) { const r = FADE[i]; r.u = Math.max(0, r.u - dt / .35); r.mats.forEach(m => { m.opacity = 1 - .86 * easeOut(r.u); }); if (r.u <= 0) { xrayRestore(r); FADE.splice(i, 1); } }
+    if (HOV && HOV.br) { HOV.br.fill.material.opacity = .05; }
+    if (SCAN) { SCAN.u += dt / SCAN.dur; const u = Math.min(1, SCAN.u); if (SCAN.kind === 'rack') SCAN.m.position.x = -SCAN.len / 2 + SCAN.len * ease(u); else { SCAN.m.position.y = SCAN.y0 + SCAN.h * (.5 - .5 * Math.cos(u * Math.PI * 2)); } SCAN.m.material.opacity = Math.sin(Math.PI * u) * .95; if (u >= 1) { SCAN.p.remove(SCAN.m); SCAN = null; } }
+    updCallout(t);
+  }
+  // passata di luce lungo il fronte dello scaffale quando lo selezioni
+  function glowTex() { if (TX.glow) return TX.glow; TX.glow = cvTex(128, 8, (gx, w, h) => { const gr = gx.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(255,140,40,0)'); gr.addColorStop(.5, 'rgba(255,190,110,1)'); gr.addColorStop(1, 'rgba(255,140,40,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, w, h); }); return TX.glow; }
+  function scanRack(it) {
+    const g = rackG(it.id); if (!g || SCAN) return; const len = rackLen(it), H = it.k === 'pallet' ? (it.lv - 1) * rackLh(it) + 1.4 : it.lv * rackLh(it) + .5;
+    const m2 = new T.MeshBasicMaterial({ map: glowTex(), transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false }); OWN.push(m2);
+    const m = new T.Mesh(G.plane, m2); m.scale.set(1.6, H, 1); m.position.set(-len / 2, .5 + H / 2, rackDep(it) / 2 + .12); g.add(m);
+    SCAN = { kind: 'rack', m, p: g, len, u: 0, dur: 1.5 };
+  }
+  // laser di verifica sul vano: una riga rossa che scorre su e giù
+  function scanCell() {
+    if (!FOC || SCAN) return; const { g, bx } = FOC;
+    const lt = TX.laser || (TX.laser = cvTex(8, 64, (gx, w, h) => { const gr = gx.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,40,30,0)'); gr.addColorStop(.5, 'rgba(255,60,40,1)'); gr.addColorStop(1, 'rgba(255,40,30,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, w, h); }));
+    const m2 = new T.MeshBasicMaterial({ map: lt, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, depthTest: false }); OWN.push(m2);
+    const m = new T.Mesh(G.plane, m2); m.renderOrder = 21; m.scale.set(bx.w + .1, .14, 1); m.position.set(bx.c.x, bx.c.y - bx.h / 2, bx.c.z + bx.d / 2 + (FOC.cur ? FOC.cur.dz : 0) + .02); g.add(m);
+    SCAN = { kind: 'cell', m, p: g, y0: bx.c.y - bx.h / 2, h: bx.h, u: 0, dur: 1.6 };
+  }
+  // passaggio del mouse: staffe chiare sul vano e anteprima vicino al puntatore
+  function hoverArt(id, cx, cy) {
+    const tip = $('.m3-tip'); if (!tip) return;
+    if (!id || EDIT || (FOC && FOC.art === id)) { if (HOV) { WH && WH.remove(HOV.br.grp); HOV = null; } tip.classList.remove('on'); return; }
+    const x = D.arts.find(a => a.id === id), p2 = P.byArt.get(id); if (!x || !p2) return;
+    if (!HOV || HOV.id !== id) { if (HOV) WH.remove(HOV.br.grp); const g = rackG(p2.rk.id); if (!g) return; const br = brackets(0xffffff, .95), bb = cellBox(p2.rk, p2.b, p2.l); br.set(bb.w, bb.h, bb.d); g.updateMatrixWorld(); const wp = g.localToWorld(bb.c.clone()); br.grp.position.copy(wp); br.grp.rotation.y = p2.rk.r * Math.PI / 2; br.grp.visible = true; HOV = { id, br };
+      tip.innerHTML = `<b>${esc(x.a.descrizione)}</b><span><i class="m3-loc">${esc(p2.code)}</i>${N(x.g)} ${esc(x.a.um || 'pz')}${x.low ? ' · <em>sotto scorta</em>' : x.out ? ' · esaurito' : ''}</span>`; }
+    const rc = root.getBoundingClientRect(); tip.style.transform = `translate(${cx - rc.left + 16}px,${cy - rc.top + 18}px)`; tip.classList.add('on');
+  }
+  // scheda ancorata al vano, con linea di collegamento
+  function callout(on) {
+    const co = $('.m3-co'), ld = $('.m3-lead'); if (!co) return;
+    if (!on || !FOC || !FOC.art) { co.classList.remove('on'); ld.classList.remove('on'); return; }
+    const x = D.arts.find(a => a.id === FOC.art), p2 = P.byArt.get(FOC.art); if (!x || !p2) return;
+    const last = C.mov().filter(m => m.articolo === x.id).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.creato || '').localeCompare(String(a.creato || '')))[0];
+    const ref = Math.max(x.s * 3, x.g, 1), pg = clamp(Math.max(0, x.g) / ref, 0, 1), ps = x.s ? clamp(x.s / ref, 0, 1) : 0;
+    const st = x.out ? ['n', 'Esaurito'] : x.low ? ['a', 'Sotto scorta'] : ['g', 'Disponibile'];
+    co.innerHTML = `<div class="m3-coh"><span class="m3-loc">${ic('pin', ' style="width:11px;height:11px"')}${esc(p2.code)}</span><span class="m3-chip ${st[0]}"><i></i>${st[1]}</span><button type="button" data-m3="pclose" aria-label="Chiudi">${ic('x')}</button></div>
+      <b class="m3-cot">${esc(x.a.descrizione)}</b><small class="m3-cos">${esc([x.a.codice, x.a.codForn ? 'forn. ' + x.a.codForn : '', x.cat].filter(Boolean).join(' · '))}</small>
+      <div class="m3-coq"><b data-cnt="${x.g}">0</b><span>${esc(x.a.um || 'pz')}</span>${x.val ? `<em>${C.eur0(x.val)}</em>` : ''}</div>
+      <div class="m3-cob"><u style="--w:${(pg * 100).toFixed(1)}%"></u>${x.s ? `<i style="left:${(ps * 100).toFixed(1)}%" title="scorta minima"></i>` : ''}</div>
+      <small class="m3-cos">${x.s ? `scorta minima ${N(x.s)} ${esc(x.a.um || '')}` : 'nessuna scorta minima'}${last ? ` · ultimo movimento ${esc(C.dIt(last.data))} (${C.num(last.quantita) > 0 ? '+' : ''}${N(C.num(last.quantita))})` : ''}</small>
+      <div class="m3-coa">${canW() ? `<button type="button" class="pri" data-gx="mov-art" data-id="${esc(x.id)}">±<span>Carico / scarico</span></button>` : ''}<button type="button" data-m3="verify">${ic('check')}<span>Verifica</span></button>${canEdit() ? `<button type="button" data-loc3="${esc(x.id)}">${ic('pin')}<span>Sposta</span></button>` : ''}</div>`;
+    co.classList.remove('on'); void co.offsetWidth; co.classList.add('on'); ld.classList.add('on'); co._t0 = performance.now();
+    const n = $('[data-cnt]', co); if (n) { const v = +n.dataset.cnt, d = Math.abs(v % 1) > .001 ? 1 : 0, t0 = performance.now(); const step = () => { const u = Math.min(1, (performance.now() - t0) / 900); n.textContent = (v * easeOut(u)).toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d }); if (u < 1 && n.isConnected) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+  }
+  function updCallout(t) {
+    const co = $('.m3-co'), ld = $('.m3-lead'); if (!co || !co.classList.contains('on') || !FOC || !FOC.wp) return;
+    const w = R.domElement.clientWidth, h = R.domElement.clientHeight, v = FOC.wp.clone(); v.y += FOC.bx.h * .1; v.project(cam);
+    const px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h, cw = co.offsetWidth, chh = co.offsetHeight, panelW = root.classList.contains('pn') && w > 760 ? 372 : 0;
+    let x = px + 70, y = py - chh - 50; if (x + cw > w - panelW - 16) x = px - cw - 70; x = clamp(x, 16, w - panelW - cw - 16); y = clamp(y, 76, h - chh - 120);
+    if (w <= 760) { x = (w - cw) / 2; y = h - chh - 120; }
+    co.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
+    const ax = x < px ? x + cw : x, ay = clamp(py, y + 22, y + chh - 22);
+    const ln = $('line', ld), c1 = $('circle', ld), c2 = $$('circle', ld)[1]; ln.setAttribute('x1', ax); ln.setAttribute('y1', ay); ln.setAttribute('x2', px); ln.setAttribute('y2', py);
+    c1.setAttribute('cx', px); c1.setAttribute('cy', py); c2.setAttribute('cx', px); c2.setAttribute('cy', py); c2.setAttribute('r', 6 + (t * 14 % 14)); c2.setAttribute('opacity', 1 - (t * 14 % 14) / 14);
+    ld.style.opacity = v.z < 1 ? 1 : 0;
+  }
+  function verify() {
+    if (!FOC || !FOC.art) return; scanCell(); const co = $('.m3-co'), x = D.arts.find(a => a.id === FOC.art); if (!co || !x) return;
+    const b = $('[data-m3="verify"]', co); if (b) { b.classList.add('busy'); b.innerHTML = `<i class="m3-spin"></i><span>Verifica…</span>`; }
+    setTimeout(() => { if (!FOC || FOC.art !== x.id) return; const b2 = $('[data-m3="verify"]', co); if (b2) { b2.classList.remove('busy'); b2.classList.add('ok'); b2.innerHTML = `${ic('check')}<span>Verificato</span>`; } toast(`${x.a.descrizione}: a sistema ${N(x.g)} ${x.a.um || 'pz'} in ${P.byArt.get(x.id).code}${x.low ? ' · sotto scorta' : ''}`); }, 1650);
+  }
+  // numeri del pannello che salgono da zero
+  function countUp(el) {
+    $$('.m3-st b', el).forEach(b => { const tn = b.firstChild; if (!tn || tn.nodeType !== 3) return; const m = /^([^\d-]*)(-?\d{1,3}(?:\.\d{3})*(?:,\d+)?|-?\d+(?:,\d+)?)(\s*%?)$/.exec(tn.textContent.trim()); if (!m) return; const raw = m[2], d = raw.includes(',') ? raw.split(',')[1].length : 0, v = parseFloat(raw.replace(/\./g, '').replace(',', '.')); if (!isFinite(v) || !v) return; const t0 = performance.now(); const step = () => { const u = Math.min(1, (performance.now() - t0) / 850); tn.textContent = m[1] + (v * easeOut(u)).toLocaleString('it-IT', { minimumFractionDigits: d, maximumFractionDigits: d }) + m[3]; if (u < 1 && tn.isConnected) requestAnimationFrame(step); }; requestAnimationFrame(step); });
+  }
+
   /* ---------------- animazioni ---------------- */
   let o3 = null, viewOff = 0;
   function animate(t, dt) {
@@ -1062,12 +1269,13 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       else if (m.t === 'belt') { for (let i = 0; i < m.n; i++) { const u = (t * m.sp + i / m.n) % 1; o3.position.set(-m.len / 2 + .5 + u * (m.len - 1), 1.22 + .2, 0); o3.rotation.set(0, (i % 3) * .2, 0); o3.scale.set(.55, .4, .5); o3.updateMatrix(); m.im.setMatrixAt(i, o3.matrix); } m.im.instanceMatrix.needsUpdate = true; }
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
+    focusTick(t, dt);
   }
 
   /* ---------------- interfaccia ---------------- */
   function html() {
     const multi = C.magMulti();
-    return `<canvas class="m3-c"></canvas><div class="m3-lbs"></div>
+    return `<canvas class="m3-c"></canvas><div class="m3-lbs"></div><svg class="m3-lead"><line/><circle r="4"/><circle r="6"/></svg><div class="m3-co"></div><div class="m3-tip"></div>
     <header class="m3-top">
       <div class="m3-brand"><i class="m3-logo">${ic('logo')}</i><b>${esc(C.orgName())}</b></div>
       <nav class="m3-tabs"><button type="button" class="on">${ic('cube')}Magazzino 3D</button><button type="button" data-m3="close">${ic('grid')}Gestionale</button></nav>
@@ -1200,8 +1408,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     }
     el.innerHTML = h;
     root.classList.remove('np'); root.classList.add('pn');
-    requestAnimationFrame(() => $$('.m3-bar u', el).forEach(u => { u.style.width = (u.dataset.w * 100) + '%'; }));
-    const hlEl = $('.m3-row.k', el); if (hlEl) setTimeout(() => hlEl.scrollIntoView({ block: 'center', behavior: 'smooth' }), 150);
+    requestAnimationFrame(() => $$('.m3-bar u', el).forEach(u => { u.style.width = (u.dataset.w * 100) + '%'; })); countUp(el); $$('.m3-cells i', el).forEach((c, i) => c.style.setProperty('--k', i));
+    const hlEl = $('.m3-row.k', el); if (hlEl) setTimeout(() => { const pb = hlEl.closest('.m3-pb'); if (pb) pb.scrollTo({ top: Math.max(0, hlEl.offsetTop - pb.offsetTop - pb.clientHeight / 2 + hlEl.offsetHeight / 2), behavior: 'smooth' }); }, 150);
   }
 
   function zoneChip(z) {
@@ -1213,10 +1421,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
   function select(k, noFly) {
     if (EDIT) return;
-    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false;
+    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
-    else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { highlightCell(it, p2.b, p2.l); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); } } else if (!noFly) rackView(it); } }
+    else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
     else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x - 2, ty: 1.5, tz: F.st.z, dist: 40, az: -0.85, pol: 1.02 }); } }
     else if (k.t === 'veh') { zoneChip('flotta'); const f = fleetVeh.find(x => x.v.p === k.p); if (f && !noFly) { const p2 = new T.Vector3(); f.o.getWorldPosition(p2); fly({ tx: p2.x, ty: 1, tz: p2.z, dist: 21, az: f.o.rotation.y + Math.PI / 2 - .7, pol: .86 }); } }
     else if (k.t === 'truck') { zoneChip('spe'); const t = trucks[k.i]; if (t && !noFly) { const p2 = new T.Vector3(); t.g.getWorldPosition(p2); fly({ tx: p2.x, tz: p2.z, dist: 62, az: t.road ? -0.35 : 0.65, pol: .96 }); } }
@@ -1393,7 +1601,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   let drag = null, pinch = null; const pts = new Map();
   function onDown(e) {
     try { R.domElement.setPointerCapture(e.pointerId); } catch {} pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: GOAL.dist }; drag = null; return; }
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: GOAL.dist }; flyStop(); drag = null; return; }
     if (EDIT && e.button === 0 && !e.shiftKey) {
       const id = edPickAt(e.clientX, e.clientY);
       if (id) { const it = L.items.find(i => i.id === id), gp = groundAt(e.clientX, e.clientY); if (it && gp) { if (EDIT.sel !== id) { EDIT.sel = id; edPanel(); } drag = { x: e.clientX, y: e.clientY, moved: 0, item: it, off: { x: gp.x - it.x, z: gp.z - it.z }, orig: JSON.stringify(L), g: WH.children.find(c => c.userData.eid === id) }; return; } }
@@ -1405,7 +1613,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (pinch && pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); GOAL.dist = clamp(pinch.dist * pinch.d / Math.max(20, d), 12, 420); stopTour(); return; }
     if (!drag) { needPick = { x: e.clientX, y: e.clientY, hover: 1 }; return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
-    if (drag.moved > 4) { R.domElement.classList.add('drag'); stopTour(); }
+    if (drag.moved > 4) { R.domElement.classList.add('drag'); stopTour(); if (!drag.item) flyStop(); }
     if (drag.item) {
       if (drag.moved < 5) return; const gp = groundAt(e.clientX, e.clientY); if (!gp) return; const it = drag.item;
       if (it.t === 'dock') dockSnap(it, gp.x - drag.off.x, gp.z - drag.off.z); else { it.x = snap(gp.x - drag.off.x); it.z = snap(gp.z - drag.off.z); inside(it); }
@@ -1423,14 +1631,14 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     else if (drag && drag.moved < 6) { if (EDIT) { EDIT.sel = null; edPanel(); } else needPick = { x: e.clientX, y: e.clientY }; }
     drag = null; R.domElement.classList.remove('drag');
   }
-  function onWheel(e) { e.preventDefault(); GOAL.dist = clamp(GOAL.dist * Math.exp(e.deltaY * .0012), 12, 420); stopTour(); }
+  function onWheel(e) { e.preventDefault(); flyStop(); GOAL.dist = clamp(GOAL.dist * Math.exp(e.deltaY * .0012), 12, 420); stopTour(); }
   const ray = new (function () { this.r = null; })();
   function doPick(p) {
     if (!ray.r) ray.r = new T.Raycaster();
     const rc = R.domElement.getBoundingClientRect(), v = new T.Vector2((p.x - rc.left) / rc.width * 2 - 1, -(p.y - rc.top) / rc.height * 2 + 1);
     ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, truck: 1, veh: 1, rack: 2, dock: 3, belt: 3, desk: 3, fuel: 3, wall: 4, zone: 5 };
     const hit2 = H.slice(0, 8).filter(h2 => h2.object.userData.k).sort((a, b) => (PR[a.object.userData.k.t] - PR[b.object.userData.k.t]) || a.distance - b.distance)[0];
-    if (p.hover) { R.domElement.classList.toggle('hov', !!hit2 || !!EDIT); return; }
+    if (p.hover) { R.domElement.classList.toggle('hov', !!hit2 || !!EDIT); const kk = hit2 && hit2.object.userData.k; hoverArt(kk && kk.t === 'art' && matchMedia('(hover:hover)').matches ? hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId] : null, p.x, p.y); return; }
     if (EDIT || !hit2) return;
     const k = hit2.object.userData.k;
     if (k.t === 'art') { const id = hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId]; if (id) select({ t: 'rack', id: k.rack, art: id }); else select({ t: 'rack', id: k.rack }); return; }
@@ -1443,13 +1651,14 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (!t.closest('.m3-menu') && !t.closest('[data-m3="zones"]') && !t.closest('[data-m3="shots"]')) $$('.m3-menu.on').forEach(m => m.classList.remove('on'));
     if (!t.closest('.m3-search')) $('.m3-res').classList.remove('on');
     if (a === 'close') { if (EDIT && EDIT.dirty && !confirm('Uscire senza salvare le modifiche alla disposizione?')) return; EDIT = null; return close(); }
-    if (a === 'zin') { GOAL.dist = clamp(GOAL.dist * .75, 12, 420); stopTour(); return; }
-    if (a === 'zout') { GOAL.dist = clamp(GOAL.dist / .75, 12, 420); stopTour(); return; }
-    if (a === 'rl') { GOAL.az -= Math.PI / 4; stopTour(); return; }
-    if (a === 'rr') { GOAL.az += Math.PI / 4; stopTour(); return; }
+    if (a === 'zin') { flyStop(); GOAL.dist = clamp(GOAL.dist * .75, 12, 420); stopTour(); return; }
+    if (a === 'zout') { flyStop(); GOAL.dist = clamp(GOAL.dist / .75, 12, 420); stopTour(); return; }
+    if (a === 'rl') { flyStop(); GOAL.az -= Math.PI / 4; stopTour(); return; }
+    if (a === 'rr') { flyStop(); GOAL.az += Math.PI / 4; stopTour(); return; }
     if (a === 'home') { if (EDIT) return fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.15, az: -0.15, pol: .42 }); select({ t: 'zone', z: 'all' }); return; }
     if (a === 'play') { if (tourOn) stopTour(); else startTour(); return; }
-    if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else select(null); return; }
+    if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else if (t.closest('.m3-co')) { unfocus(); if (sel && sel.art) sel = { t: 'rack', id: sel.id }; } else select(null); return; }
+    if (a === 'verify') return verify();
     if (a === 'aim') { if (sel) select(sel); return; }
     if (a === 'edit') return enterEdit();
     if (a === 'gasadd') { if (C.gasAdd) C.gasAdd(); return; }
@@ -1573,7 +1782,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const zt = zoneTarget('all'); Object.assign(CAM, { ty: 0, tx: zt.x, tz: zt.z, dist: zt.dist * 1.6, az: -0.1, pol: .7 }); Object.assign(GOAL, { tx: zt.x, tz: zt.z, dist: zt.dist, az: zt.az, pol: zt.pol }); applyCam();
     const cv = R.domElement;
     cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointermove', onMove); cv.addEventListener('pointerup', onUp); cv.addEventListener('pointercancel', onUp);
-    cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => cv.classList.remove('hov'));
+    cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => { cv.classList.remove('hov'); hoverArt(null); });
     root.addEventListener('click', onClick); root.addEventListener('change', onChange);
     const inp = $('.m3-search input'); inp.addEventListener('input', () => search(inp.value)); inp.addEventListener('focus', () => { if (inp.value) search(inp.value); });
     const ms = $('.m3-sel'); if (ms) ms.addEventListener('change', () => { C.setMag(ms.value); });
