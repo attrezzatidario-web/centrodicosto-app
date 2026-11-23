@@ -1,4 +1,4 @@
-/* Magazzino 3D (v278) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v279) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -1117,26 +1117,26 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const ank = grp(knee, 0, -.42, 0); part(G.box, bt, 0, .035, .03, ank, [.13, .1, .22]); part(G.sph, bt, 0, .03, .13, ank, [.13, .1, .12]); part(G.box, dk, 0, -.008, .045, ank, [.138, .022, .28]); part(G.box, mat(0x3a332e), 0, .055, .16, ank, [.12, .05, .06]); return { hip, knee, ank }; };
     const L1 = leg(-1), R1 = leg(1);
     part(capG(.12, .14), pn, 0, .98, 0, root, [1, 1, .78], [0, 0, Math.PI / 2]);
-    part(G.cyl, dk, 0, 1.045, 0, root, [.37, .05, .27]); part(G.box, mat(0xb7bcc3), 0, 1.045, .135, root, [.06, .04, .012]);
-    part(G.box, dk, .19, 1.0, -.03, root, [.05, .12, .07]); part(G.cyl, dk, .2, 1.11, -.04, root, [.012, .12, .012]); part(G.box, mat(0xf47b20), .2, 1.04, .007, root, [.04, .03, .01], null, 1);
+    part(G.cyl, dk, 0, 1.045, 0, root, [.39, .055, .29]); part(G.box, mat(0xb7bcc3), 0, 1.045, .152, root, [.06, .04, .014]);
+    part(G.box, dk, .19, 1.0, -.03, root, [.05, .12, .07]); part(G.cyl, dk, .2, 1.11, -.04, root, [.012, .12, .012]); part(G.box, mat(0xf47b20), .2, 1.04, .01, root, [.04, .03, .012], null, 1);
     const spine = grp(root, 0, 1.02, 0);
     part(capG(.16, .26), sh, 0, .23, 0, spine, [1.05, 1, .72]);
     part(capG(.168, .2), vs, 0, .2, 0, spine, [1.07, 1, .77]);
-    for (const y of [.1, .23]) part(G.cyl, rf, 0, y, 0, spine, [.364, .035, .265], null, 1);
-    for (const s of [-1, 1]) { part(G.box, rf, s * .085, .33, .127, spine, [.035, .17, .012], null, 1); part(G.box, rf, s * .085, .3, -.127, spine, [.035, .22, .012], null, 1); }
-    part(G.box, mat(0xffffff), -.08, .3, .133, spine, [.065, .045, .01], null, 1); part(G.box, mat(0xf47b20), -.08, .312, .139, spine, [.065, .012, .004], null, 1);
+    for (const y of [.12, .25]) part(G.cyl, rf, 0, y, 0, spine, [.385, .04, .284], null, 1);
+    for (const s of [-1, 1]) { part(G.box, rf, s * .085, .34, .14, spine, [.036, .17, .014], null, 1); part(G.box, rf, s * .085, .31, -.14, spine, [.036, .22, .014], null, 1); }
+    part(G.box, mat(0xffffff), -.06, .3, .143, spine, [.06, .045, .012], null, 1); part(G.box, mat(0xf47b20), -.06, .313, .151, spine, [.06, .012, .006], null, 1);
     part(G.cyl, sk, 0, .53, 0, spine, [.095, .1, .095]);
     const hd = grp(spine, 0, .58, 0);
     part(G.sph, sk, 0, .1, .005, hd, [.215, .245, .225]);
-    part(G.sph, mat(HAIR[Math.floor(rr() * HAIR.length)]), 0, .115, -.03, hd, [.222, .2, .21]);
-    for (const s of [-1, 1]) { part(G.sph, mat(0x1d1f22), s * .042, .115, .1, hd, [.024, .028, .012], null, 1); part(G.box, mat(0x3a2e26), s * .042, .145, .103, hd, [.04, .008, .01], null, 1); part(G.sph, sk, s * .11, .1, 0, hd, [.035, .06, .045]); }
-    part(G.sph, sk, 0, .088, .113, hd, [.032, .042, .03], null, 1); part(G.box, mat(0xa0675a), 0, .045, .105, hd, [.045, .008, .01], null, 1);
+    part(G.box, mat(HAIR[Math.floor(rr() * HAIR.length)]), 0, .075, -.098, hd, [.15, .07, .03]);
+    for (const s of [-1, 1]) { part(G.sph, mat(0x1d1f22), s * .041, .115, .106, hd, [.026, .03, .02], null, 1); part(G.box, mat(0x3a2e26), s * .042, .147, .104, hd, [.042, .01, .016], [-.15, 0, 0], 1); part(G.sph, sk, s * .11, .1, 0, hd, [.035, .06, .045]); }
+    part(G.sph, sk, 0, .088, .113, hd, [.032, .042, .03], null, 1); part(G.box, mat(0xa0675a), 0, .047, .108, hd, [.045, .009, .014], null, 1);
     part(domeG(), hm, 0, .148, -.005, hd, [.27, .26, .285]); part(G.cyl, hm, 0, .15, -.005, hd, [.285, .018, .3]); part(G.box, hm, 0, .152, .14, hd, [.15, .016, .07]); part(G.box, hm, 0, .27, -.01, hd, [.035, .035, .22]);
-    part(G.box, mat(0xf47b20), 0, .2, .118, hd, [.06, .03, .01], [-.5, 0, 0], 1);
     const arm = s => { const sh2 = grp(spine, s * .21, .43, 0); part(G.sph, sh, 0, -.01, 0, sh2, [.125, .125, .125]); part(capG(.05, .19), sh, 0, -.14, 0, sh2); const el = grp(sh2, 0, -.29, 0); part(G.sph, sh, 0, 0, 0, el, [.095, .095, .095]); part(capG(.045, .19), sh, 0, -.13, 0, el); const wr = grp(el, 0, -.28, 0); part(G.sph, gl, 0, -.035, .01, wr, [.085, .115, .07]); part(G.sph, gl, s * -.035, -.02, .035, wr, [.035, .06, .035]); return { sh: sh2, el, wr }; };
     const LA = arm(-1), RA = arm(1);
     if (o.tool === 'tablet' || o.mode === 'scan') { part(G.box, dk, 0, -.06, .07, RA.wr, [.06, .045, .17]); part(G.box, mat(0xf47b20), 0, -.04, .02, RA.wr, [.07, .06, .06]); part(G.box, dk, .02, -.05, .1, LA.wr, [.22, .015, .3], [0, 0, .2]); part(G.box, mat(0x9fc9e8), .02, -.04, .1, LA.wr, [.19, .006, .26], [0, 0, .2], 1); }
-    const bl = part(G.plane, blobMat(), 0, .065, 0, g, [.75, .75, 1], [-Math.PI / 2, 0, 0], 1); bl.castShadow = false; bl.renderOrder = 1;
+    const bl = part(G.plane, blobMat(), 0, .095, 0, g, [.75, .75, 1], [-Math.PI / 2, 0, 0], 1); bl.castShadow = false; bl.renderOrder = 1;
+    g.traverse(e => { if (e.isMesh) { e.castShadow = false; e.receiveShadow = false; } });
     g.userData.rig = { root, spine, hd, hipL: L1.hip, hipR: R1.hip, knL: L1.knee, knR: R1.knee, anL: L1.ank, anR: R1.ank, shL: LA.sh, shR: RA.sh, elL: LA.el, elR: RA.el, wrL: LA.wr, wrR: RA.wr, ph: rr() * 6, amp: 0, mode: o.mode || 'walk', seed: rr() * 10, steer: 0, look: 0, lp: null, blob: bl };
     return g;
   }
@@ -1191,12 +1191,12 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     part(sideG('fkSide', [[-.78, .42], [.66, .42], [.66, .7], [.1, .7], [-.03, .99], [-.72, .99], [-.79, .9]], 1.04, .035), OR, 0, 0, 0, g);
     part(sideG('fkCW', [[-1.33, .17], [-.72, .17], [-.72, 1.07], [-1.06, 1.07], Object.assign([-1.33, .8], { q: [-1.33, 1.07] })], 1.1, .05), ST, 0, 0, 0, g);
     for (let i = 0; i < 5; i++) part(G.box, BK, 0, 1.03, -.62 + i * .09, g, [.56, .012, .035], null, 1);
-    part(G.box, mat(0x1d1f22), 0, .725, .37, g, [.9, .02, .54], null, 1); for (let i = 0; i < 5; i++) part(G.box, mat(0x2b2f35), 0, .738, .16 + i * .1, g, [.86, .008, .025], null, 1);
+    part(G.box, mat(0x1d1f22), 0, .748, .37, g, [.9, .024, .54], null, 1); for (let i = 0; i < 5; i++) part(G.box, mat(0x2b2f35), 0, .766, .16 + i * .1, g, [.86, .012, .025], null, 1);
     part(G.box, SEAT, 0, 1.1, -.42, g, [.52, .11, .46]); part(G.box, SEAT, 0, 1.39, -.67, g, [.5, .5, .1], [-.14, 0, 0]); part(G.box, SEAT, 0, 1.66, -.71, g, [.3, .12, .09], [-.14, 0, 0]);
     for (const s of [-1, 1]) part(G.box, SEAT, s * .29, 1.22, -.42, g, [.05, .06, .34]);
     part(G.box, mat(0xf47b20), .17, 1.36, -.6, g, [.05, .48, .012], [-.14, 0, 0], 1);
     part(G.box, DK, 0, .95, .6, g, [.88, .48, .14], [.2, 0, 0]);
-    part(G.box, new T.MeshBasicMaterial({ color: 0x8fe0b4 }), .14, 1.15, .52, g, [.16, .08, .008], [.2, 0, 0], 1);
+    part(G.box, new T.MeshBasicMaterial({ color: 0x8fe0b4 }), .14, 1.15, .508, g, [.16, .08, .012], [.2, 0, 0], 1);
     part(G.cyl, DK, 0, 1.2, .43, g, [.07, .42, .07], [.8, 0, 0]);
     const stw = grp(g, 0, 1.37, .28); stw.rotation.x = -.85; const spin = grp(stw, 0, 0, 0); part(torG(), BK, 0, 0, 0, spin, null, [Math.PI / 2, 0, 0]); part(G.box, BK, 0, 0, 0, spin, [.3, .02, .03]); part(G.sph, mat(0xd62b1f), .13, .03, 0, spin, [.05, .06, .05]);
     for (let i = 0; i < 3; i++) { part(G.cyl, BK, .3 + i * .05, 1.08, .5, g, [.018, .26, .018], [-.35, 0, 0]); part(G.sph, mat([0xd62b1f, 0x2f6db4, 0x2b2f35][i]), .3 + i * .05, 1.2, .46, g, [.045, .045, .045]); }
@@ -1206,12 +1206,12 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     for (let i = 0; i < 6; i++) part(G.box, DK, 0, 2.23, -.66 + i * .2, g, [.92, .025, .045]);
     for (const s of [-1, 1]) { part(G.box, DK, s * .4, 2.17, .52, g, [.14, .1, .08]); part(G.box, new T.MeshBasicMaterial({ color: 0xfff6dc }), s * .4, 2.17, .565, g, [.1, .06, .01], null, 1); }
     // luci posteriori, bande di sicurezza, numero
-    for (const s of [-1, 1]) { part(G.box, new T.MeshBasicMaterial({ color: 0xd8261c }), s * .38, .98, -1.335, g, [.1, .08, .02], null, 1); part(G.box, new T.MeshBasicMaterial({ color: 0xf6f6f0 }), s * .25, .98, -1.335, g, [.07, .06, .02], null, 1); }
-    part(G.box, M.haz, 0, .32, -1.34, g, [.92, .14, .02], null, 1);
-    const num = String(++fkN).padStart(2, '0'); planeT(textTex([[num, 74, 800, 50, null, '#fff']], { bg: '#1d1f22', w: 128, h: 100, round: 14 }), .2, .16, g, 0, .7, -1.345, { ry: Math.PI });
-    for (const s of [-1, 1]) planeT(textTex([['C' + num, 60, 800, 50, null, '#fff']], { w: 160, h: 100 }), .26, .16, g, s * .526, .82, -.35, { ry: s * Math.PI / 2 });
+    for (const s of [-1, 1]) { part(G.box, new T.MeshBasicMaterial({ color: 0xd8261c }), s * .38, .9, -1.395, g, [.1, .08, .03], null, 1); part(G.box, new T.MeshBasicMaterial({ color: 0xf6f6f0 }), s * .25, .9, -1.395, g, [.07, .06, .03], null, 1); }
+    part(G.box, M.haz, 0, .3, -1.397, g, [.92, .14, .03], null, 1);
+    const num = String(++fkN).padStart(2, '0'); planeT(textTex([[num, 74, 800, 50, null, '#fff']], { bg: '#1d1f22', w: 128, h: 100, round: 14 }), .2, .16, g, 0, .6, -1.415, { ry: Math.PI });
+    for (const s of [-1, 1]) planeT(textTex([['C' + num, 60, 800, 50, null, '#fff']], { w: 160, h: 100 }), .26, .16, g, s * .538, .82, -.35, { ry: s * Math.PI / 2 });
     // ruote
-    const wf = [-1, 1].map(s => { const w = grp(g, s * .5, .3, .42); part(G.cyl, BK, 0, 0, 0, w, [.6, .24, .6], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .122, 0, 0, w, [.34, .01, .34], [0, 0, Math.PI / 2], 1); for (let k = 0; k < 5; k++) { const a2 = k / 5 * Math.PI * 2; part(G.cyl, DK, s * .128, Math.cos(a2) * .08, Math.sin(a2) * .08, w, [.035, .01, .035], [0, 0, Math.PI / 2], 1); } for (let k = 0; k < 10; k++) { const a2 = k / 10 * Math.PI * 2; part(G.box, mat(0x232528), 0, Math.cos(a2) * .3, Math.sin(a2) * .3, w, [.22, .02, .05], [a2, 0, 0], 1); } return w; });
+    const wf = [-1, 1].map(s => { const w = grp(g, s * .5, .3, .42); part(G.cyl, BK, 0, 0, 0, w, [.6, .24, .6], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .122, 0, 0, w, [.34, .01, .34], [0, 0, Math.PI / 2], 1); for (let k = 0; k < 5; k++) { const a2 = k / 5 * Math.PI * 2; part(G.cyl, DK, s * .133, Math.cos(a2) * .08, Math.sin(a2) * .08, w, [.035, .014, .035], [0, 0, Math.PI / 2], 1); } for (let k = 0; k < 10; k++) { const a2 = k / 10 * Math.PI * 2; part(G.box, mat(0x232528), 0, Math.cos(a2) * .305, Math.sin(a2) * .305, w, [.2, .03, .05], [a2, 0, 0], 1); } return w; });
     const rs = [-1, 1].map(s => { const st = grp(g, s * .4, .23, -.98); const w = grp(st, 0, 0, 0); part(G.cyl, BK, 0, 0, 0, w, [.46, .18, .46], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .092, 0, 0, w, [.24, .01, .24], [0, 0, Math.PI / 2], 1); return { st, w }; });
     for (const s of [-1, 1]) part(G.box, OR, s * .57, .67, .42, g, [.14, .035, .66], null, 1);
     // montante
@@ -1224,10 +1224,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     for (const s of [-1, 1]) part(G.box, mat(0xa3aab2), s * .25, 1.2, 0, inner, [.06, 2.36, .1]);
     part(G.box, mat(0xa3aab2), 0, 2.36, 0, inner, [.56, .07, .07]); for (const s of [-1, 1]) part(G.cyl, DK, s * .12, 2.3, .07, inner, [.13, .045, .13], [0, 0, Math.PI / 2]);
     const carr = grp(mast, 0, 0, .14);
-    part(G.box, DK, 0, .3, 0, carr, [.84, .36, .06]); part(G.box, M.haz, 0, .41, .035, carr, [.8, .06, .008], null, 1);
+    part(G.box, DK, 0, .3, 0, carr, [.84, .36, .06]); part(G.box, M.haz, 0, .41, .042, carr, [.8, .06, .014], null, 1);
     for (const yy of [.5, 1.06]) part(G.box, DK, 0, yy, -.01, carr, [.84, .04, .04]);
     for (let i = -3; i <= 3; i++) part(G.box, DK, i * .13, .79, -.01, carr, [.022, .56, .022]);
-    for (const s of [-1, 1]) { part(G.box, DK, s * .41, .79, -.01, carr, [.035, .56, .035]); part(G.box, ST, s * .22, .3, .055, carr, [.1, .56, .05]); part(G.box, ST, s * .22, .045, .66, carr, [.1, .045, 1.15]); part(G.box, ST, s * .22, .037, 1.26, carr, [.09, .028, .06]); }
+    for (const s of [-1, 1]) { part(G.box, DK, s * .41, .79, -.01, carr, [.035, .56, .035]); part(G.box, ST, s * .22, .3, .055, carr, [.1, .56, .05]); part(G.box, ST, s * .22, .045, .66, carr, [.1, .045, 1.15]); }
     const chains = [-1, 1].map(s => part(G.box, BK, s * .12, 1, .02, mast, [.03, 1, .02], null, 1));
     const load = grp(carr, 0, -.005, .66); const LB = new Batch(load); palletStack(LB, 0, 0, 0, .65 + rr() * .35, PAL[Math.floor(rr() * PAL.length)], 3, null); LB.flush(); load.visible = false;
     // lampeggiante arancione e faretto blu a terra
@@ -1235,10 +1235,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const bmat = new T.MeshBasicMaterial({ color: 0xffa020 }); OWN.push(bmat); part(G.cyl, bmat, -.32, 2.36, -.72, g, [.1, .1, .1], null, 1); part(G.sph, bmat, -.32, 2.41, -.72, g, [.1, .07, .1], null, 1);
     const glow = new T.Sprite(new T.SpriteMaterial({ map: radTex('glowA', 'rgba(255,190,80,1)', 'rgba(255,140,20,.35)'), transparent: true, depthWrite: false, blending: T.AdditiveBlending })); glow.position.set(-.32, 2.38, -.72); glow.scale.set(.9, .9, 1); g.add(glow); OWN.push(glow.material);
     const spM = new T.MeshBasicMaterial({ map: radTex('spotB', 'rgba(90,170,255,1)', 'rgba(40,110,255,.45)'), transparent: true, depthWrite: false, blending: T.AdditiveBlending }); OWN.push(spM);
-    const spot = part(G.plane, spM, 0, .07, 3.3, g, [.9, .9, 1], [-Math.PI / 2, 0, 0], 1); spot.castShadow = false;
-    part(G.plane, blobMat(), 0, .065, -.2, g, [1.7, 2.9, 1], [-Math.PI / 2, 0, 0], 1).castShadow = false;
+    const spot = part(G.plane, spM, 0, .1, 3.3, g, [.9, .9, 1], [-Math.PI / 2, 0, 0], 1); spot.castShadow = false;
+    part(G.plane, blobMat(), 0, .095, -.2, g, [1.7, 2.9, 1], [-Math.PI / 2, 0, 0], 1).castShadow = false;
     const drv = person(g, 0, -.4, 0xf47b20, 0xf2c418, { mode: 'drive' }); drv.position.y = .28; drv.userData.rig.blob.visible = false;
-    g.traverse(e => { if (e.isMesh) e.castShadow = e.castShadow && true; });
+    const big = new Set(); g.children.slice(0, 3).forEach(e => big.add(e)); g.traverse(e => { if (e.isMesh) { e.receiveShadow = false; e.castShadow = big.has(e); } }); [mast.children[0], mast.children[2]].forEach(e => { if (e) e.castShadow = true; });
     g.userData.fk = { mast, inner, carr, chains, load, wf, rs, spin, bmat, glow, spot, spM, drv: drv.userData.rig, f: .1, tilt: 0, steer: 0, rev: 0, revS: 0, ds: 0, v: 0 };
     return g;
   }
@@ -1298,6 +1298,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     part(G.box, OR, 0, .62, -.16, j, [.56, .2, .16]); part(G.cyl, LG, 0, .8, -.18, j, [.09, .34, .09]); part(G.cyl, DK, 0, .99, -.18, j, [.12, .05, .12]);
     for (const s of [-1, 1]) part(G.cyl, BK, s * .07, .58, -.22, j, [.16, .06, .16], [0, 0, Math.PI / 2]);
     const tl = grp(j, 0, .74, -.2); tl.rotation.x = -.6; part(G.cyl, DK, 0, .47, 0, tl, [.04, .94, .04]); part(G.box, DK, 0, .95, 0, tl, [.34, .045, .045]); for (const s of [-1, 1]) part(G.box, DK, s * .16, .85, 0, tl, [.04, .22, .04]); part(G.box, mat(0xd62b1f), .07, .8, .025, tl, [.05, .09, .03]); part(G.box, BK, 0, .95, 0, tl, [.22, .06, .06]);
+    j.traverse(e => { if (e.isMesh) e.receiveShadow = false; });
     return j;
   }
 
