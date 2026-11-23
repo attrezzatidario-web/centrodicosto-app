@@ -1,4 +1,4 @@
-/* Magazzino 3D (v272) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v273) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -250,6 +250,25 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-cells{display:grid;gap:3px;margin:6px 0 4px}
 .m3-cells i{display:block;height:18px;border-radius:4px;background:#efeeeb;position:relative}
 .m3-cells i.f{background:#f6c89a}.m3-cells i.l{background:#f4a38e}.m3-cells i.e{background:#f7f6f4;border:1px dashed #dcd9d4}
+.m3-pl{display:inline-flex;align-items:stretch;height:24px;border:1.5px solid #2b2f35;border-radius:5px;background:#fbfbf8;overflow:hidden;flex:none;font-style:normal}
+.m3-pl i{background:#1f4fb4;color:#fff;font:700 9px/1 Inter,system-ui;display:grid;place-items:end center;padding:0 4px 3px;font-style:normal}
+.m3-pl b{font:700 12.5px/22px Inter,system-ui;letter-spacing:.06em;padding:0 7px;color:#16181b;white-space:nowrap}
+.m3-pl.big{height:34px;border-width:2px;border-radius:7px;margin:3px 0 2px}.m3-pl.big i{font-size:11px;padding:0 6px 5px}.m3-pl.big b{font-size:19px;line-height:30px;padding:0 10px}
+.m3-b6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;height:118px;padding:6px 4px 0;background:#f8f7f5;border-radius:13px;margin-bottom:4px}
+.m3-b6 div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+.m3-b6 span{font-size:10.5px;color:#8a8d93;font-weight:600}
+.m3-b6 i{display:block;width:62%;height:var(--h);min-height:2px;border-radius:6px 6px 2px 2px;background:#f3c9a4;transform-origin:bottom;animation:m3g .9s cubic-bezier(.2,.8,.2,1) both}
+.m3-b6 i.c{background:${OR}}
+.m3-b6 small{font-size:10.5px;color:#9a9ca1;padding-bottom:6px}
+@keyframes m3g{from{transform:scaleY(0)}}
+.m3-tl2{border:0;margin:0;padding:0;gap:4px}
+.m3-tl2>div,.m3-tl2>button{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:11px;border:1px solid #eeece8;text-align:left;width:100%;background:#fff}
+.m3-tl2>button:hover{border-color:#f3c9a4;background:#fffaf5}
+.m3-tl2 b{min-width:40px;font-size:12px;margin:0}
+.m3-tl2 .tx2{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:#2b2f35}
+.m3-tl2 .tx2 small{display:block;font-weight:500;color:#9a9ca1;font-size:11px;text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-kpis .m3-kpi:nth-child(3) i{background:#e8f4ec;color:#1f8a4b}
+@media (max-width:1180px){.m3-kpis .m3-kpi:nth-child(3){display:none}}
 .m3-cells i.k{outline:2px solid ${OR};outline-offset:1px}
 @media (max-width:760px){.m3-pal{top:auto;bottom:10px;left:10px;right:10px;width:auto;max-height:150px;flex-direction:row;flex-wrap:wrap}.m3-pal h4,.m3-pal p{display:none}.m3-pal button{width:auto;flex:1 1 30%;padding:5px}.m3-pal button small{display:none}.m3-edbar{left:10px;right:10px;bottom:170px;font-size:12px}.m3.edit .m3-panel{top:60px;left:56px;max-height:calc(100% - 300px);min-height:0}.m3.edit .m3-tools{top:60px}.m3-edbar .k{display:none}.m3-edit span{display:none}}
 `;
@@ -292,7 +311,9 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     pallet: '<path d="M3 17h18M4 20h16M6 17v3M12 17v3M18 17v3"/><path d="M6 8h12v9H6zM6 12.5h12M12 8v9"/>',
     building: '<path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-6h6v6"/>', undo: '<path d="M9 7 4 12l5 5"/><path d="M4 12h11a5 5 0 0 1 0 10h-2"/>',
     pin: '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/>', auto: '<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>',
-    floor: '<path d="M3 17 12 21l9-4-9-4z"/><path d="M3 12l9 4 9-4"/>'
+    floor: '<path d="M3 17 12 21l9-4-9-4z"/><path d="M3 12l9 4 9-4"/>',
+    fuel: '<path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h14M7 8h6"/><path d="M15 10h1.5a1.5 1.5 0 0 1 1.5 1.5V17a1.5 1.5 0 0 0 3 0V8l-3-3"/>',
+    van: '<path d="M2 16V7a1 1 0 0 1 1-1h11v10M14 9h4l3 3.5V16h-7"/><circle cx="6.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/>'
   });
   const ic = (k, extra) => `<svg viewBox="0 0 24 24"${extra || ''}>${I[k] || ''}</svg>`;
 
@@ -336,7 +357,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const ddt = C.ddt().slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || (parseInt(b.numero, 10) || 0) - (parseInt(a.numero, 10) || 0)).map(d => { const R2 = parse(d.righe).filter(l => !l.h), c = C.cliOf(d.cliente); return { d, R: R2, cli: c, cliN: c ? c.nome : (d.cliente || 'Cliente'), citta: c ? [c.citta, c.prov && '(' + c.prov + ')'].filter(Boolean).join(' ') : '', pz: R2.reduce((s, l) => s + C.num(l.q), 0) }; });
     const ddtM = ddt.filter(x => String(x.d.data).slice(0, 7) === m0);
     const pos = arts.map(x => x.g).filter(g => g > 0).sort((a, b) => a - b), refG = pos.length ? pos[Math.floor(pos.length * .75)] : 1;
-    return { mag, arts, cats, catOf, tot, disp, val, low, out, MM, car, car30, ret, ret90, scar, ddt, ddtM, trf: C.xiTransito(), t0, nArt: arts.length, cli: C.cli(), refG };
+    return { mag, arts, cats, catOf, tot, disp, val, low, out, MM, car, car30, ret, ret90, scar, ddt, ddtM, trf: C.xiTransito(), t0, nArt: arts.length, cli: C.cli(), refG, gas: gasData() };
   }
 
   /* ---------------- disposizione del magazzino ---------------- */
@@ -529,7 +550,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     // sfera arancione all'ingresso
     const orb = mesh(G.sph, mat(0xf47b20), 0, 3.6, hd + 10, P2, { s: [4.4, 4.4, 4.4] }); bx(P2, 4, .8, 4, 0x2b2f35, 0, 0, hd + 10); movers.push({ o: orb, t: 'float', y: 3.6 });
     // alberi
-    const free = (x, z) => !(x > -hw - 32 && x < hw + yardW + 6 && z > -hd - 14 && z < hd + 24) && !(z > rz - 9 && z < rz + 9) && !(x > hw + 10 && x < hw + 26 && z > hd && z < rz);
+    const free = (x, z) => !(x > -hw - 42 && x < hw + yardW + 6 && z > -hd - 14 && z < hd + 24) && !(z > rz - 9 && z < rz + 9) && !(x > hw + 10 && x < hw + 26 && z > hd && z < rz);
     let n = 0; while (n < 680) { const near = rr() < .38, x = (rr() - .5) * (near ? W + 160 : 620), z = (rr() - .5) * (near ? Dd + 140 : 480) - (near ? 5 : 30); if (!free(x, z)) continue; n++; const s = .55 + rr() * .6;
       if (rr() < .22) B2.add('pine', G.pine, mat(0x4f9a43), m4(x, 0, z, s, s * 1.15, s)); else { B2.add('tree', G.tree, mat(0xffffff), m4(x, 2.6 * s + 1.1, z, s, s, s), [0x7cbf4f, 0x8cc95a, 0x6fb347, 0x98cf62][Math.floor(rr() * 4)]); B2.add('trunk', G.trunk, mat(0x8a6a4f), m4(x, 0, z, s, s, s)); } }
     for (let i = 0; i < 28; i++) B2.add('bush', G.tree, mat(0x86c457), m4(-hw + 2 + i * (W - 4) / 27, .7, hd + 3.2 + (i % 2) * .6, .5, .42, .5));
@@ -558,7 +579,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     P = place();
     L.items.filter(i => i.t === 'zone').forEach(buildZone);
     L.items.filter(i => i.t !== 'zone').forEach(it => ({ rack: buildRack, dock: buildDock, wall: buildWall, belt: buildBelt, desk: buildDesk })[it.t](it));
-    buildRoadTrucks(); buildPeople();
+    buildRoadTrucks(); buildPeople(); buildFleet();
     if (EDIT) { const v = []; for (let x = -hw; x <= hw + .01; x += 1) v.push(x, .53, -hd, x, .53, hd); for (let z = -hd; z <= hd + .01; z += 1) v.push(-hw, .53, z, hw, .53, z); const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(v, 3)); const gm = new T.LineBasicMaterial({ color: 0xcdbfb0, transparent: true, opacity: .45 }); WH.add(new T.LineSegments(gg, gm)); OWN.push(gg, gm); }
     hiMesh = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0xf47b20, transparent: true, opacity: .35, depthWrite: false, depthTest: false })); hiMesh.renderOrder = 10; hiMesh.visible = false; WH.add(hiMesh); OWN.push(hiMesh.material);
     const eg = new T.LineSegments(new T.EdgesGeometry(G.box), new T.LineBasicMaterial({ color: 0xf47b20, depthTest: false })); eg.renderOrder = 11; hiMesh.add(eg); OWN.push(eg.geometry, eg.material);
@@ -764,12 +785,13 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function zoneTarget(k) {
     if (k === 'all') return { x: 4, z: 8, dist: Math.max(L.W, L.D) * 3.05, az: -0.3, pol: .9 };
     if (k === 'uffe') return { x: L.W / 4, z: L.D / 2 + 13, dist: 100, az: -0.45, pol: .95 };
+    if (k === 'flotta') { if (!D.gas) return null; const F = FL(); return { x: F.cx, z: 2, dist: 118, az: -1.05, pol: .88 }; }
     if (k === 'stk') { const R2 = L.items.filter(i => i.t === 'rack'); if (!R2.length) return null; const bb = R2.map(box2).reduce((a, b) => ({ x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), z0: Math.min(a.z0, b.z0), z1: Math.max(a.z1, b.z1) })); return { x: (bb.x0 + bb.x1) / 2, z: (bb.z0 + bb.z1) / 2 + 2, dist: Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 1.9 + 20, az: -0.5, pol: .88 }; }
     const z = L.items.find(i => i.t === 'zone' && i.k === k); if (!z) return null; const f = foot(z);
     return { x: z.x + (k === 'spe' ? 10 : 0), z: z.z, dist: Math.max(f.w, f.d) * 1.6 + 26, az: k === 'spe' ? .6 : -0.6, pol: .92 };
   }
-  const zoneKinds = () => ['all', ...['ric', 'stk', 'pre', 'cq', 'spe'].filter(k => zoneTarget(k)), 'uffe'];
-  const ZN = k => k === 'all' ? ['Panoramica', 'ALL'] : k === 'uffe' ? ['Uffici', 'UFF'] : [ZONE[k][0], ZONE[k][2]];
+  const zoneKinds = () => ['all', ...['ric', 'stk', 'pre', 'cq', 'spe', 'flotta'].filter(k => zoneTarget(k)), 'uffe'];
+  const ZN = k => k === 'all' ? ['Panoramica', 'ALL'] : k === 'uffe' ? ['Uffici', 'UFF'] : k === 'flotta' ? ['Parco mezzi e gasolio', 'MEZ'] : [ZONE[k][0], ZONE[k][2]];
   function buildLabels() {
     const box = $('.m3-lbs'); box.innerHTML = ''; labels = [];
     const add = (pos, html2, cls, k, maxD, obj) => { const el = document.createElement('div'); el.className = 'm3-lb ' + (cls || ''); el.innerHTML = html2; box.appendChild(el); const L2 = { p: new T.Vector3(...pos), el, k, maxD: maxD || 1e9, obj }; el.onclick = () => { if (!EDIT) select(k); }; labels.push(L2); return L2; };
@@ -778,6 +800,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const sub = { ric: `${D.car30.length} carichi in 30 gg`, pre: `${D.ddtM.length} DDT nel mese`, cq: `${D.ret90.length} rettifiche`, spe: `${trucks.filter(t => !t.road && t.d).length} in banchina`, terra: 'stoccaggio a terra', uff: 'ufficio', free: '' };
     L.items.filter(i => i.t === 'zone').forEach(z => add([z.x, 4.5, z.z], `${esc(z.name || ZONE[z.k][0])}${sub[z.k] ? ` <em>${sub[z.k]}</em>` : ''}`, '', { t: 'zone', z: z.k, id: z.id }, 340));
     add([L.W / 4, 8.6, L.D / 2 + 13], `Uffici <em>${D.cli.length} clienti</em>`, 'wh', { t: 'zone', z: 'uffe' }, 240);
+    if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 6.6, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
+      fleetVeh.forEach(f => { const L3 = add([0, 0, 0], `${esc(plFmt(f.v.p))}${f.v.name ? ` <em>${esc(f.v.name.slice(0, 18))}</em>` : ''}`, 'sm wh', { t: 'veh', p: f.v.p }, 95, f.o); L3.dy = f.v.kind === 'truck' ? 4.2 : 3.2; }); }
     R2.forEach(it => { const g = WH.children.find(c => c.userData.eid === it.id); const c = D.catOf.get(it.cat), n = [...P.byArt.values()].filter(v => v.rk === it).length, pz = c ? 0 : 0;
       const pos = g ? [it.x, (it.k === 'pallet' ? (it.lv - 1) * rackLh(it) + 2.6 : it.lv * rackLh(it) + 1.2) + 1.2, it.z] : [it.x, 6, it.z];
       add(pos, `${esc(it.code)} · ${esc((it.cat || KIND[it.k].n).slice(0, 22))} <em>${n}/${it.bays * it.lv} vani</em>`, 'sm', { t: 'rack', id: it.id }, 120); });
@@ -787,10 +811,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function updLabels() {
     const w = R.domElement.clientWidth, h = R.domElement.clientHeight, v = V3();
     labels.forEach(L2 => {
-      if (L2.obj) { L2.obj.getWorldPosition(v); v.y += 5.6; } else v.copy(L2.p);
+      if (L2.obj) { L2.obj.getWorldPosition(v); v.y += L2.dy || 5.6; } else v.copy(L2.p);
       const d = cam.position.distanceTo(v); v.project(cam);
       const on = v.z < 1 && d < L2.maxD && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
-      const act = sel && L2.k.t === sel.t && L2.k.z === sel.z && L2.k.id === sel.id && L2.k.i === sel.i;
+      const act = sel && L2.k.t === sel.t && L2.k.z === sel.z && L2.k.id === sel.id && L2.k.i === sel.i && L2.k.p === sel.p;
       const quiet = (sel && sel.t === 'rack' && L2.k.t === 'rack' && !act) || (EDIT && L2.k.t !== 'rack');
       L2.el.classList.toggle('hid', (!on && !act) || quiet);
       L2.el.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px,${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%,-100%)`;
@@ -826,6 +850,202 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const p = g.localToWorld(c); hiMesh.position.copy(p); hiMesh.rotation.y = it.r * Math.PI / 2; hiMesh.scale.set(bw - .1, (it.k === 'pallet' ? Math.min(lh, 1.6) : lh) - .1, rackDep(it) + .2); hiMesh.visible = true;
   }
 
+
+  /* ---------------- parco mezzi e distributore di gasolio (v273) ---------------- */
+  const plFmt = p => C.plateFmt ? C.plateFmt(p) : p;
+  const kindOf = s => /camion|tir\b|motrice|daily|eurocargo|autocarro|cassonat|truck|scania|volvo|\bman\b|iveco|actros|stralis/i.test(s) ? 'truck' : /pick.?up|hilux|ranger|l200|navara|d-max|amarok|fullback/i.test(s) ? 'pickup' : /\bauto\b|panda|punto|golf|yaris|clio|fiesta|polo|\b500\b|smart|ypsilon|berlina|tipo|qashqai|captur|duster/i.test(s) ? 'car' : 'van';
+  function gasData() {
+    if (!C.gasOn || !C.gasOn()) return null;
+    const rows = C.gas() || [], Pl = C.plate, M2 = C.gasMezzi() || {}, Nm = C.gasNomi() || {}, Rt = C.gasRent() || {}, price = C.num(C.gasPrice()), mul = C.gMul ? C.gMul() : 1;
+    const m0 = C.today().slice(0, 7), keys = []; { const d = new Date(m0 + '-15'); for (let i = 5; i >= 0; i--) { const x = new Date(d); x.setMonth(x.getMonth() - i); keys.push(x.toISOString().slice(0, 7)); } }
+    const pr = r => C.num(r.prezzo) || price;
+    const by = new Map(); rows.forEach(r => { const p = Pl(r.targa); if (!p) return; if (!by.has(p)) by.set(p, []); by.get(p).push(r); });
+    const reg = new Set([...Object.keys(M2), ...Object.keys(Rt), ...Object.keys(Nm)].map(Pl).filter(Boolean));
+    const V = [...new Set([...reg, ...by.keys()])].map(p => {
+      const s = (by.get(p) || []).slice().sort((a, b) => String(a.data).localeCompare(String(b.data)) || C.num(a.km) - C.num(b.km));
+      let km = 0, kl = 0, prev = 0; s.forEach(r => { const k = C.num(r.km); if (!k) return; if (prev && k > prev && k - prev < 5000) { km += k - prev; kl += C.num(r.litri); } prev = k; });
+      const mm = s.filter(r => String(r.data).slice(0, 7) === m0), cnt = {}; s.forEach(r => { const u = String(r.uso || '').trim().toUpperCase(); if (u) cnt[u] = (cnt[u] || 0) + 1; });
+      const uso = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || '', owner = s.map(r => String(r.proprietario || '').trim()).filter(Boolean).pop() || '';
+      const name = String(Nm[p] || Nm[Object.keys(Nm).find(k => Pl(k) === p)] || '').trim(), rentK = Object.keys(Rt).find(k => Pl(k) === p), mz = M2[p] || M2[Object.keys(M2).find(k => Pl(k) === p)] || {};
+      const sum = L2 => L2.reduce((a, r) => a + C.num(r.litri), 0);
+      return { p, s, name, reg: reg.has(p), rent: rentK ? C.num(Rt[rentK]) : 0, drv: C.gasDrv ? C.gasDrv(p) : [], centro: mz.centro || '', uso, owner, km, cons: kl ? km / kl : 0, odo: Math.max(0, ...s.map(r => C.num(r.km))), last: s[s.length - 1] || null,
+        lM: sum(mm), cM: mm.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, nM: mm.length, lT: sum(s), cT: s.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, m6: keys.map(k => sum(s.filter(r => String(r.data).slice(0, 7) === k))), kind: kindOf(name + ' ' + uso + ' ' + owner) };
+    }).sort((a, b) => (b.reg - a.reg) || b.lT - a.lT).slice(0, 20);
+    const rM = rows.filter(r => String(r.data).slice(0, 7) === m0), lM = rM.reduce((a, r) => a + C.num(r.litri), 0);
+    let km = 0, kl = 0; V.forEach(v => { if (v.cons) { km += v.km; kl += v.km / v.cons; } });
+    const lastR = rows.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || C.num(b.km) - C.num(a.km));
+    return { V, price, mul, lM, cM: rM.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, nM: rM.length, cons: kl ? km / kl : 0, rent: V.reduce((a, v) => a + v.rent, 0), lastR, keys, nAll: rows.length };
+  }
+  const FL = () => { const hw = L.W / 2, hd = L.D / 2; return { x0: -hw - 36, x1: -hw - 5, z0: -hd - 4, z1: hd + 4, cx: -hw - 20.5, st: { x: -hw - 20.5, z: hd - 5.5 } }; };
+  function plateTex(p) {
+    return cvTex(256, 56, g => { g.fillStyle = '#fbfbf8'; g.beginPath(); g.roundRect(1, 1, 254, 54, 8); g.fill(); g.strokeStyle = '#2b2f35'; g.lineWidth = 2; g.stroke(); g.fillStyle = '#1f4fb4'; g.beginPath(); g.roundRect(2, 2, 34, 52, [7, 0, 0, 7]); g.fill(); g.fillStyle = '#f5c518'; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; g.beginPath(); g.arc(19 + Math.cos(a) * 8, 18 + Math.sin(a) * 8, 1.4, 0, 7); g.fill(); } g.fillStyle = '#fff'; g.font = '700 17px Inter, system-ui'; g.textAlign = 'center'; g.fillText('I', 19, 45); g.fillStyle = '#16181b'; g.font = '700 36px Inter, system-ui, sans-serif'; g.textBaseline = 'middle'; g.fillText(plFmt(p), 146, 30); });
+  }
+  // sagome dei mezzi: profilo laterale estruso con spigoli arrotondati (geometrie condivise)
+  function vgeo(key, pts, depth, bev) {
+    if (G[key]) return G[key];
+    const sh = new T.Shape(); pts.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y)); sh.closePath();
+    const g = new T.ExtrudeGeometry(sh, { depth, bevelEnabled: bev > 0, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 4 });
+    g.translate(0, 0, -depth / 2); g.computeVertexNormals(); return (G[key] = g);
+  }
+  const VP = {
+    van: { w: 1.9, body: [[-2.7, .36], [2.5, .36], [2.68, .52], [2.72, 1.02], [2.36, 1.26], [1.56, 2.26], [1.25, 2.44], [-2.58, 2.44], [-2.7, 2.32]], ws: [[2.33, 1.3], [1.58, 2.24]], side: [[.62, 1.5], [2.1, 1.5], [1.55, 2.18], [.62, 2.18]], rw: [[-2.72, 1.5], [-2.72, 2.2]], wh: [[1.62, .37], [-1.72, .37]], plateF: [2.75, .62], plateR: [-2.74, .7], hl: [2.7, .92], tl: [-2.71, 1.1], liv: [-.6, 3.6, .95] },
+    car: { w: 1.66, body: [[-2.15, .3], [2.08, .3], [2.2, .48], [2.18, .76], [1.02, .96], [.32, 1.42], [-.9, 1.47], [-1.82, 1.06], [-2.15, .96], [-2.2, .5]], ws: [[1.0, .98], [.34, 1.4]], side: [[-1.66, 1.0], [.92, 1.0], [.36, 1.36], [-.86, 1.41]], rw: [[-1.8, 1.07], [-.98, 1.43]], wh: [[1.32, .33], [-1.36, .33]], plateF: [2.21, .5], plateR: [-2.21, .62], hl: [2.16, .7], tl: [-2.17, .82], liv: [0, 3.4, .55] },
+    pickup: { w: 1.76, body: [[-2.6, .42], [2.45, .42], [2.6, .6], [2.6, 1.02], [1.5, 1.16], [.98, 1.82], [-.4, 1.86], [-.5, 1.18], [-2.6, 1.18]], ws: [[1.48, 1.18], [1.0, 1.8]], side: [[-.35, 1.24], [1.36, 1.24], [.96, 1.74], [-.35, 1.78]], rw: null, wh: [[1.62, .41], [-1.62, .41]], plateF: [2.63, .62], plateR: [-2.63, .8], hl: [2.58, .92], tl: [-2.61, 1.0], liv: [-.2, 4.4, .72] },
+    cab: { w: 2.25, body: [[-1.0, .55], [.98, .55], [1.06, .8], [1.06, 2.75], [.9, 3.15], [-1.0, 3.15]], ws: [[1.07, 1.85], [.97, 2.95]], side: [[-.35, 1.85], [.85, 1.85], [.85, 2.85], [-.35, 2.85]], rw: null, wh: [], plateF: [1.1, .72], plateR: null, hl: [1.08, 1.0], tl: null, liv: null }
+  };
+  function vehicle(p2, v, x, z, ry) {
+    const g = new T.Group(); g.position.set(x, .17, z); g.rotation.y = ry || 0; p2.add(g);
+    const b = (w, h, d, c, xx, y, zz, o) => mesh(G.box, typeof c === 'object' ? c : mat(c), xx, y, zz, g, { s: [w, h, d], ...(o || {}) });
+    const glass = M.glass || (M.glass = new T.MeshLambertMaterial({ color: 0x2c3e55 })), dark = 0x22262b;
+    const pt = plateTex(v.p); OWN.push(pt); const pm = new T.MeshBasicMaterial({ map: pt }); OWN.push(pm);
+    const plateAt = (xx, y, rot, zz) => { const m = new T.Mesh(G.plane, pm); m.scale.set(.52, .115, 1); m.position.set(xx, y, zz || 0); m.rotation.y = rot; g.add(m); };
+    const wheel = (xx, zz, r) => { const s = Math.sign(zz); mesh(G.cyl, mat(0x15171a), xx, r, zz, g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xbfc4cb), xx, r, zz + s * .14, g, { s: [r * 1.2, .02, r * 1.2], rx: Math.PI / 2, ns: 1 }); mesh(G.cyl, mat(0x7d838b), xx, r, zz + s * .155, g, { s: [r * .42, .02, r * .42], rx: Math.PI / 2, ns: 1 }); };
+    const shell = (kind, color, P, ox) => {
+      const w = P.w, bev = kind === 'cab' ? .07 : .09, body = mesh(vgeo('vb_' + kind, P.body, w - 2 * bev, bev), mat(color), ox || 0, 0, 0, g);
+      mesh(vgeo('vg_' + kind, P.side, w + .02, 0), glass, ox || 0, 0, 0, g, { ns: 1 });
+      const wsl = (a, c) => { const dx = c[0] - a[0], dy = c[1] - a[1], ln = Math.hypot(dx, dy), nx = dy / ln, ny = -dx / ln, sgn = kind === 'cab' ? 1 : 1; const m = mesh(G.box, glass, (ox || 0) + (a[0] + c[0]) / 2 + nx * .05 * sgn, (a[1] + c[1]) / 2 + ny * .05 * sgn, 0, g, { s: [ln, .035, w - .16], rz: Math.atan2(dy, dx), ns: 1 }); return m; };
+      wsl(P.ws[0], P.ws[1]); if (P.rw) wsl(P.rw[1], P.rw[0]);
+      P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) mesh(G.cyl, mat(0x111316), (ox || 0) + wx, r + .02, s * (w / 2 - .02), g, { s: [r * 2 + .2, .02, r * 2 + .2], rx: Math.PI / 2, ns: 1 }); wheel((ox || 0) + wx, w / 2 - .12, r); wheel((ox || 0) + wx, -w / 2 + .12, r); });
+      for (const s of [-1, 1]) { b(.05, .13, .34, 0xfff3d1, (ox || 0) + P.hl[0], P.hl[1], s * (w / 2 - .3), { ns: 1 }); if (P.tl) b(.05, .26, .16, 0xd8322a, (ox || 0) + P.tl[0], P.tl[1], s * (w / 2 - .14), { ns: 1 }); }
+      plateAt((ox || 0) + P.plateF[0], P.plateF[1], Math.PI / 2); if (P.plateR) plateAt((ox || 0) + P.plateR[0], P.plateR[1], -Math.PI / 2);
+      return body;
+    };
+    const livery = (len, xc, y, w) => { for (const s of [-1, 1]) b(len, .14, .02, 0xf47b20, xc, y, s * (w / 2 + .012), { ns: 1 }); const t = textTex([[C.orgName().toUpperCase().slice(0, 24), 54, 800]], { color: '#2b2f35', w: 768, h: 110 }); for (const s of [-1, 1]) { const m = planeT(t, Math.min(len * .8, 3.2), .45, g, xc, y + .5, s * (w / 2 + .016)); m.rotation.y = s > 0 ? 0 : Math.PI; } };
+    const mirror = (xx, y, w) => { for (const s of [-1, 1]) { b(.05, .04, .22, dark, xx, y, s * (w / 2 + .1), { ns: 1 }); b(.07, .3, .12, dark, xx - .02, y - .05, s * (w / 2 + .24)); } };
+    if (v.kind === 'truck') {
+      const P = VP.cab, w = P.w; shell('cab', 0xfbfbfa, P, 2.85);
+      b(.06, .55, w - .4, dark, 3.93, .85, 0, { ns: 1 }); for (let i = 0; i < 4; i++) b(.07, .04, w - .5, 0x4a5059, 3.94, .65 + i * .13, 0, { ns: 1 });
+      b(.4, .32, w + .02, 0x2b2f35, 3.85, .4, 0); b(2.1, .28, w + .03, 0xf47b20, 2.85, 1.42, 0, { ns: 1 }); mirror(3.75, 2.6, w);
+      b(5.7, .28, 1.1, 0x2b2f35, -.4, .42, 0); b(5.6, 3.0, 2.42, 0xf3f3f1, -1.35, .78, 0); b(5.62, .09, 2.44, 0xe1e3e6, -1.35, 3.74, 0, { ns: 1 });
+      b(.05, 2.9, 2.38, 0xe6e8eb, -4.17, .82, 0, { ns: 1 }); b(.06, 2.9, .05, 0x9aa0a8, -4.2, .82, 0, { ns: 1 }); for (const s of [-1, 1]) b(.06, .22, .14, 0xd8322a, -4.2, .95, s * 1.05, { ns: 1 });
+      livery(5.2, -1.35, 1.4, 2.42); plateAt(-4.21, .7, -Math.PI / 2);
+      [[3.0, .5], [-2.3, .5], [-3.35, .5]].forEach(([wx, r]) => { for (const s of [-1, 1]) { mesh(G.cyl, mat(0x111316), wx, r + .03, s * 1.13, g, { s: [r * 2 + .22, .02, r * 2 + .22], rx: Math.PI / 2, ns: 1 }); wheel(wx, s * 1.05, r); } });
+    } else if (v.kind === 'car') {
+      const P = VP.car; shell('car', [0xe9ebee, 0xc8ccd2, 0x2f3540, 0x9fb3c8][v.p.charCodeAt(1) % 4], P);
+      b(.05, .2, P.w - .5, dark, 2.2, .55, 0, { ns: 1 }); mirror(.85, 1.02, P.w); for (const s of [-1, 1]) b(3.6, .06, .02, 0xf47b20, 0, .66, s * (P.w / 2 + .1), { ns: 1 });
+      b(.3, .14, P.w + .1, 0x2b2f35, 2.12, .34, 0); b(.3, .14, P.w + .1, 0x2b2f35, -2.12, .36, 0);
+    } else if (v.kind === 'pickup') {
+      const P = VP.pickup; shell('pickup', 0xfbfbfa, P);
+      for (const s of [-1, 1]) b(2.05, .5, .06, 0xfbfbfa, -1.55, 1.18, s * (P.w / 2 - .03)); b(.06, .5, P.w, 0xfbfbfa, -2.57, 1.18, 0); b(1.9, .05, P.w - .1, 0x3a3f46, -1.55, 1.18, 0, { ns: 1 });
+      b(1.4, .3, 1.0, 0xc79a68, -1.4, 1.23, 0); b(.6, .25, .5, 0x8aa36a, -2.1, 1.23, .3);
+      b(.05, .32, P.w - .5, dark, 2.62, .82, 0, { ns: 1 }); mirror(1.25, 1.55, P.w); livery(3.2, .4, .66, P.w);
+      b(.12, .5, .14, 0x2b2f35, -.55, 1.95, .6); b(.12, .5, .14, 0x2b2f35, -.55, 1.95, -.6); b(.12, .08, 1.3, 0x2b2f35, -.55, 2.2, 0);
+      b(.3, .16, P.w + .12, 0x2b2f35, 2.55, .42, 0); b(.25, .16, P.w + .12, 0x2b2f35, -2.6, .46, 0);
+    } else {
+      const P = VP.van; shell('van', 0xfbfbfa, P);
+      b(.05, .34, P.w - .5, dark, 2.72, .82, 0, { ns: 1 }); for (let i = 0; i < 3; i++) b(.06, .03, P.w - .6, 0x4a5059, 2.73, .72 + i * .1, 0, { ns: 1 });
+      b(.3, .18, P.w + .1, 0x2b2f35, 2.6, .38, 0); b(.25, .18, P.w + .1, 0x2b2f35, -2.66, .42, 0);
+      b(.03, 1.9, .02, 0xd5d7da, -2.73, 1.38, 0, { ns: 1 }); b(.03, .04, .5, 0x9aa0a8, -2.74, 1.35, .35, { ns: 1 });
+      b(.02, 1.75, .03, 0xd5d7da, -.4, 1.4, P.w / 2 + .1, { ns: 1 }); mirror(1.62, 1.6, P.w); livery(3.4, -.65, .82, P.w);
+      if (v.p.charCodeAt(0) % 2) { b(3.2, .05, .05, 0x8e959e, -.8, 2.62, .6); b(3.2, .05, .05, 0x8e959e, -.8, 2.62, -.6); for (let i = 0; i < 4; i++) b(.05, .05, 1.25, 0x8e959e, -2.2 + i * .9, 2.62, 0); }
+    }
+    if (v.rent) b(.5, .1, .9, 0x1f6fd0, v.kind === 'truck' ? 2.8 : v.kind === 'van' ? -1 : -.3, v.kind === 'truck' ? 3.27 : v.kind === 'car' ? 1.5 : v.kind === 'pickup' ? 1.89 : 2.48, 0, { ns: 1 });
+    g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.k = { t: 'veh', p: v.p }; pick.push(o); } });
+    return g;
+  }
+  let pumpCv = null, pumpTex = null;
+  function pumpDraw(l, price) {
+    if (!pumpCv) { pumpCv = document.createElement('canvas'); pumpCv.width = 192; pumpCv.height = 128; }
+    const g = pumpCv.getContext('2d'); g.fillStyle = '#0f1a14'; g.fillRect(0, 0, 192, 128);
+    g.fillStyle = '#5df08a'; g.font = '700 16px Inter, system-ui'; g.textAlign = 'left'; g.fillText('GASOLIO', 12, 24);
+    g.font = '700 34px ui-monospace, Menlo, monospace'; g.textAlign = 'right'; g.fillText(l.toFixed(2), 180, 70); g.font = '600 13px Inter, system-ui'; g.fillText('litri', 180, 88);
+    g.fillStyle = '#f5c518'; g.font = '700 18px ui-monospace, Menlo, monospace'; g.fillText(price ? price.toFixed(3) + ' €/L' : '— €/L', 180, 116);
+    if (pumpTex) pumpTex.needsUpdate = true;
+  }
+  function buildFleet() {
+    const GD = D.gas; if (!GD) return; const F = FL(), g = new T.Group(); WH.add(g);
+    const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2, B = new Batch(g);
+    const asp = mesh(G.box, new T.MeshLambertMaterial({ map: TX.road }), cx, .08, cz, g, { s: [w, .16, d], ns: 1 }); OWN.push(asp.material);
+    bx(g, 9, .15, L.D / 2 + 31 - F.z1, 0x575c64, F.st.x, 0, (F.z1 + L.D / 2 + 31) / 2, { ns: 1 });
+    for (const xx of [F.x0, F.x1]) bx(g, .3, .22, d, 0xd9d6cf, xx, 0, cz, { ns: 1 });
+    // stalli: due file di posti con strisce bianche e numeri
+    const rowX = [F.x0 + 4.4, F.x1 - 4.4], sz = 3.9, z0 = F.z0 + 2.4, n = Math.max(1, Math.floor((F.st.z - 8 - z0) / sz)), slots = [];
+    rowX.forEach((rx, ri) => { for (let i = 0; i <= n; i++) B.add('str', G.box, mat(0xf4f4f2), m4(rx, .17, z0 + i * sz - sz / 2, 7.6, .02, .12)); for (let i = 0; i < n; i++) { slots.push({ x: rx, z: z0 + i * sz, ry: ri ? 0 : Math.PI }); B.add('stop', G.box, mat(0xf2c418), m4(rx + (ri ? 3.3 : -3.3), .24, z0 + i * sz, .25, .14, 1.6)); } });
+    slots.forEach((s, i) => floorText(g, String(i + 1).padStart(2, '0'), 1.6, s.x + (s.ry ? 2.2 : -2.2), s.z, Math.PI / 2, 'rgba(255,255,255,.75)').position.y = .18);
+    // linea di mezzeria della corsia
+    for (let zz = z0; zz < F.st.z - 9; zz += 3) B.add('lm', G.box, mat(0xf4f4f2), m4(cx, .17, zz, .14, .02, 1.6));
+    // distributore: pensilina, isole, colonnine, totem prezzo, cisterna
+    const st = F.st, cw = 12, cd = 9.5;
+    for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) mesh(G.cyl, mat(0xd7dadf), st.x + sx * (cw / 2 - 1.2), 2.75, st.z + sz2 * (cd / 2 - 1.5), g, { s: [.42, 5.2, .42] });
+    bx(g, cw, .55, cd, 0xfbfbfa, st.x, 5.2, st.z); bx(g, cw + .1, .42, .12, 0xf47b20, st.x, 5.25, st.z + cd / 2); bx(g, cw + .1, .42, .12, 0xf47b20, st.x, 5.25, st.z - cd / 2); bx(g, .12, .42, cd, 0xf47b20, st.x - cw / 2, 5.25, st.z); bx(g, .12, .42, cd, 0xf47b20, st.x + cw / 2, 5.25, st.z);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j += 2) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6 }); OWN.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.6, .5, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 3.6, 5.19, st.z + j * 2.2); g.add(lp); }
+    const sg = textTex([['GASOLIO', 78, 800, 60, null, '#ffffff'], [C.orgName().toUpperCase().slice(0, 26), 30, 700, 118, null, 'rgba(255,255,255,.9)']], { bg: '#f47b20', w: 768, h: 150 });
+    planeT(sg, 5.2, 1, g, st.x, 5.27, st.z + cd / 2 + .07);
+    pumpDraw(0, GD.price); pumpTex = new T.CanvasTexture(pumpCv); pumpTex.colorSpace = T.SRGBColorSpace; OWN.push(pumpTex);
+    const isl = [-2.3, 2.3];
+    isl.forEach((ix, k) => {
+      bx(g, 1.3, .22, 4.4, 0xd8d5ce, st.x + ix, .16, st.z); bx(g, 1.3, .06, 4.4, 0xf2c418, st.x + ix, .38, st.z, { ns: 1 });
+      const px = st.x + ix, pz = st.z; bx(g, .75, 1.75, .55, 0xf1f2f4, px, .44, pz); bx(g, .78, .32, .58, 0xf47b20, px, 2.19, pz); bx(g, .8, .08, .6, 0x2b2f35, px, 2.5, pz);
+      for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.52, .35, 1); sc.position.set(px + s * .38, 1.75, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); bx(g, .06, .22, .1, 0x1d1f22, px + s * .4, 1.05, pz + .12); bx(g, .1, .08, .06, 0x2cbf5d, px + s * .41, 1.25, pz - .12, { ns: 1 }); }
+      for (const s of [-1, 1]) { mesh(G.cyl, mat(0xf2c418), px, .9, pz + s * 2.05, g, { s: [.22, .95, .22] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .9 + s * 0, pz + s * 2.05, .23, .12, .23)); }
+    });
+    // totem del prezzo
+    const tot = textTex([['GASOLIO', 44, 800, 46, null, '#ffffff'], [GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', 84, 800, 140, null, '#f5c518'], ['€ / litro', 30, 600, 204, null, 'rgba(255,255,255,.85)'], [`${N(GD.lM)} L nel mese`, 26, 600, 262, null, 'rgba(255,255,255,.8)']], { bg: '#17191c', w: 320, h: 300, round: 18 });
+    bx(g, 1.7, 4.6, .45, 0xf47b20, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5); planeT(tot, 1.45, 1.36, g, st.x + cw / 2 + 2.2, 3.55, st.z + cd / 2 - .27); bx(g, 1.2, .6, .5, 0x2b2f35, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5);
+    // cisterna del gasolio su selle, con vasca di contenimento e scaletta
+    const tx = F.x0 + 5, tz = st.z + 1.5;
+    bx(g, 3.6, .5, 7.4, 0xc9c6bf, tx, .16, tz); bx(g, 3.2, .1, 7, 0x9a978f, tx, .62, tz, { ns: 1 });
+    mesh(G.cyl, mat(0xeef0f2), tx, 2.25, tz, g, { s: [2.5, 6, 2.5], rx: Math.PI / 2 }); mesh(G.sph, mat(0xeef0f2), tx, 2.25, tz + 3, g, { s: [2.5, 2.5, .7] }); mesh(G.sph, mat(0xeef0f2), tx, 2.25, tz - 3, g, { s: [2.5, 2.5, .7] });
+    mesh(G.cyl, mat(0xf47b20), tx, 2.25, tz, g, { s: [2.53, .5, 2.53], rx: Math.PI / 2 });
+    for (const s of [-1, 1]) bx(g, 2.4, 1.1, .35, 0x7d848d, tx, .6, tz + s * 2);
+    bx(g, .3, .25, .3, 0x2b2f35, tx, 3.45, tz + 1.5); mesh(G.cyl, mat(0x2b2f35), tx + .3, 3.5, tz - 1.2, g, { s: [.12, .6, .12] });
+    const tl = textTex([['GASOLIO', 64, 800, 46, null, '#1d1f22'], ['infiammabile · non fumare', 22, 600, 96, null, '#55585e']], { bg: '#ffffff', w: 400, h: 120, round: 10 });
+    for (const s of [-1, 1]) planeT(tl, 2, .6, g, tx + s * 1.27, 2.3, tz, { ry: s * Math.PI / 2 });
+    for (let k = 0; k < 6; k++) B.add('lad', G.box, mat(0x9aa1a9), m4(tx - 1.45, .9 + k * .45, tz - 2.6, .05, .05, .5)); for (const s of [-1, 1]) B.add('lad', G.box, mat(0x9aa1a9), m4(tx - 1.45, 1.95, tz - 2.6 + s * .25, .05, 2.6, .05));
+    // tubo dalla cisterna alle colonnine
+    const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .4, tz - 2), new T.Vector3(tx + 4, .25, tz - 3), new T.Vector3(st.x - 2.3, .25, st.z + 1)]), 24, .07, 6); OWN.push(tube); mesh(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
+    // carrello antincendio e cartelli
+    bx(g, .45, .7, .35, 0xd62b1f, st.x - cw / 2 - 1, .16, st.z - 3); mesh(G.cyl, mat(0xd62b1f), st.x - cw / 2 - 1, 1.15, st.z - 3, g, { s: [.32, .55, .32] });
+    const ns = textTex([['⛔', 80, 400, 64]], { bg: '#ffffff', w: 128, h: 128, round: 64 }); bx(g, .06, 1.8, .06, 0x8e959e, st.x - cw / 2 - 1, .16, st.z + 3); planeT(ns, .7, .7, g, st.x - cw / 2 - 1, 2.2, st.z + 3.05);
+    B.flush();
+    // mezzi: quello dell'ultimo rifornimento è alla colonnina, gli altri nei posti
+    const lastP = GD.lastR[0] ? C.plate(GD.lastR[0].targa) : '';
+    let k = 0; fleetVeh = [];
+    GD.V.forEach(v => {
+      let o;
+      if (v.p === lastP && GD.V.length) { o = vehicle(g, v, st.x, st.z, Math.PI / 2); v.atPump = 1; }
+      else { const s = slots[k++]; if (!s) return; o = vehicle(g, v, s.x, s.z, s.ry); }
+      fleetVeh.push({ v, o });
+    });
+    // tubo della colonnina fino al bocchettone del mezzo al rifornimento
+    const vp = fleetVeh.find(f => f.v.atPump);
+    if (vp) { const h2 = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(st.x - 2.3 + .38, 1.1, st.z + .1), new T.Vector3(st.x - 1.7, .45, st.z + .6), new T.Vector3(st.x - 1.1, 1.05, st.z + 1.1)]), 16, .035, 6); OWN.push(h2); mesh(h2, mat(0x1d1f22), 0, 0, 0, g, { ns: 1 }); movers.push({ t: 'pump', l: C.num(GD.lastR[0].litri) || 40, price: GD.price, last: 0 }); }
+    // area cliccabile del parco mezzi e del distributore
+    const hz = new T.Mesh(G.box, M.hit); hz.scale.set(w, .6, d); hz.position.set(cx, .2, cz); hz.userData.k = { t: 'zone', z: 'flotta' }; g.add(hz); pick.push(hz);
+    const hf = new T.Mesh(G.box, M.hit); hf.scale.set(cw + 6, 5.6, cd); hf.position.set(st.x + 1.5, 2.8, st.z); hf.userData.k = { t: 'fuel' }; g.add(hf); pick.push(hf);
+    const ht = new T.Mesh(G.box, M.hit); ht.scale.set(3.6, 4, 7.4); ht.position.set(tx, 2, tz); ht.userData.k = { t: 'fuel' }; g.add(ht); pick.push(ht);
+  }
+  let fleetVeh = [];
+  const vehOf = p => D.gas && D.gas.V.find(v => v.p === p);
+  const plHtml = (p, big) => `<span class="m3-pl${big ? ' big' : ''}"><i>I</i><b>${esc(plFmt(p))}</b></span>`;
+  const bars6 = (vals, keys) => { const mx = Math.max(1, ...vals); const MN = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']; return `<div class="m3-b6">${vals.map((v, i) => `<div><span>${v ? N(Math.round(v)) : ''}</span><i style="--h:${(v / mx * 100).toFixed(1)}%"${i === vals.length - 1 ? ' class="c"' : ''}></i><small>${MN[+keys[i].slice(5) - 1]}</small></div>`).join('')}</div>`; };
+  const gasBtns = () => (C.gasW && C.gasW() ? `<button type="button" class="m3-go" data-m3="gasadd">${ic('fuel')}Registra un rifornimento</button>` : '') + `<button type="button" class="m3-go ghost" data-m3="gasopen">${ic('chart')}Apri la sezione Gasolio</button>`;
+  function fleetPanel(Pn) {
+    const GD = D.gas; if (!GD) return '';
+    if (Pn.t === 'zone') {
+      return head(ic('van'), 'or', 'Parco mezzi · gasolio', 'Mezzi aziendali', `${GD.V.length} mezzi · distributore interno`, 1) + `<div class="m3-pb"><div class="m3-grid">
+        ${stat('Gasolio nel mese', N(Math.round(GD.lM)), 'L', `${GD.nM} rifornimenti`)}${stat('Costo carburante', GD.price || GD.cM ? C.eur0(GD.cM) : '—', '', GD.price ? `${GD.price.toFixed(3).replace('.', ',')} €/L` : 'prezzo €/L da impostare')}
+        ${stat('Consumo medio', GD.cons ? GD.cons.toFixed(1).replace('.', ',') : '—', GD.cons ? 'km/L' : '', GD.cons ? `${(100 / GD.cons).toFixed(1).replace('.', ',')} L ogni 100 km` : 'servono i km')}${stat('Noleggi', GD.rent ? C.eur0(GD.rent * GD.mul) : '—', GD.rent ? '/mese' : '', `${GD.V.filter(v => v.rent).length} mezzi a noleggio`)}</div>
+        ${gasBtns()}
+        <div class="m3-h4">Mezzi <em>${GD.V.length}</em></div><div class="m3-rows m3-ilist">${GD.V.map(v => `<button type="button" class="m3-row" data-veh3="${esc(v.p)}">${plHtml(v.p)}<span class="tx"><b>${esc(v.name || ({ van: 'Furgone', truck: 'Autocarro', car: 'Auto', pickup: 'Pick-up' })[v.kind])}</b><small>${esc([v.drv.length ? 'guida ' + v.drv.join(', ') : v.uso, v.last ? 'ultimo ' + C.dIt(v.last.data) : 'nessun rifornimento'].filter(Boolean).join(' · '))}</small></span><span class="m3-chip ${v.lM ? 'g' : 'n'}">${N(Math.round(v.lM))} L</span></button>`).join('') || '<div class="m3-empty">Nessun mezzo: aggiungili dalla sezione Gasolio con «+ Mezzo»</div>'}</div></div>`;
+    }
+    if (Pn.t === 'fuel') {
+      return head(ic('fuel'), 'or', 'Distributore interno', 'Gasolio', `${GD.nAll} rifornimenti registrati`, 1) + `<div class="m3-pb"><div class="m3-grid">
+        ${stat('Prezzo', GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', '€/L', GD.price ? 'impostato nella sezione Gasolio' : 'da impostare')}${stat('Erogati nel mese', N(Math.round(GD.lM)), 'L', `${GD.nM} rifornimenti`)}</div>
+        ${gasBtns()}
+        <div class="m3-h4">Ultimi rifornimenti <em>${GD.lastR.length}</em></div><div class="m3-tl m3-tl2">${GD.lastR.slice(0, 14).map(r => { const p = C.plate(r.targa), v = vehOf(p); return `<button type="button" ${v ? `data-veh3="${esc(p)}"` : ''}><b>${esc(C.dIt(r.data).slice(0, 5))}</b>${plHtml(p)}<span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></button>`; }).join('') || '<div class="m3-empty">Nessun rifornimento</div>'}</div></div>`;
+    }
+    const v = vehOf(Pn.p); if (!v) return '';
+    const KN = { van: 'Furgone', truck: 'Autocarro', car: 'Auto aziendale', pickup: 'Pick-up' }[v.kind];
+    return head(ic(v.kind === 'truck' ? 'truck' : 'van'), '', KN + (v.atPump ? ' · al distributore' : ''), plHtml(v.p, 1), esc([v.name, v.owner].filter(Boolean).join(' · ') || 'mezzo aziendale'), 1) + `<div class="m3-pb">
+      <div class="m3-chips">${v.drv.length ? `<span class="m3-chip">${ic('users', ' style="width:13px;height:13px"')}${esc(v.drv.join(', '))}</span>` : ''}${v.centro ? `<span class="m3-chip n">centro ${esc(v.centro)}</span>` : ''}${v.rent ? `<span class="m3-chip" style="background:#e6efff;color:#1f55b8">Noleggio ${C.eur0(v.rent * D.gas.mul)}/mese</span>` : ''}${v.uso ? `<span class="m3-chip n">${esc(v.uso.toLowerCase())}</span>` : ''}</div>
+      <div class="m3-grid">${stat('Contachilometri', v.odo ? N(v.odo) : '—', v.odo ? 'km' : '', v.last && C.num(v.last.km) ? 'al ' + C.dIt(v.last.data) : 'km non registrati')}${stat('Consumo', v.cons ? v.cons.toFixed(1).replace('.', ',') : '—', v.cons ? 'km/L' : '', v.cons ? `${(100 / v.cons).toFixed(1).replace('.', ',')} L/100 km · ${N(v.km)} km` : 'servono i km')}
+      ${stat('Gasolio nel mese', N(Math.round(v.lM)), 'L', `${v.nM} pieni · ${C.eur0(v.cM)}`)}${stat('Totale', N(Math.round(v.lT)), 'L', `${v.s.length} pieni · ${C.eur0(v.cT)}`)}</div>
+      <div class="m3-h4">Litri negli ultimi 6 mesi</div>${bars6(v.m6, D.gas.keys)}
+      ${gasBtns()}
+      <div class="m3-h4">Rifornimenti <em>${v.s.length}</em></div><div class="m3-tl m3-tl2">${v.s.slice().reverse().slice(0, 12).map(r => `<div><b>${esc(C.dIt(r.data))}</b><span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></div>`).join('') || '<div class="m3-empty">Nessun rifornimento registrato</div>'}</div></div>`;
+  }
+
   /* ---------------- animazioni ---------------- */
   let o3 = null, viewOff = 0;
   function animate(t, dt) {
@@ -838,6 +1058,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       else if (m.t === 'bob') m.o.position.y = .5 + Math.abs(Math.sin(t * 2 + m.ph)) * .03;
       else if (m.t === 'spin') m.o.rotation.y = Math.sin(t * m.sp) * 1.3;
       else if (m.t === 'float') m.o.position.y = m.y + Math.sin(t * 1.2) * .25;
+      else if (m.t === 'pump') { if (t - m.last > .12) { m.last = t; const u = (t % 11) / 8; pumpDraw(Math.min(1, u) * m.l, m.price); } }
       else if (m.t === 'road') { m.o.position.x += m.dir * m.sp * dt; if (m.o.position.x > 330) m.o.position.x = -330; if (m.o.position.x < -330) m.o.position.x = 330; }
       else if (m.t === 'belt') { for (let i = 0; i < m.n; i++) { const u = (t * m.sp + i / m.n) % 1; o3.position.set(-m.len / 2 + .5 + u * (m.len - 1), 1.22 + .2, 0); o3.rotation.set(0, (i % 3) * .2, 0); o3.scale.set(.55, .4, .5); o3.updateMatrix(); m.im.setMatrixAt(i, o3.matrix); } m.im.instanceMatrix.needsUpdate = true; }
     });
@@ -851,7 +1072,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     <header class="m3-top">
       <div class="m3-brand"><i class="m3-logo">${ic('logo')}</i><b>${esc(C.orgName())}</b></div>
       <nav class="m3-tabs"><button type="button" class="on">${ic('cube')}Magazzino 3D</button><button type="button" data-m3="close">${ic('grid')}Gestionale</button></nav>
-      <label class="m3-search">${ic('search')}<input type="search" placeholder="Articolo, codice, ubicazione, DDT" aria-label="Cerca nel magazzino" autocomplete="off"><kbd>/</kbd><div class="m3-res"></div></label>
+      <label class="m3-search">${ic('search')}<input type="search" placeholder="Articolo, ubicazione, DDT, targa" aria-label="Cerca nel magazzino" autocomplete="off"><kbd>/</kbd><div class="m3-res"></div></label>
       <div class="m3-shots" style="position:relative"><button type="button" class="m3-btn" data-m3="shots">${ic('cam')}<span>Riprese</span></button><div class="m3-menu" data-menu="shots"></div></div>
       ${canEdit() ? `<button type="button" class="m3-edit" data-m3="edit">${ic('pencil')}<span>Progetta</span></button>` : ''}
       <div class="m3-zone"><b class="m3-zc">ALL</b><span class="m3-zt"><b>Panoramica</b><small></small></span><button type="button" data-m3="next" aria-label="Reparto successivo">${ic('right')}</button><button type="button" data-m3="zones" aria-label="Scegli il reparto">${ic('down')}</button><div class="m3-menu" data-menu="zones" style="left:0;right:auto;min-width:260px"></div></div>
@@ -882,7 +1103,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function panel(k) {
     const el = $('.m3-panel'); let h = '';
     const Pn = k || { t: 'zone', z: 'all' };
-    if (Pn.t === 'zone' && Pn.z === 'all') {
+    if ((Pn.t === 'zone' && Pn.z === 'flotta') || Pn.t === 'fuel' || Pn.t === 'veh') { h = fleetPanel(Pn); if (!h) return panel(); }
+    else if (Pn.t === 'zone' && Pn.z === 'all') {
       const todo = D.low.length + D.out.length + D.trf.length;
       h = head(ic('logo'), 'or', 'Magazzino · in tempo reale', esc(C.orgName()), 'Ricevimento · stoccaggio · preparazione · spedizione') + `<div class="m3-pb"><div class="m3-grid">
         ${stat('Pezzi in giacenza', N(D.tot), '', `${D.nArt} articoli`, D.nArt ? D.disp / D.nArt : 0)}
@@ -986,7 +1208,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function zoneChip(z) {
     const n = ZN(z); $('.m3-zc').textContent = n[1]; $('.m3-zt b').textContent = n[0];
     const nv = P.racks.reduce((s, r) => s + r.bays * r.lv, 0);
-    const sub = { all: `${pc(D.disp, D.nArt)} % · ${N(D.tot)} pezzi`, ric: `${D.car30.length} carichi · 30 gg`, stk: `${N(P.byArt.size)}/${N(nv)} ubicazioni`, pre: `${D.ddtM.length} DDT · mese`, cq: `${D.ret90.length} rettifiche · 90 gg`, spe: `${D.ddt.filter(x => !x.d.fattura).length} da fatturare`, uffe: `${D.cli.length} clienti` }[z] || '';
+    const sub = { flotta: D.gas ? `${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L` : '', all: `${pc(D.disp, D.nArt)} % · ${N(D.tot)} pezzi`, ric: `${D.car30.length} carichi · 30 gg`, stk: `${N(P.byArt.size)}/${N(nv)} ubicazioni`, pre: `${D.ddtM.length} DDT · mese`, cq: `${D.ret90.length} rettifiche · 90 gg`, spe: `${D.ddt.filter(x => !x.d.fattura).length} da fatturare`, uffe: `${D.cli.length} clienti` }[z] || '';
     $('.m3-zt small').textContent = sub;
     $$('.m3-fs button[data-fgo]').forEach(b => b.classList.toggle('on', b.dataset.fgo === z && b.dataset.on === '1'));
   }
@@ -994,8 +1216,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (EDIT) return;
     sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false;
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
-    if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
+    if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { highlightCell(it, p2.b, p2.l); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); } } else if (!noFly) rackView(it); } }
+    else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x - 2, ty: 1.5, tz: F.st.z, dist: 40, az: -0.85, pol: 1.02 }); } }
+    else if (k.t === 'veh') { zoneChip('flotta'); const f = fleetVeh.find(x => x.v.p === k.p); if (f && !noFly) { const p2 = new T.Vector3(); f.o.getWorldPosition(p2); fly({ tx: p2.x, ty: 1, tz: p2.z, dist: 21, az: f.o.rotation.y + Math.PI / 2 - .7, pol: .86 }); } }
     else if (k.t === 'truck') { zoneChip('spe'); const t = trucks[k.i]; if (t && !noFly) { const p2 = new T.Vector3(); t.g.getWorldPosition(p2); fly({ tx: p2.x, tz: p2.z, dist: 62, az: t.road ? -0.35 : 0.65, pol: .96 }); } }
     else if (k.t === 'belt' || k.t === 'desk' || k.t === 'dock' || k.t === 'wall') { zoneChip(k.t === 'dock' ? 'spe' : 'pre'); if (!noFly) { const it = L.items.find(i => i.id === k.id); if (it) fly({ tx: it.x, tz: it.z, dist: 40, az: -0.5, pol: .95 }); } }
     if (k.t === 'wall') return;
@@ -1003,9 +1227,9 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
   function kpis() {
     $('.m3-kpis').innerHTML = `<div class="m3-kpi m3-card" data-m3="zall"><i>${ic('box')}</i><div><span>Pezzi in magazzino</span><b>${N(D.tot)}<em>${pc(D.disp, D.nArt)} %</em></b><small>${D.nArt} articoli · ${C.eur0(D.val)}</small></div></div>
-      <div class="m3-kpi m3-card" data-m3="zspe"><i>${ic('truck')}</i><div><span>Spedizioni del mese</span><b>${D.ddtM.length}<em>${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli</em></b><small>${D.ddt.filter(x => !x.d.fattura).length} DDT da fatturare</small></div></div>`;
+      <div class="m3-kpi m3-card" data-m3="zspe"><i>${ic('truck')}</i><div><span>Spedizioni del mese</span><b>${D.ddtM.length}<em>${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli</em></b><small>${D.ddt.filter(x => !x.d.fattura).length} DDT da fatturare</small></div></div>` + (D.gas ? `<div class="m3-kpi m3-card" data-m3="zgas"><i>${ic('fuel')}</i><div><span>Gasolio del mese</span><b>${N(Math.round(D.gas.lM))}<em>litri</em></b><small>${D.gas.nM} rifornimenti · ${D.gas.V.length} mezzi</small></div></div>` : '');
     const n = D.low.length + D.out.length + D.trf.length, b = $('.m3-bell em'); b.hidden = !n; b.textContent = n > 99 ? '99+' : n;
-    const st = [['fornitori', 'Fornitori', 'factory', 'ric', 0], ['ric', 'Ricevimento', 'dock', 'ric', 1], ['stk', 'Scaffalature', 'rack', 'stk', 1], ['pre', 'Preparazione', 'hand', 'pre', 1], ['cq', 'Controllo', 'shield', 'cq', 1], ['spe', 'Spedizione', 'truck', 'spe', 1], ['cli', 'Clienti', 'users', 'uffe', 0]].filter(s => s[3] === 'uffe' || zoneTarget(s[3]));
+    const st = [['fornitori', 'Fornitori', 'factory', 'ric', 0], ['ric', 'Ricevimento', 'dock', 'ric', 1], ['stk', 'Scaffalature', 'rack', 'stk', 1], ['pre', 'Preparazione', 'hand', 'pre', 1], ['cq', 'Controllo', 'shield', 'cq', 1], ['spe', 'Spedizione', 'truck', 'spe', 1], ['mez', 'Mezzi', 'fuel', 'flotta', 1], ['cli', 'Clienti', 'users', 'uffe', 0]].filter(s => s[3] === 'uffe' || zoneTarget(s[3]));
     $('.m3-flow').innerHTML = `<div class="m3-fh">${ic('flow')}Flusso del magazzino<em>fornitore → cliente · in tempo reale</em></div><div class="m3-fs">${st.map(([k, l, icn, z, on], i) => `${i ? '<b class="sep"></b>' : ''}<button type="button" data-fgo="${z}" data-on="${on}" class="${k === 'cq' && D.out.length || k === 'stk' && D.low.length ? 'w' : ''}"><i>${ic(icn)}</i>${l}</button>`).join('')}</div>`;
     table(table.k || 'cor');
     $('.m3-menu[data-menu="zones"]').innerHTML = zoneKinds().map(z => `<button type="button" data-zsel="${z}"><span class="zc">${ZN(z)[1]}</span>${ZN(z)[0]}</button>`).join('');
@@ -1013,11 +1237,12 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
   function table(k) {
     table.k = k;
-    const tabs = [['cor', 'Scaffali', P.racks.length], ['mov', 'Movimenti', D.MM.length], ['spe', 'Spedizioni', D.ddtM.length], ['low', 'Riordino', D.low.length]];
+    const tabs = [['cor', 'Scaffali', P.racks.length], ['mov', 'Movimenti', D.MM.length], ['spe', 'Spedizioni', D.ddtM.length], ...(D.gas ? [['mez', 'Mezzi', D.gas.V.length]] : []), ['low', 'Riordino', D.low.length]];
     let rows = '';
     if (k === 'cor') rows = P.racks.map(r => { const c = D.catOf.get(r.cat), A2 = rackArts(r), top = A2.slice().sort((a, b) => b.g - a.g)[0], lw = A2.filter(x => x.low).length; return `<button type="button" data-rack3="${esc(r.id)}"><span class="c1"><b>${esc(r.code)}</b><small>${esc(r.cat || KIND[r.k].n)}</small></span><span class="c2"><i style="background:${c ? c.colH : '#c9c6c0'}"></i>${esc(top ? top.a.descrizione : 'vuoto')}${top ? ' · ' + N(top.g) : ''}</span>${lw ? '<span class="m3-chip a">Sotto scorta</span>' : '<span class="m3-chip g"><i></i>Ok</span>'}<span class="c4">${pc(A2.length, r.bays * r.lv)} %</span><span class="c5">›</span></button>`; }).join('');
     else if (k === 'mov') rows = D.MM.slice().sort((a, b) => String(b.data).localeCompare(String(a.data))).slice(0, 40).map(m => { const a = C.artOf(m.articolo), q = C.num(m.quantita), p2 = P.byArt.get(m.articolo); return `<button type="button" ${p2 ? `data-art3="${esc(m.articolo)}"` : ''}><span class="c1"><b>${esc(C.dIt(m.data).slice(0, 5))}</b><small>${esc(p2 ? p2.code : m.tipo || '')}</small></span><span class="c2">${esc(a ? a.descrizione : 'Articolo eliminato')}</span><span class="m3-chip ${q > 0 ? 'g' : 'a'}">${q > 0 ? '+' : ''}${N(q)}</span><span class="c4">${esc((m.causale || '').slice(0, 8))}</span><span class="c5">›</span></button>`; }).join('');
     else if (k === 'spe') rows = D.ddtM.slice(0, 30).map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><span class="c1"><b>${esc(C.dnum(x.d))}</b><small>${esc(C.dIt(x.d.data).slice(0, 5))}</small></span><span class="c2">${esc(x.cliN)}</span>${x.d.fattura ? '<span class="m3-chip g">Fatturato</span>' : '<span class="m3-chip a">Da fatturare</span>'}<span class="c4">${N(C.num(x.d.colli))} colli</span><span class="c5">›</span></button>`; }).join('');
+    else if (k === 'mez' && D.gas) rows = D.gas.V.map(v => `<button type="button" data-veh3="${esc(v.p)}"><span class="c1"><b>${esc(plFmt(v.p))}</b><small>${esc(v.name || v.kind)}</small></span><span class="c2">${esc(v.drv.join(', ') || v.uso || '—')}</span><span class="m3-chip ${v.lM ? 'g' : 'n'}">${N(Math.round(v.lM))} L</span><span class="c4">${v.cons ? v.cons.toFixed(1).replace('.', ',') + ' km/L' : '—'}</span><span class="c5">›</span></button>`).join('');
     else rows = D.low.slice(0, 40).map(x => { const p2 = P.byArt.get(x.id); return `<button type="button" data-art3="${esc(x.id)}"><span class="c1"><b>${esc(p2 ? p2.code : x.a.codice || '—')}</b><small>min. ${N(x.s)}</small></span><span class="c2">${esc(x.a.descrizione)}</span><span class="m3-chip a">${N(x.g)} ${esc(x.a.um || '')}</span><span class="c4">${pc(x.g, x.s)} %</span><span class="c5">›</span></button>`; }).join('');
     $('.m3-tab').innerHTML = `<div class="m3-tt"><i>${ic('chart')}</i>${tabs.map(([kk, l, n]) => `<button type="button" data-tab3="${kk}" class="${kk === k ? 'on' : ''}">${l}<em>${n}</em></button>`).join('')}</div><div class="m3-tr">${rows || '<div class="m3-empty">Niente da mostrare</div>'}</div>`;
   }
@@ -1036,6 +1261,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const h = A2.map(x => { const p2 = P.byArt.get(x.id); return `<button type="button" data-art3="${esc(x.id)}"><i>${esc(p2 ? p2.code.split('-')[0] : 'ART')}</i><span><b>${esc(x.a.descrizione)}</b><small>${esc([p2 ? p2.code : 'senza ubicazione', N(x.g) + ' ' + (x.a.um || 'pz'), x.out ? 'esaurito' : x.low ? 'sotto scorta' : ''].filter(Boolean).join(' · '))}</small></span></button>`; }).join('')
       + Rr.map(r => `<button type="button" data-rack3="${esc(r.id)}"><i>${esc(r.code)}</i><span><b>Scaffale ${esc(r.code)} · ${esc(r.cat || KIND[r.k].n)}</b><small>${rackArts(r).length} articoli · ${r.bays * r.lv} vani</small></span></button>`).join('')
       + Dd.map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i>DDT</i><span><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc(C.dIt(x.d.data))}</small></span></button>`; }).join('')
+      + (D.gas ? D.gas.V.filter(v => (v.p + ' ' + plFmt(v.p) + ' ' + v.name + ' ' + v.drv.join(' ')).toLowerCase().includes(s)).slice(0, 4).map(v => `<button type="button" data-veh3="${esc(v.p)}"><i>${ic('van', ' style="width:16px;height:16px"')}</i><span><b>${esc(plFmt(v.p))}${v.name ? ' · ' + esc(v.name) : ''}</b><small>${N(Math.round(v.lM))} L nel mese${v.drv.length ? ' · ' + esc(v.drv.join(', ')) : ''}</small></span></button>`).join('') : '')
       + zs.map(z => `<button type="button" data-zsel="${z}"><i>${ZN(z)[1]}</i><span><b>${ZN(z)[0]}</b><small>reparto</small></span></button>`).join('');
     res.innerHTML = h || '<p>Nessun risultato</p>'; res.classList.add('on');
   }
@@ -1203,7 +1429,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function doPick(p) {
     if (!ray.r) ray.r = new T.Raycaster();
     const rc = R.domElement.getBoundingClientRect(), v = new T.Vector2((p.x - rc.left) / rc.width * 2 - 1, -(p.y - rc.top) / rc.height * 2 + 1);
-    ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, truck: 1, rack: 2, dock: 3, belt: 3, desk: 3, wall: 4, zone: 5 };
+    ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, truck: 1, veh: 1, rack: 2, dock: 3, belt: 3, desk: 3, fuel: 3, wall: 4, zone: 5 };
     const hit2 = H.slice(0, 8).filter(h2 => h2.object.userData.k).sort((a, b) => (PR[a.object.userData.k.t] - PR[b.object.userData.k.t]) || a.distance - b.distance)[0];
     if (p.hover) { R.domElement.classList.toggle('hov', !!hit2 || !!EDIT); return; }
     if (EDIT || !hit2) return;
@@ -1227,6 +1453,9 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else select(null); return; }
     if (a === 'aim') { if (sel) select(sel); return; }
     if (a === 'edit') return enterEdit();
+    if (a === 'gasadd') { if (C.gasAdd) C.gasAdd(); return; }
+    if (a === 'gasopen') { close(); if (C.goGas) setTimeout(C.goGas, 50); return; }
+    if (a === 'zgas') { select({ t: 'zone', z: 'flotta' }); return; }
     if (a === 'edx') return exitEdit(false);
     if (a === 'eds') return exitEdit(true);
     if (a === 'undo') return undo();
@@ -1255,6 +1484,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const tb = t.closest('[data-tab3]'); if (tb) { table(tb.dataset.tab3); return; }
     const rw = t.closest('[data-rack3]'); if (rw) { $('.m3-res').classList.remove('on'); select({ t: 'rack', id: rw.dataset.rack3 }); return; }
     const ar = t.closest('[data-art3]'); if (ar) { $('.m3-res').classList.remove('on'); focusArt(ar.dataset.art3); return; }
+    const vh = t.closest('[data-veh3]'); if (vh) { $('.m3-res').classList.remove('on'); select({ t: 'veh', p: vh.dataset.veh3 }); return; }
     const tr = t.closest('[data-trk3]'); if (tr) { $('.m3-res').classList.remove('on'); select({ t: 'truck', i: +tr.dataset.trk3 }); return; }
   }
   function onChange(e) {
