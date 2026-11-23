@@ -1,4 +1,4 @@
-/* Magazzino 3D (v277) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v278) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -778,32 +778,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     bx(g, .6, .38, .04, 0x1d2025, -.9, 1.7, -.45); bx(g, .06, .25, .06, 0x2b2f35, -.9, 1.46, -.45);
     bx(g, .35, .25, .3, 0xeeeeec, .9, 1.46, -.35); bx(g, .45, .3, .4, 0xe3b073, .25, 1.46, .1); bx(g, .4, .26, .36, 0xa9c98a, .3, 1.76, .1);
     mesh(G.cyl, mat(0xf47b20), -.2, 1.5, .3, g, { s: [.16, .08, .16] });
-    const p = person(g, 0, 1.1, 0x39a85a); p.rotation.y = Math.PI; movers.push({ o: p, t: 'bob', ph: it.x });
+    const p = person(g, 0, 1.0, 0x39a85a, null, { mode: 'work' }); p.rotation.y = Math.PI; movers.push({ o: p, t: 'bob', ph: it.x });
     hit(g, 3.4, 2, 2.6, 1, { t: 'desk', id: it.id }, it);
-  }
-  function person(p, x, z, vest, helmet) {
-    const g = new T.Group(); g.position.set(x, .5, z);
-    const add = (w, h, d, c, y, xx, zz) => { const m = mesh(G.box, mat(c), xx || 0, y, zz || 0, g, { s: [w, h, d] }); return m; };
-    add(.2, .82, .26, 0x2b3440, .41, -.13); add(.2, .82, .26, 0x2b3440, .41, .13);
-    add(.24, .08, .32, 0x1b1d20, .04, -.13, .04); add(.24, .08, .32, 0x1b1d20, .04, .13, .04);
-    add(.6, .72, .36, 0xf4f4f2, 1.18); add(.62, .5, .38, vest || 0x39a85a, 1.2); add(.63, .06, .39, 0xe8eef0, 1.12);
-    add(.14, .62, .16, 0xf4f4f2, 1.14, -.39); add(.14, .62, .16, 0xf4f4f2, 1.14, .39);
-    mesh(G.sph, mat(0xe9c4a0), 0, 1.78, 0, g, { s: [.46, .48, .46] });
-    mesh(G.sph, mat(helmet || 0xf5f5f2), 0, 1.86, 0, g, { s: [.52, .34, .52] });
-    g.traverse(o => { if (o.isMesh) o.castShadow = true; }); p.add(g); return g;
-  }
-  function forklift(p, x, z) {
-    const g = new T.Group(); g.position.set(x, .5, z);
-    const b = (w, h, d, c, xx, y, zz) => mesh(G.box, mat(c), xx, y, zz, g, { s: [w, h, d] });
-    b(1.25, .75, 1.9, 0xf47b20, 0, .6, -.15); b(1.2, .55, .5, 0x2b2f35, 0, .55, -1.05);
-    for (const s of [-1, 1]) { b(.07, 1.3, .07, 0x2b2f35, s * .55, 1.6, -.8); b(.07, 1.3, .07, 0x2b2f35, s * .55, 1.6, .45); }
-    b(1.2, .06, 1.35, 0x2b2f35, 0, 2.27, -.18);
-    for (const s of [-1, 1]) b(.12, 2.6, .12, 0x3a3f46, s * .38, 1.5, .95);
-    b(.9, .08, .1, 0x3a3f46, 0, .5, 1.02); for (const s of [-1, 1]) b(.12, .05, 1.15, 0x3a3f46, s * .28, .28, 1.6);
-    b(.9, .55, 1.05, 0xe9a25c, 0, .6, 1.6);
-    for (const [wx, wz] of [[-.62, .6], [.62, .6], [-.62, -.8], [.62, -.8]]) mesh(G.cyl, mat(0x1d1f22), wx, .32, wz, g, { s: [.62, .22, .62], rz: Math.PI / 2 });
-    person(g, 0, -.35, 0xf47b20, 0xf2c418).position.y = .65;
-    g.traverse(o => { if (o.isMesh) o.castShadow = true; }); p.add(g); return g;
   }
   function truck(p, d, x, z, ry) {
     const g = new T.Group(); g.position.set(x, .1, z); g.rotation.y = ry || 0;
@@ -830,7 +806,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     L.items.filter(i => i.t === 'rack' && i.k === 'pallet').slice(0, 4).forEach((it, k) => {
       if (k % 2) return; const g = WH.children.find(c => c.userData.eid === it.id); if (!g) return; g.updateMatrixWorld();
       const len = rackLen(it), dep = rackDep(it), a = g.localToWorld(new T.Vector3(-len / 2 + 1, 0, dep / 2 + 1.6)), b = g.localToWorld(new T.Vector3(len / 2 - 1, 0, dep / 2 + 1.6));
-      const f = forklift(WH, a.x, a.z); movers.push({ o: f, t: 'path', a, b, sp: .18 + k * .03, ph: k * 1.3 });
+      const steps = rackForkSteps(it, g), f = forklift(WH, steps[0].x, steps[0].z); f.rotation.y = Math.atan2(b.x - a.x, b.z - a.z); movers.push({ o: f, t: 'fork', steps, i: 0, st: null });
     });
     // operatori che camminano nelle zone
     L.items.filter(i => i.t === 'zone' && ['pre', 'spe', 'cq'].includes(i.k)).forEach((z, k) => {
@@ -1118,6 +1094,213 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
 
 
+  /* ---------------- persone, muletti e transpallet (v278): modelli articolati e movimenti ---------------- */
+  const CAPS = {};
+  const capG = (r, l) => { const k = r + '|' + l; return CAPS[k] || (CAPS[k] = new T.CapsuleGeometry(r, l, 5, 12)); };
+  const domeG = () => G.dome || (G.dome = new T.SphereGeometry(.5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2));
+  const torG = () => G.tor || (G.tor = new T.TorusGeometry(.16, .022, 8, 28));
+  const angD = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+  function part(geo, m, x, y, z, par, s, r, ns) { const e = new T.Mesh(geo, m); e.position.set(x, y, z); if (s) e.scale.set(s[0], s[1], s[2]); if (r) e.rotation.set(r[0], r[1], r[2]); e.castShadow = !ns; e.receiveShadow = true; par.add(e); return e; }
+  const grp = (par, x, y, z) => { const q = new T.Group(); q.position.set(x, y, z); par.add(q); return q; };
+  function blobMat() { if (M.blob) return M.blob; const t = cvTex(64, 64, (gx, w, h) => { const gr = gx.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(20,22,26,.42)'); gr.addColorStop(1, 'rgba(20,22,26,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, w, h); }); return (M.blob = new T.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); }
+  function radTex(k, c0, c1) { if (TX[k]) return TX[k]; TX[k] = cvTex(128, 128, (gx, w, h) => { const gr = gx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, c0); gr.addColorStop(.45, c1); gr.addColorStop(1, 'rgba(0,0,0,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, w, h); }); return TX[k]; }
+  const SKIN = [0xeac4a0, 0xdcae88, 0xc8916b, 0xf1d3b6, 0xa8734f], HAIR = [0x2b211b, 0x4a3426, 0x6b4a2f, 0x1b1b1d, 0x8a8d93];
+
+  // operatore: anche, ginocchia, caviglie, busto, testa, spalle, gomiti, polsi
+  function person(p, x, z, vest, helmet, o) {
+    o = o || {};
+    const g = new T.Group(); g.position.set(x, .5, z); p.add(g);
+    const sk = mat(SKIN[Math.floor(rr() * SKIN.length)]), pn = mat(o.pants || [0x2b3440, 0x33363b, 0x3b4a5e][Math.floor(rr() * 3)]), sh = mat(o.shirt || [0xf4f4f2, 0x3f4a5a, 0xe4e7eb, 0x2f3a4a][Math.floor(rr() * 4)]);
+    const vs = mat(vest || 0x39a85a), rf = mat(0xe8ebee), dk = mat(0x1b1d20), bt = mat(0x2a2522), gl = mat(o.glove || [0x4a4f57, 0xe0a03a, 0x5b6068][Math.floor(rr() * 3)]), hm = mat(helmet || 0xf5f5f2);
+    const root = grp(g, 0, 0, 0);
+    const leg = s => { const hip = grp(root, s * .1, .92, 0); part(capG(.084, .3), pn, 0, -.21, 0, hip, [1, 1, 1.05]); const knee = grp(hip, 0, -.43, 0); part(G.sph, pn, 0, 0, .005, knee, [.15, .15, .155]); part(capG(.07, .3), pn, 0, -.2, 0, knee); part(G.cyl, rf, 0, -.27, 0, knee, [.155, .035, .155]);
+      const ank = grp(knee, 0, -.42, 0); part(G.box, bt, 0, .035, .03, ank, [.13, .1, .22]); part(G.sph, bt, 0, .03, .13, ank, [.13, .1, .12]); part(G.box, dk, 0, -.008, .045, ank, [.138, .022, .28]); part(G.box, mat(0x3a332e), 0, .055, .16, ank, [.12, .05, .06]); return { hip, knee, ank }; };
+    const L1 = leg(-1), R1 = leg(1);
+    part(capG(.12, .14), pn, 0, .98, 0, root, [1, 1, .78], [0, 0, Math.PI / 2]);
+    part(G.cyl, dk, 0, 1.045, 0, root, [.37, .05, .27]); part(G.box, mat(0xb7bcc3), 0, 1.045, .135, root, [.06, .04, .012]);
+    part(G.box, dk, .19, 1.0, -.03, root, [.05, .12, .07]); part(G.cyl, dk, .2, 1.11, -.04, root, [.012, .12, .012]); part(G.box, mat(0xf47b20), .2, 1.04, .007, root, [.04, .03, .01], null, 1);
+    const spine = grp(root, 0, 1.02, 0);
+    part(capG(.16, .26), sh, 0, .23, 0, spine, [1.05, 1, .72]);
+    part(capG(.168, .2), vs, 0, .2, 0, spine, [1.07, 1, .77]);
+    for (const y of [.1, .23]) part(G.cyl, rf, 0, y, 0, spine, [.364, .035, .265], null, 1);
+    for (const s of [-1, 1]) { part(G.box, rf, s * .085, .33, .127, spine, [.035, .17, .012], null, 1); part(G.box, rf, s * .085, .3, -.127, spine, [.035, .22, .012], null, 1); }
+    part(G.box, mat(0xffffff), -.08, .3, .133, spine, [.065, .045, .01], null, 1); part(G.box, mat(0xf47b20), -.08, .312, .139, spine, [.065, .012, .004], null, 1);
+    part(G.cyl, sk, 0, .53, 0, spine, [.095, .1, .095]);
+    const hd = grp(spine, 0, .58, 0);
+    part(G.sph, sk, 0, .1, .005, hd, [.215, .245, .225]);
+    part(G.sph, mat(HAIR[Math.floor(rr() * HAIR.length)]), 0, .115, -.03, hd, [.222, .2, .21]);
+    for (const s of [-1, 1]) { part(G.sph, mat(0x1d1f22), s * .042, .115, .1, hd, [.024, .028, .012], null, 1); part(G.box, mat(0x3a2e26), s * .042, .145, .103, hd, [.04, .008, .01], null, 1); part(G.sph, sk, s * .11, .1, 0, hd, [.035, .06, .045]); }
+    part(G.sph, sk, 0, .088, .113, hd, [.032, .042, .03], null, 1); part(G.box, mat(0xa0675a), 0, .045, .105, hd, [.045, .008, .01], null, 1);
+    part(domeG(), hm, 0, .148, -.005, hd, [.27, .26, .285]); part(G.cyl, hm, 0, .15, -.005, hd, [.285, .018, .3]); part(G.box, hm, 0, .152, .14, hd, [.15, .016, .07]); part(G.box, hm, 0, .27, -.01, hd, [.035, .035, .22]);
+    part(G.box, mat(0xf47b20), 0, .2, .118, hd, [.06, .03, .01], [-.5, 0, 0], 1);
+    const arm = s => { const sh2 = grp(spine, s * .21, .43, 0); part(G.sph, sh, 0, -.01, 0, sh2, [.125, .125, .125]); part(capG(.05, .19), sh, 0, -.14, 0, sh2); const el = grp(sh2, 0, -.29, 0); part(G.sph, sh, 0, 0, 0, el, [.095, .095, .095]); part(capG(.045, .19), sh, 0, -.13, 0, el); const wr = grp(el, 0, -.28, 0); part(G.sph, gl, 0, -.035, .01, wr, [.085, .115, .07]); part(G.sph, gl, s * -.035, -.02, .035, wr, [.035, .06, .035]); return { sh: sh2, el, wr }; };
+    const LA = arm(-1), RA = arm(1);
+    if (o.tool === 'tablet' || o.mode === 'scan') { part(G.box, dk, 0, -.06, .07, RA.wr, [.06, .045, .17]); part(G.box, mat(0xf47b20), 0, -.04, .02, RA.wr, [.07, .06, .06]); part(G.box, dk, .02, -.05, .1, LA.wr, [.22, .015, .3], [0, 0, .2]); part(G.box, mat(0x9fc9e8), .02, -.04, .1, LA.wr, [.19, .006, .26], [0, 0, .2], 1); }
+    const bl = part(G.plane, blobMat(), 0, .065, 0, g, [.75, .75, 1], [-Math.PI / 2, 0, 0], 1); bl.castShadow = false; bl.renderOrder = 1;
+    g.userData.rig = { root, spine, hd, hipL: L1.hip, hipR: R1.hip, knL: L1.knee, knR: R1.knee, anL: L1.ank, anR: R1.ank, shL: LA.sh, shR: RA.sh, elL: LA.el, elR: RA.el, wrL: LA.wr, wrR: RA.wr, ph: rr() * 6, amp: 0, mode: o.mode || 'walk', seed: rr() * 10, steer: 0, look: 0, lp: null, blob: bl };
+    return g;
+  }
+  // posa: camminata, spinta, guida, lavoro al banco, controllo con lettore
+  function poseP(R, t) {
+    const a = R.amp, ph = R.ph, s = Math.sin(ph), c = Math.cos(ph), md = R.mode, sd = R.seed, still = 1 - a;
+    let hL = -s * .5 * a, hR = s * .5 * a, kL = (Math.max(0, c) * 1.0 + .08) * a + .03, kR = (Math.max(0, -c) * 1.0 + .08) * a + .03;
+    let sL = s * .45 * a, sR = -s * .45 * a, eL = -.16 - .32 * a * Math.max(0, -s), eR = -.16 - .32 * a * Math.max(0, s), zL = .07, zR = -.07;
+    let lean = .06 * a, tw = s * .08 * a, hy = (Math.sin(t * .37 + sd) * .5 + Math.sin(t * .13 + sd * 2) * .25) * still, hx = Math.sin(t * .23 + sd) * .06 * still, bob = .028 * a * Math.cos(2 * ph), sway = Math.sin(t * .55 + sd) * .016 * still;
+    let aL = -(hL + kL) * .55 + Math.max(0, -c) * .25 * a, aR = -(hR + kR) * .55 + Math.max(0, c) * .25 * a;
+    if (md === 'push') { sL = sR = -1.12 + s * .04 * a; eL = eR = -.28; zL = .16; zR = -.16; lean = .2 + .04 * a; hx = .04; hy *= .3; tw *= .4; }
+    else if (md === 'drive') { hL = hR = -1.5; kL = kR = 1.5; aL = aR = .05; sL = -.88 + R.steer * .25; sR = -.88 - R.steer * .25; eL = eR = -.62; zL = .1; zR = -.1; lean = -.06 + Math.sin(t * 2.2 + sd) * .01; tw = R.look * .42; hy = R.look * 1.2 + (1 - R.look) * Math.sin(t * .5 + sd) * .25; hx = .05; bob = Math.sin(t * 9) * .004 * Math.min(1, R.vib || 0); sway = 0; }
+    else if (md === 'work') { const ty = t * 10; sL = -.52 + Math.sin(ty) * .05; sR = -.52 + Math.sin(ty + 1.7) * .05; eL = -1.0 + Math.max(0, Math.sin(ty * .9)) * .12; eR = -1.0 + Math.max(0, Math.sin(ty * .9 + 2)) * .12; zL = .2; zR = -.2; const up = Math.pow(Math.max(0, Math.sin(t * .31 + sd)), 10); hx = .34 - .42 * up; hy = up * Math.sin(t * .7 + sd) * .6; lean = .1; }
+    else if (md === 'scan') { const cy = (t * .55 + sd) % 4, up = cy < 1.6 ? Math.sin(Math.min(1, cy / .35) * Math.PI / 2) * (cy > 1.25 ? Math.max(0, (1.6 - cy) / .35) : 1) : 0; sL = -.62; eL = -1.15; zL = .22; sR = -.55 - .75 * up; eR = -1.05 + .85 * up; zR = -.12; hx = .3 - .25 * up; hy = -.25 * up + Math.sin(t * .4 + sd) * .1 * (1 - up); lean = .06; }
+    R.hipL.rotation.x = hL; R.hipR.rotation.x = hR; R.knL.rotation.x = kL; R.knR.rotation.x = kR; R.anL.rotation.x = aL; R.anR.rotation.x = aR;
+    R.shL.rotation.set(sL, 0, zL); R.shR.rotation.set(sR, 0, zR); R.elL.rotation.x = eL; R.elR.rotation.x = eR;
+    R.spine.rotation.set(lean, tw, 0); R.spine.scale.y = 1 + Math.sin(t * 1.7 + sd) * .012 * still;
+    R.hd.rotation.set(hx, hy - tw * .8, 0); R.root.position.set(sway, bob, 0);
+  }
+  // aggiorna la posa dalle velocità reali (passo legato allo spazio percorso)
+  function rigTick(o, t, dt) {
+    const R = o.userData.rig; if (!R) return; const p = o.position;
+    if (!R.lp) R.lp = p.clone(); const d = Math.hypot(p.x - R.lp.x, p.z - R.lp.z); R.lp.copy(p);
+    const v = dt > 0 ? d / dt : 0; R.amp += (clamp(v / 1.15, 0, 1) - R.amp) * Math.min(1, dt * 7); R.ph += d / 1.35 * Math.PI * 2;
+    poseP(R, t);
+  }
+  // passeggiata tra due punti: si ferma, si guarda intorno, si gira con calma e riparte
+  function strollTick(m, t, dt) {
+    const o = m.o; if (!m.st) { m.st = { a: m.a, b: m.b, u: 0, w: rr() * 2 }; o.position.x = m.a.x; o.position.z = m.a.z; }
+    const S = m.st, d = Math.max(.5, Math.hypot(S.b.x - S.a.x, S.b.z - S.a.z)), hd = Math.atan2(S.b.x - S.a.x, S.b.z - S.a.z), df = angD(hd, o.rotation.y);
+    if (S.w > 0) { S.w -= dt; if (S.w < .9) o.rotation.y += df * Math.min(1, dt * 3.2); return; }
+    if (Math.abs(df) > .25) { o.rotation.y += Math.sign(df) * Math.min(Math.abs(df), dt * 3); return; }
+    o.rotation.y += df * Math.min(1, dt * 5);
+    S.u = Math.min(1, S.u + dt * 1.05 / (d * 1.18)); const u = S.u, e = u * u * u * (u * (u * 6 - 15) + 10);
+    o.position.x = S.a.x + (S.b.x - S.a.x) * e; o.position.z = S.a.z + (S.b.z - S.a.z) * e;
+    if (u >= 1) { m.st = { a: S.b, b: S.a, u: 0, w: 1.4 + rr() * 2.6 }; }
+  }
+
+  // carrello elevatore frontale: telaio, contrappeso, tettuccio, montante a sfilo, piastra, forche, catene, ruote sterzanti
+  function sideG(key, pts, depth, bev) {
+    if (G[key]) return G[key];
+    const sh = new T.Shape(); pts.forEach((p, i) => { if (p.q) sh.quadraticCurveTo(p.q[0], p.q[1], p[0], p[1]); else if (i) sh.lineTo(p[0], p[1]); else sh.moveTo(p[0], p[1]); });
+    const ge = new T.ExtrudeGeometry(sh, { depth: depth - bev * 2, bevelEnabled: true, bevelThickness: bev, bevelSize: bev, bevelSegments: 3, curveSegments: 10 });
+    ge.rotateY(-Math.PI / 2); ge.translate((depth - bev * 2) / 2, 0, 0); ge.computeVertexNormals(); return (G[key] = ge);
+  }
+  let fkN = 0;
+  function forklift(p, x, z, o) {
+    o = o || {};
+    const g = new T.Group(); g.position.set(x, .5, z); p.add(g);
+    const OR = mat(0xf47b20), DK = mat(0x2b2f35), BK = mat(0x17191c), GR = mat(0x8e959e), LG = mat(0xc5cad1), ST = mat(0x3a3f46), SEAT = mat(0x26292d);
+    part(G.box, DK, 0, .34, -.25, g, [.98, .3, 1.9]);
+    part(sideG('fkSide', [[-.78, .42], [.66, .42], [.66, .7], [.1, .7], [-.03, .99], [-.72, .99], [-.79, .9]], 1.04, .035), OR, 0, 0, 0, g);
+    part(sideG('fkCW', [[-1.33, .17], [-.72, .17], [-.72, 1.07], [-1.06, 1.07], Object.assign([-1.33, .8], { q: [-1.33, 1.07] })], 1.1, .05), ST, 0, 0, 0, g);
+    for (let i = 0; i < 5; i++) part(G.box, BK, 0, 1.03, -.62 + i * .09, g, [.56, .012, .035], null, 1);
+    part(G.box, mat(0x1d1f22), 0, .725, .37, g, [.9, .02, .54], null, 1); for (let i = 0; i < 5; i++) part(G.box, mat(0x2b2f35), 0, .738, .16 + i * .1, g, [.86, .008, .025], null, 1);
+    part(G.box, SEAT, 0, 1.1, -.42, g, [.52, .11, .46]); part(G.box, SEAT, 0, 1.39, -.67, g, [.5, .5, .1], [-.14, 0, 0]); part(G.box, SEAT, 0, 1.66, -.71, g, [.3, .12, .09], [-.14, 0, 0]);
+    for (const s of [-1, 1]) part(G.box, SEAT, s * .29, 1.22, -.42, g, [.05, .06, .34]);
+    part(G.box, mat(0xf47b20), .17, 1.36, -.6, g, [.05, .48, .012], [-.14, 0, 0], 1);
+    part(G.box, DK, 0, .95, .6, g, [.88, .48, .14], [.2, 0, 0]);
+    part(G.box, new T.MeshBasicMaterial({ color: 0x8fe0b4 }), .14, 1.15, .52, g, [.16, .08, .008], [.2, 0, 0], 1);
+    part(G.cyl, DK, 0, 1.2, .43, g, [.07, .42, .07], [.8, 0, 0]);
+    const stw = grp(g, 0, 1.37, .28); stw.rotation.x = -.85; const spin = grp(stw, 0, 0, 0); part(torG(), BK, 0, 0, 0, spin, null, [Math.PI / 2, 0, 0]); part(G.box, BK, 0, 0, 0, spin, [.3, .02, .03]); part(G.sph, mat(0xd62b1f), .13, .03, 0, spin, [.05, .06, .05]);
+    for (let i = 0; i < 3; i++) { part(G.cyl, BK, .3 + i * .05, 1.08, .5, g, [.018, .26, .018], [-.35, 0, 0]); part(G.sph, mat([0xd62b1f, 0x2f6db4, 0x2b2f35][i]), .3 + i * .05, 1.2, .46, g, [.045, .045, .045]); }
+    // tettuccio di protezione
+    for (const s of [-1, 1]) { part(G.box, DK, s * .47, 1.6, -.82, g, [.07, 1.24, .07]); part(G.box, DK, s * .47, 1.47, .53, g, [.07, 1.52, .07], [-.08, 0, 0]); part(G.box, DK, s * .47, 2.23, -.14, g, [.07, .07, 1.5]); }
+    for (const zz of [-.84, .5]) part(G.box, DK, 0, 2.23, zz, g, [1.0, .07, .07]);
+    for (let i = 0; i < 6; i++) part(G.box, DK, 0, 2.23, -.66 + i * .2, g, [.92, .025, .045]);
+    for (const s of [-1, 1]) { part(G.box, DK, s * .4, 2.17, .52, g, [.14, .1, .08]); part(G.box, new T.MeshBasicMaterial({ color: 0xfff6dc }), s * .4, 2.17, .565, g, [.1, .06, .01], null, 1); }
+    // luci posteriori, bande di sicurezza, numero
+    for (const s of [-1, 1]) { part(G.box, new T.MeshBasicMaterial({ color: 0xd8261c }), s * .38, .98, -1.335, g, [.1, .08, .02], null, 1); part(G.box, new T.MeshBasicMaterial({ color: 0xf6f6f0 }), s * .25, .98, -1.335, g, [.07, .06, .02], null, 1); }
+    part(G.box, M.haz, 0, .32, -1.34, g, [.92, .14, .02], null, 1);
+    const num = String(++fkN).padStart(2, '0'); planeT(textTex([[num, 74, 800, 50, null, '#fff']], { bg: '#1d1f22', w: 128, h: 100, round: 14 }), .2, .16, g, 0, .7, -1.345, { ry: Math.PI });
+    for (const s of [-1, 1]) planeT(textTex([['C' + num, 60, 800, 50, null, '#fff']], { w: 160, h: 100 }), .26, .16, g, s * .526, .82, -.35, { ry: s * Math.PI / 2 });
+    // ruote
+    const wf = [-1, 1].map(s => { const w = grp(g, s * .5, .3, .42); part(G.cyl, BK, 0, 0, 0, w, [.6, .24, .6], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .122, 0, 0, w, [.34, .01, .34], [0, 0, Math.PI / 2], 1); for (let k = 0; k < 5; k++) { const a2 = k / 5 * Math.PI * 2; part(G.cyl, DK, s * .128, Math.cos(a2) * .08, Math.sin(a2) * .08, w, [.035, .01, .035], [0, 0, Math.PI / 2], 1); } for (let k = 0; k < 10; k++) { const a2 = k / 10 * Math.PI * 2; part(G.box, mat(0x232528), 0, Math.cos(a2) * .3, Math.sin(a2) * .3, w, [.22, .02, .05], [a2, 0, 0], 1); } return w; });
+    const rs = [-1, 1].map(s => { const st = grp(g, s * .4, .23, -.98); const w = grp(st, 0, 0, 0); part(G.cyl, BK, 0, 0, 0, w, [.46, .18, .46], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .092, 0, 0, w, [.24, .01, .24], [0, 0, Math.PI / 2], 1); return { st, w }; });
+    for (const s of [-1, 1]) part(G.box, OR, s * .57, .67, .42, g, [.14, .035, .66], null, 1);
+    // montante
+    const mast = grp(g, 0, .12, .8);
+    for (const s of [-1, 1]) { part(G.box, GR, s * .33, 1.25, 0, mast, [.08, 2.5, .13]); part(G.box, mat(0x6f7680), s * .29, 1.25, 0, mast, [.02, 2.5, .09], null, 1); }
+    part(G.box, GR, 0, .15, -.03, mast, [.74, .1, .08]); part(G.box, GR, 0, 2.46, -.03, mast, [.74, .08, .08]); part(G.box, GR, 0, 1.3, -.06, mast, [.62, .06, .05]);
+    part(G.cyl, LG, 0, .95, -.12, mast, [.09, 1.7, .09]); part(G.cyl, mat(0xdfe3e6), 0, 1.95, -.12, mast, [.05, .4, .05]);
+    for (const s of [-1, 1]) part(G.cyl, BK, s * .16, .7, -.12, mast, [.025, 1.0, .025], [.0, 0, 0]);
+    const inner = grp(mast, 0, 0, .05);
+    for (const s of [-1, 1]) part(G.box, mat(0xa3aab2), s * .25, 1.2, 0, inner, [.06, 2.36, .1]);
+    part(G.box, mat(0xa3aab2), 0, 2.36, 0, inner, [.56, .07, .07]); for (const s of [-1, 1]) part(G.cyl, DK, s * .12, 2.3, .07, inner, [.13, .045, .13], [0, 0, Math.PI / 2]);
+    const carr = grp(mast, 0, 0, .14);
+    part(G.box, DK, 0, .3, 0, carr, [.84, .36, .06]); part(G.box, M.haz, 0, .41, .035, carr, [.8, .06, .008], null, 1);
+    for (const yy of [.5, 1.06]) part(G.box, DK, 0, yy, -.01, carr, [.84, .04, .04]);
+    for (let i = -3; i <= 3; i++) part(G.box, DK, i * .13, .79, -.01, carr, [.022, .56, .022]);
+    for (const s of [-1, 1]) { part(G.box, DK, s * .41, .79, -.01, carr, [.035, .56, .035]); part(G.box, ST, s * .22, .3, .055, carr, [.1, .56, .05]); part(G.box, ST, s * .22, .045, .66, carr, [.1, .045, 1.15]); part(G.box, ST, s * .22, .037, 1.26, carr, [.09, .028, .06]); }
+    const chains = [-1, 1].map(s => part(G.box, BK, s * .12, 1, .02, mast, [.03, 1, .02], null, 1));
+    const load = grp(carr, 0, -.005, .66); const LB = new Batch(load); palletStack(LB, 0, 0, 0, .65 + rr() * .35, PAL[Math.floor(rr() * PAL.length)], 3, null); LB.flush(); load.visible = false;
+    // lampeggiante arancione e faretto blu a terra
+    part(G.cyl, BK, -.32, 2.29, -.72, g, [.12, .05, .12]);
+    const bmat = new T.MeshBasicMaterial({ color: 0xffa020 }); OWN.push(bmat); part(G.cyl, bmat, -.32, 2.36, -.72, g, [.1, .1, .1], null, 1); part(G.sph, bmat, -.32, 2.41, -.72, g, [.1, .07, .1], null, 1);
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: radTex('glowA', 'rgba(255,190,80,1)', 'rgba(255,140,20,.35)'), transparent: true, depthWrite: false, blending: T.AdditiveBlending })); glow.position.set(-.32, 2.38, -.72); glow.scale.set(.9, .9, 1); g.add(glow); OWN.push(glow.material);
+    const spM = new T.MeshBasicMaterial({ map: radTex('spotB', 'rgba(90,170,255,1)', 'rgba(40,110,255,.45)'), transparent: true, depthWrite: false, blending: T.AdditiveBlending }); OWN.push(spM);
+    const spot = part(G.plane, spM, 0, .07, 3.3, g, [.9, .9, 1], [-Math.PI / 2, 0, 0], 1); spot.castShadow = false;
+    part(G.plane, blobMat(), 0, .065, -.2, g, [1.7, 2.9, 1], [-Math.PI / 2, 0, 0], 1).castShadow = false;
+    const drv = person(g, 0, -.4, 0xf47b20, 0xf2c418, { mode: 'drive' }); drv.position.y = .28; drv.userData.rig.blob.visible = false;
+    g.traverse(e => { if (e.isMesh) e.castShadow = e.castShadow && true; });
+    g.userData.fk = { mast, inner, carr, chains, load, wf, rs, spin, bmat, glow, spot, spM, drv: drv.userData.rig, f: .1, tilt: 0, steer: 0, rev: 0, revS: 0, ds: 0, v: 0 };
+    return g;
+  }
+  function fkUpdate(F, t, dt) {
+    const h = F.f - .19; F.carr.position.y = h; F.inner.position.y = Math.max(0, h - 1.05); F.mast.rotation.x = F.tilt;
+    const top = 2.3 + F.inner.position.y, cb = h + .48; F.chains.forEach(c => { const L2 = Math.max(.05, top - cb); c.scale.y = L2; c.position.y = cb + L2 / 2; });
+    F.wf.forEach(w => { w.rotation.x += F.ds / .3; }); F.rs.forEach(r => { r.w.rotation.x += F.ds / .23; r.st.rotation.y = -F.steer; }); F.spin.rotation.y = F.steer * 2.2; F.ds = 0;
+    const fl = Math.pow(Math.max(0, Math.sin(t * 7.5)), 3); F.bmat.color.setRGB(1, .45 + fl * .35, .08 + fl * .1); F.glow.material.opacity = .25 + fl * .75; F.glow.scale.setScalar(.6 + fl * .7);
+    F.revS += (F.rev - F.revS) * Math.min(1, dt * 4); F.spot.position.z = F.rev ? -2.6 : 3.3; F.spM.opacity = .55 + Math.sin(t * 5) * .15;
+    const R = F.drv; R.steer += (F.steer - R.steer) * Math.min(1, dt * 6); R.look = F.revS; R.vib = 1; poseP(R, t);
+  }
+  // muletto guidato da una sequenza: vai, girati, alza/abbassa, carica/scarica, attendi
+  function fkTick(m, t, dt) {
+    const o = m.o, F = o.userData.fk; let S = m.st;
+    if (!S) { const s = m.steps[m.i]; S = m.st = { s, u: 0 };
+      if (s.t === 'go') { S.from = o.position.clone(); S.to = new T.Vector3(s.x, o.position.y, s.z); S.d = S.from.distanceTo(S.to); S.h = S.d > .02 ? Math.atan2(S.to.x - S.from.x, S.to.z - S.from.z) + (s.rev ? Math.PI : 0) : o.rotation.y; S.dur = S.d / (s.v || (s.rev ? 1.1 : 1.9)) + .8; }
+      if (s.t === 'turn') S.h = s.h;
+      if (s.t === 'lift') { S.f0 = F.f; S.dur = Math.abs(s.f - F.f) / .55 + .35; }
+      if (s.t === 'tilt') { S.a0 = F.tilt; S.dur = .55; }
+      if (s.t === 'wait') S.dur = s.s;
+    }
+    const s = S.s; let done = false;
+    if (s.t === 'go' || s.t === 'turn') {
+      F.rev = s.t === 'go' && s.rev ? 1 : 0;
+      if (!S.ok) { const df = angD(S.h, o.rotation.y), st2 = Math.sign(df) * Math.min(Math.abs(df), dt * 1.3); o.rotation.y += st2; F.ds += Math.abs(st2) * .45; F.steer += ((Math.abs(df) > .015 ? Math.sign(df) * .7 : 0) - F.steer) * Math.min(1, dt * 7); if (Math.abs(df) < .012) { S.ok = 1; o.rotation.y = S.h; if (s.t === 'turn') done = true; } }
+      else { S.u = Math.min(1, S.u + dt / S.dur); const e = ease(S.u), px = o.position.x, pz = o.position.z; o.position.lerpVectors(S.from, S.to, e); const ds = Math.hypot(o.position.x - px, o.position.z - pz); F.ds += ds * (s.rev ? -1 : 1); F.steer *= 1 - Math.min(1, dt * 5); F.tilt += ((F.load.visible ? -.05 : 0) - F.tilt) * Math.min(1, dt * 2); if (S.u >= 1) done = true; }
+    } else if (s.t === 'lift') { S.u = Math.min(1, S.u + dt / S.dur); F.f = S.f0 + (s.f - S.f0) * ease(S.u); if (S.u >= 1) done = true; }
+    else if (s.t === 'tilt') { S.u = Math.min(1, S.u + dt / S.dur); F.tilt = S.a0 + (s.a - S.a0) * ease(S.u); if (S.u >= 1) done = true; }
+    else if (s.t === 'load') {
+      if (s.drop && F.load.visible) { const v = new T.Vector3(); F.load.getWorldPosition(v); const par = s.drop.parent; par.worldToLocal(v); s.drop.position.set(v.x, .5, v.z); s.drop.rotation.y = o.rotation.y; s.drop.visible = true; }
+      if (s.pick) s.pick.visible = false; F.load.visible = s.on; done = true;
+    } else if (s.t === 'wait') { S.u = Math.min(1, S.u + dt / S.dur); if (S.u >= 1) done = true; }
+    if (done) { m.i = (m.i + 1) % m.steps.length; m.st = null; }
+    fkUpdate(F, t, dt);
+  }
+  function stagePallet(par) { const sg = new T.Group(); par.add(sg); const B = new Batch(sg); palletStack(B, 0, 0, 0, .8, PAL[Math.floor(rr() * PAL.length)], 3, null); B.flush(); sg.visible = false; return sg; }
+  // giro di lavoro lungo uno scaffale portapallet: preleva da un vano, posa a fine corsia, riprende e mette a scaffale
+  function rackForkSteps(it, g) {
+    g.updateMatrixWorld(); const len = rackLen(it), dep = rackDep(it), th = it.r * Math.PI / 2, bw = it.bw || KIND.pallet.bw;
+    const W2 = (x, z) => g.localToWorld(new T.Vector3(x, 0, z)), za = dep / 2 + 2.1, zi = 1.62, face = th + Math.PI;
+    const bayX = b => -len / 2 + b * bw + bw / 2, lvF = l => (l === 0 ? .5 : .6 + l * rackLh(it)) - .5;
+    const lvs = []; for (let l = 0; l < it.lv; l++) if (lvF(l) + .22 < 3.45) lvs.push(l);
+    const st = stagePallet(WH), steps = [], go = (x, z, rev, v) => { const p = W2(x, z); steps.push({ t: 'go', x: p.x, z: p.z, rev, v }); };
+    for (let k = 0; k < 3; k++) {
+      const b1 = Math.floor(rr() * it.bays), b2 = Math.floor(rr() * it.bays), l1 = lvs[Math.floor(rr() * lvs.length)], l2 = lvs[Math.floor(rr() * lvs.length)], sgn = k % 2 ? -1 : 1, ex = sgn * (len / 2 - 2.35);
+      go(bayX(b1), za); steps.push({ t: 'turn', h: face }, { t: 'lift', f: lvF(l1) + .07 }); go(bayX(b1), zi, false, .55); steps.push({ t: 'lift', f: lvF(l1) + .2 }, { t: 'load', on: true }); go(bayX(b1), za, true, .55);
+      steps.push({ t: 'lift', f: .26 }); go(ex, za); steps.push({ t: 'lift', f: .07 }, { t: 'load', on: false, drop: st }); go(ex - sgn * 1.9, za, true, .7); steps.push({ t: 'lift', f: .1 }, { t: 'wait', s: 1.2 + rr() * 1.5 });
+      go(ex, za, false, .6); steps.push({ t: 'lift', f: .22 }, { t: 'load', on: true, pick: st }); go(bayX(b2), za, true);
+      steps.push({ t: 'turn', h: face }, { t: 'lift', f: lvF(l2) + .2 }); go(bayX(b2), zi, false, .55); steps.push({ t: 'lift', f: lvF(l2) + .06 }, { t: 'load', on: false }); go(bayX(b2), za, true, .55); steps.push({ t: 'lift', f: .1 });
+    }
+    return steps;
+  }
+  // transpallet manuale: forche con rulli, pompa idraulica, timone con impugnatura
+  function palletJack(par) {
+    const j = new T.Group(); par.add(j); const OR = mat(0xf47b20), DK = mat(0x2b2f35), BK = mat(0x17191c), LG = mat(0xc5cad1);
+    for (const s of [-1, 1]) { part(G.box, OR, s * .2, .55, .45, j, [.16, .07, 1.15]); part(G.box, DK, s * .2, .515, .45, j, [.13, .02, 1.1], null, 1); part(G.cyl, BK, s * .2, .535, .98, j, [.07, .1, .07], [0, 0, Math.PI / 2]); part(G.cyl, BK, s * .2, .535, .86, j, [.07, .1, .07], [0, 0, Math.PI / 2]); }
+    part(G.box, OR, 0, .62, -.16, j, [.56, .2, .16]); part(G.cyl, LG, 0, .8, -.18, j, [.09, .34, .09]); part(G.cyl, DK, 0, .99, -.18, j, [.12, .05, .12]);
+    for (const s of [-1, 1]) part(G.cyl, BK, s * .07, .58, -.22, j, [.16, .06, .16], [0, 0, Math.PI / 2]);
+    const tl = grp(j, 0, .74, -.2); tl.rotation.x = -.6; part(G.cyl, DK, 0, .47, 0, tl, [.04, .94, .04]); part(G.box, DK, 0, .95, 0, tl, [.34, .045, .045]); for (const s of [-1, 1]) part(G.box, DK, s * .16, .85, 0, tl, [.04, .22, .04]); part(G.box, mat(0xd62b1f), .07, .8, .025, tl, [.05, .09, .03]); part(G.box, BK, 0, .95, 0, tl, [.22, .06, .06]);
+    return j;
+  }
+
   /* ---------------- ricevimento merci (v276): banchine fornitori, corsie di sosta, accettazione ---------------- */
   const hashS = s => { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
   const dAgoN = d => { const a = new Date(String(d).slice(0, 10) + 'T12:00:00'), b = new Date(C.today() + 'T12:00:00'); return Math.round((b - a) / 864e5); };
@@ -1215,7 +1398,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       bx(q, .34, .26, .32, 0xeeeeec, xA + .55, 1.4, zF - .3); bx(q, .24, .02, .14, 0xffffff, xA + .55, 1.66, zF - .18, { ns: 1 });
       bx(q, .1, .06, .26, 0x2b2f35, xA + 1.05, 1.4, zF); bx(q, .08, .16, .08, 0xf47b20, xA + 1.05, 1.44, zF + .12);
       bx(q, .5, .32, .4, 0xe3b073, xA + .1, 1.4, zF + .15);
-      const op = person(q, xA - .2, zF + 1.05, 0x39a85a); op.rotation.y = Math.PI; movers.push({ o: op, t: 'bob', ph: 1.3 });
+      const op = person(q, xA - .2, zF + 1.0, 0x39a85a, null, { mode: 'work' }); op.rotation.y = Math.PI; movers.push({ o: op, t: 'bob', ph: 1.3 });
       // bilancia a pavimento
       const xS = xA + 4.2; bx(q, 1.7, .07, 1.7, 0x8e959e, xS, .5, zF, { ns: 1 }); for (const s of [-1, 1]) { bx(q, 1.9, .08, .12, M.haz, xS, .5, zF + s * .91, { ns: 1 }); bx(q, .12, .08, 1.9, M.haz, xS + s * .91, .5, zF, { ns: 1 }); }
       bx(q, .07, 1.3, .07, 0x2b2f35, xS + 1.25, .5, zF - .7); bx(q, .5, .32, .14, 0x2b2f35, xS + 1.25, 1.75, zF - .7);
@@ -1234,14 +1417,17 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const V = (x, z) => new T.Vector3(x, 0, z);
     const lane0 = R2.length ? lanes.get(R2[0].key) : null, dz0 = doors.length ? doors[0].zc : -Dl / 2 + 3;
     const ax = wallX + AP + .2;
-    if (lane0) { const pts = [V(wallX + 2.6, dz0), V(ax, dz0), V(ax, lane0.z), V(lane0.x - LW / 2 - .7, lane0.z), V(ax, lane0.z), V(ax, dz0)]; const f = forklift(q, pts[0].x, pts[0].z); movers.push(route(f, pts, 1.6, 0)); }
-    else { const pts = [V(ax, -Dl / 2 + 3), V(ax, zL1 - 1), V(W / 2 - 2, zL1 - 1), V(W / 2 - 2, -Dl / 2 + 3)]; const f = forklift(q, pts[0].x, pts[0].z); movers.push(route(f, pts, 1.4, 0)); }
-    if (doors.length > 1 || R2.length > 1) { const dz1 = doors.length > 1 ? doors[1].zc : dz0, l1 = R2[1] ? lanes.get(R2[1].key) : null, tz = l1 ? l1.z : dz1 + 3, tx = l1 ? l1.x - LW / 2 - .6 : ax + 2;
-      const jg = new T.Group(); q.add(jg); person(jg, 0, -.55, 0xf47b20); bx(jg, .55, .07, 1.15, 0x3a3f46, 0, .52, .45); bx(jg, .5, .45, .22, 0xf47b20, 0, .55, -.15); bx(jg, .05, .85, .05, 0x2b2f35, 0, .9, -.32, { rx: -.35 });
-      const pj = new Batch(jg); palletStack(pj, 0, .6, .45, .5, R2[1] ? R2[1].col : PAL[1], 2, null); pj.flush();
-      movers.push(route(jg, [V(wallX + 2.4, dz1), V(ax - .6, dz1), V(ax - .6, tz), V(tx, tz), V(ax - .6, tz), V(ax - .6, dz1)], .95, 4)); }
-    // controllore con il terminale vicino all'ultimo arrivo
-    if (lane0) { const p = person(q, lane0.x + LW / 2 + .45, lane0.z + .6, 0x39a85a); p.rotation.y = -Math.PI / 2; bx(p, .22, .3, .05, 0x1d2025, 0, 1.15, .35, { rx: -.6 }); movers.push({ o: p, t: 'bob', ph: 2.1 }); }
+    if (lane0 && doors.length) { const st = [], go = (x, z, rev, v) => st.push({ t: 'go', x, z, rev, v }), lz = lane0.z, lx = lane0.x - .5 - 1.62;
+      go(ax, dz0); st.push({ t: 'turn', h: -Math.PI / 2 }, { t: 'lift', f: .08 }); go(wallX + 2.7, dz0, false, .6); st.push({ t: 'lift', f: .24 }, { t: 'load', on: true }); go(ax, dz0, true, .7); st.push({ t: 'lift', f: .3 });
+      go(ax, lz); st.push({ t: 'turn', h: Math.PI / 2 }); go(lx, lz, false, .6); st.push({ t: 'lift', f: .06 }, { t: 'load', on: false }); go(ax, lz, true, .7); st.push({ t: 'lift', f: .1 }, { t: 'wait', s: 1 });
+      const f = forklift(q, ax, dz0); movers.push({ o: f, t: 'fork', steps: st, i: 0, st: null }); }
+    else { const st = [{ t: 'go', x: ax, z: zL1 - 1 }, { t: 'wait', s: 1.5 }, { t: 'go', x: ax, z: -Dl / 2 + 3 }, { t: 'wait', s: 1.5 }], f = forklift(q, ax, -Dl / 2 + 3); movers.push({ o: f, t: 'fork', steps: st, i: 0, st: null }); }
+    if (doors.length > 1 || R2.length > 1) { const dz1 = doors.length > 1 ? doors[1].zc : dz0, l1 = R2[1] ? lanes.get(R2[1].key) : null, tz = l1 ? l1.z + 1.5 : dz1 + 3, tx = l1 ? l1.x - LW / 2 - 1.1 : ax + 2;
+      const jg = new T.Group(); q.add(jg); const op = person(jg, 0, -1.25, 0xf47b20, null, { mode: 'push' }); palletJack(jg);
+      const pj = new Batch(jg); palletStack(pj, 0, .6, .45, .5, R2[1] ? R2[1].col : PAL[1], 2, null); pj.flush(); jg.userData.rig = op.userData.rig;
+      movers.push(route(jg, [V(wallX + 2.9, dz1), V(ax - .8, dz1), V(ax - .8, tz), V(tx, tz), V(ax - .8, tz), V(ax - .8, dz1)], .9, 4)); }
+    // controllore con lettore e tablet vicino all'ultimo arrivo
+    if (lane0) { const p = person(q, lane0.x + LW / 2 + .5, lane0.z + .4, 0x39a85a, null, { mode: 'scan' }); p.rotation.y = -Math.PI / 2; movers.push({ o: p, t: 'bob', ph: 2.1 }); }
   }
   const MB = c => M['mb' + c] || (M['mb' + c] = new T.MeshBasicMaterial({ color: c }));
   function laneCard(r) {
@@ -1485,14 +1671,18 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const s = t * (m.sp || 1) + (m.ph || 0);
       if (m.t === 'path') { const u = (Math.sin(s) + 1) / 2, dir = Math.cos(s) >= 0 ? 1 : -1; m.o.position.lerpVectors(m.a, m.b, u); m.o.rotation.y = Math.atan2((m.b.x - m.a.x) * dir, (m.b.z - m.a.z) * dir); }
       else if (m.t === 'loop') { m.o.position.x = m.cx + Math.cos(s) * m.rx; m.o.position.z = m.cz + Math.sin(s) * m.rz; m.o.rotation.y = -s; }
+      else if (m.t === 'fork') fkTick(m, t, dt);
+      else if (m.t === 'walk' && m.o.userData.rig) strollTick(m, t, dt);
       else if (m.t === 'walk') { const u = (Math.sin(s) + 1) / 2, dir = Math.cos(s) >= 0 ? 1 : -1; m.o.position.x = m.a.x + (m.b.x - m.a.x) * u; m.o.position.z = m.a.z + (m.b.z - m.a.z) * u; m.o.rotation.y = Math.atan2((m.b.x - m.a.x) * dir, (m.b.z - m.a.z) * dir); m.o.position.y = .5 + Math.abs(Math.sin(t * 6 + m.ph)) * .05; }
       else if (m.t === 'route') routeTick(m, t, dt);
+      else if (m.t === 'bob' && m.o.userData.rig) { }
       else if (m.t === 'bob') m.o.position.y = .5 + Math.abs(Math.sin(t * 2 + m.ph)) * .03;
       else if (m.t === 'spin') m.o.rotation.y = Math.sin(t * m.sp) * 1.3;
       else if (m.t === 'float') m.o.position.y = m.y + Math.sin(t * 1.2) * .25;
       else if (m.t === 'pump') { if (t - m.last > .12) { m.last = t; const u = (t % 11) / 8; pumpDraw(Math.min(1, u) * m.l, m.price); } }
       else if (m.t === 'road') { m.o.position.x += m.dir * m.sp * dt; if (m.o.position.x > 330) m.o.position.x = -330; if (m.o.position.x < -330) m.o.position.x = 330; }
       else if (m.t === 'belt') { for (let i = 0; i < m.n; i++) { const u = (t * m.sp + i / m.n) % 1; o3.position.set(-m.len / 2 + .5 + u * (m.len - 1), 1.22 + .2, 0); o3.rotation.set(0, (i % 3) * .2, 0); o3.scale.set(.55, .4, .5); o3.updateMatrix(); m.im.setMatrixAt(i, o3.matrix); } m.im.instanceMatrix.needsUpdate = true; }
+      if (m.t !== 'fork' && m.o && m.o.userData && m.o.userData.rig) rigTick(m.o, t, dt);
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
     focusTick(t, dt); ricTick(t, dt);
