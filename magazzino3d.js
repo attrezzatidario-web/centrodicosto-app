@@ -1,4 +1,4 @@
-/* Magazzino 3D (v286) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v287) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -352,6 +352,30 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-b12{grid-template-columns:repeat(12,1fr)!important}
 .m3-acts{display:flex;gap:8px;flex-wrap:wrap}.m3-acts .m3-go{flex:1 1 140px;margin:0}
 
+/* v287: amministrazione */
+.m3-dl.g{color:#2a8a4a}.m3-dl.r{color:#d9452f}
+.m3-amm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 12px}
+.m3-amm button{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:14px;background:#f8f7f5;cursor:pointer;transition:background .2s,transform .2s;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-amm button:hover{background:#f1efeb;transform:translateY(-1px)}
+.m3-amm i{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 14%,#fff);color:var(--c)}
+.m3-amm i svg{width:18px;height:18px}.m3-amm span{display:flex;flex-direction:column;min-width:0}.m3-amm b{font-size:13.5px}.m3-amm small{font-size:11.5px;color:#8a8d93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-pi.m3-dt{background:color-mix(in srgb,var(--c) 13%,#fff)!important;color:var(--c)!important}
+.m3-rc{display:grid;grid-template-columns:repeat(12,1fr);gap:5px;align-items:end;height:118px;padding:12px 8px 0;background:#f8f7f5;border-radius:13px;margin-bottom:6px}
+.m3-rc>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.m3-rc span{display:flex;gap:2px;align-items:flex-end;height:100%;width:100%}
+.m3-rc i{flex:1;display:block;height:var(--h);min-height:2px;border-radius:4px 4px 1px 1px;transform-origin:bottom;animation:m3g .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*35ms)}
+.m3-rc i.r{background:#f6b27c}.m3-rc i.c{background:#c9ccd2}.m3-rc>div:last-child i.r{background:#f47b20}.m3-rc>div:last-child i.c{background:#9aa0a8}
+.m3-rc small{font-size:10px;color:#8a8d93}
+.m3-note{font-size:11.5px;color:#8a8d93;margin:-2px 0 10px;line-height:1.4}
+.m3-cf{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.m3-cf div{background:#f8f7f5;border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:2px}.m3-cf span{font-size:11px;color:#8a8d93}.m3-cf b{font-size:14.5px}.m3-cf b.g{color:#2a8a4a}.m3-cf b.r{color:#d9452f}
+.m3-dtg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.m3-dtg button{all:unset;box-sizing:border-box;position:relative;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;column-gap:8px;align-items:center;padding:10px 11px;border-radius:13px;background:#f8f7f5;cursor:pointer;border:1.5px solid transparent;transition:border-color .2s,background .2s;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-dtg button:hover{background:#f1efeb}.m3-dtg button.on{border-color:var(--c);background:#fff}
+.m3-dtg i{grid-row:1/3;width:8px;height:30px;border-radius:4px;background:var(--c)}
+.m3-dtg span{font-size:12px;color:#5b5e63;font-weight:600}.m3-dtg b{grid-row:1/3;grid-column:3;font-size:17px}.m3-dtg em{font-style:normal;font-size:10.5px;color:#9a9ca1}
+.m3-dtg button:last-child:nth-child(odd){grid-column:1/3}
+@media (max-width:760px){.m3-amm{grid-template-columns:1fr}}
 /* v284: gasolio */
 .m3-dl{font-style:normal;font-weight:700;color:#8a8d93}.m3-dl.up{color:#c2410c}.m3-dl.dn{color:#2a8a4a}
 .m3-hb>button{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:4px 6px;margin:-4px -6px;border-radius:10px;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*50ms)}
@@ -1089,6 +1113,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const sub = { ric: `${D.rcv.length} arrivi in 30 gg`, pre: `${D.ddtM.length} DDT nel mese`, cq: `${D.ret90.length} rettifiche`, spe: `${trucks.filter(t => !t.road && t.d).length} in banchina`, terra: 'stoccaggio a terra', uff: 'ufficio', free: '' };
     L.items.filter(i => i.t === 'zone').forEach(z => add([z.x, 4.5, z.z], `${esc(z.name || ZONE[z.k][0])}${sub[z.k] ? ` <em>${sub[z.k]}</em>` : ''}`, '', { t: 'zone', z: z.k, id: z.id }, 340));
     add([L.W / 4, 10.4, L.D / 2 + 13], `Uffici <em>${OFF ? OFF.OD.CL.length : D.cli.length} clienti · ${OFF ? OFF.OD.FR.length : 0} fornitori</em>`, 'wh', { t: 'zone', z: 'uffe' }, 260).offClosed = true;
+    if (OFF && OFF.acL) OFF.acL.forEach(A => { const L3 = add([0, 0, 0], `${A.t} <em>${A.s}</em>`, 'sm', A.k, 140, A.a); L3.dy = 0; L3.offOnly = true; });
     if (OFF) OFF.anc.forEach(A => { const L3 = add([0, 0, 0], `${A.t} <em>${A.s}</em>`, 'sm', { t: 'zone', z: 'uffe' }, 140, A.a); L3.dy = 0; L3.offOnly = true; });
     if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 7.4, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
       fleetVeh.forEach(f => { const L3 = add([0, 0, 0], `${esc(plFmt(f.v.p))}${f.v.name ? ` <em>${esc(f.v.name.slice(0, 18))}</em>` : ''}`, 'sm wh', { t: 'veh', p: f.v.p }, 95, f.o); L3.dy = f.v.kind === 'truck' ? 4.2 : 3.2; }); }
@@ -1690,7 +1715,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   }
   function buildOffice() {
     const hw = L.W / 2, hd = L.D / 2, ox = hw * .5, oz = hd + 13, BW = 30, BD = 13, FH = 3.6, OD = offData();
-    const g = new T.Group(); g.position.set(ox, 0, oz); WH.add(g);
+    const g = new T.Group(); g.position.set(ox, 0, oz); WH.add(g); ACC = null;
     const FM = [], fm = (c, o) => { const m = new T.MeshLambertMaterial({ color: c, transparent: true, opacity: o == null ? 1 : o }); m.userData.o0 = m.opacity; FM.push(m); OWN.push(m); return m; };
     const glassF = fm(0x7f9db6, .92), frameF = fm(0xf7f7f5), darkF = fm(0x2b2f35), orF = fm(0xf47b20), roofF = fm(0xeeeeec), pvF = fm(0x27416e);
     // basamento, piazza d'ingresso, totem
@@ -1751,16 +1776,13 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         B.add('lift', G.box, glassI, m4(-2.35, 1.5, -4.4, 1.3, 3.0, 1.3)); B.add('liftc', G.box, mat(0xc5cad1), m4(-2.35, .6, -4.4, 1.1, 1.2, 1.1));
         const rp = person(f0, -.3, -1.75, 0x39a85a, null, { mode: 'work' }); rp.position.y = 0; movers.push({ o: rp, t: 'bob', ph: 7 });
       } else {
-        for (const sz of [-1, 1]) B.add('gw', G.box, glassI, m4(0, 1.4, sz * 4.2, 5.6, 2.7, .05)); for (const sx of [-1, 1]) B.add('gw', G.box, glassI, m4(sx * 2.8, 1.4, 0, .05, 2.7, 8.4));
-        B.add('mtab', G.box, mat(0xfafafa), m4(0, .74, 0, 1.4, .06, 5)); B.add('mtl', G.box, mat(0x2b2f35), m4(0, .37, 0, .5, .72, 4));
-        for (let i = 0; i < 4; i++) for (const s of [-1, 1]) B.add('mch', G.box, mat(0xffffff), m4(s * 1.05, .5, -1.8 + i * 1.2, .45, .08, .45), s < 0 ? 0xf47b20 : 0x2f6db4);
-        const OPN = OD.CL.reduce((s, e) => s + e.open, 0), OPF = OD.FR.reduce((s, e) => s + e.open, 0);
-        bxS(f1, .1, 1.5, 2.6, 0x1d1f22, -2.6, .9, 0); const sc = planeT(textTex([['SALA RIUNIONI', 26, 800, 36, null, '#f47b20'], [`Da incassare ${C.eur0(OPN)}`, 28, 700, 84, null, '#fff'], [`Da pagare ${C.eur0(OPF)}`, 28, 700, 126, null, '#fff']], { bg: '#1d1f22', w: 400, h: 170, round: 10 }), 2.4, 1.02, f1, -2.53, 1.65, 0, { ry: Math.PI / 2 });
-        sc.renderOrder = 2;
+        ACC = accBuild(fg, B, glassI, people, OD); // v287: contabilità e archivio al posto della sala riunioni
       }
       const ims = B.flush(); Object.values(ims).forEach(im => { im.castShadow = false; });
     };
     floorG(f0, 0); floorG(f1, 1);
+    rooms.push({ kd: 'acc', e: { id: 'cont' }, x: 0, z: -3.25, w: 5.8, d: 5.9, lvl: 1, fg: f1 }, { kd: 'acc', e: { id: 'doc' }, x: 0, z: 3.3, w: 5.8, d: 5.9, lvl: 1, fg: f1 });
+    const acL = [[-3.2, 'Contabilità', 'IVA · scadenze', 'cont'], [3.3, 'Archivio', 'documenti', 'doc']].map(([z, t2, s2, id]) => { const a = new T.Object3D(); a.position.set(0, 3.75, z); f1.add(a); return { a, t: t2, s: s2, k: { t: 'acc', id } }; });
     const anc = [[f0, -9, 'Clienti', 'piano terra'], [f0, 9, 'Fornitori', 'piano terra'], [f1, -9, 'Clienti', '1° piano'], [f1, 9, 'Fornitori', '1° piano']].map(([fg, x, t2, s2]) => { const a = new T.Object3D(); a.position.set(x, 3.9, -6.3); fg.add(a); return { a, t: t2, s: s2, kd: x < 0 ? 'cli' : 'for' }; });
     // ---- facciata in vetro, fasce, pensilina, insegna (svaniscono quando si apre)
     const fac = grp(g, 0, 0, 0), FB = new Batch(fac), H2 = FH * 2 + .1;
@@ -1773,7 +1795,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     FB.add('can', G.box, frameF, m4(0, 3.25, BD / 2 + 1.6, 7, .22, 3.2)); for (const s of [-1, 1]) FB.add('canp', G.box, darkF, m4(s * 3.2, 1.6, BD / 2 + 3, .14, 3.1, .14));
     FB.flush();
     const sgn = planeT(textTex([[C.orgName().slice(0, 30), 60, 800, 64, null, '#16181b']], { w: 1024, h: 128 }), 10, 1.25, fac, 3.2, .24 + FH + .6, BD / 2 + .24, {}); sgn.material.transparent = true; FM.push(sgn.material); sgn.material.userData.o0 = 1;
-    const sgn2 = planeT(textTex([['UFFICI · CLIENTI E FORNITORI', 40, 800, 56, null, '#ffffff']], { bg: '#f47b20', w: 768, h: 110, round: 10 }), 5.4, .78, fac, 0, 3.25, BD / 2 + 3.22, {}); sgn2.material.transparent = true; FM.push(sgn2.material); sgn2.material.userData.o0 = 1;
+    const sgn2 = planeT(textTex([['UFFICI · AMMINISTRAZIONE', 40, 800, 56, null, '#ffffff']], { bg: '#f47b20', w: 768, h: 110, round: 10 }), 5.4, .78, fac, 0, 3.25, BD / 2 + 3.22, {}); sgn2.material.transparent = true; FM.push(sgn2.material); sgn2.material.userData.o0 = 1;
     // ---- tetto: solaio, parapetto, pannelli, impianti, lucernario
     const roof = grp(g, 0, 0, 0), RB = new Batch(roof), yR = .24 + H2;
     RB.add('rs', G.box, roofF, m4(0, yR + .2, 0, BW + .4, .4, BD + .4));
@@ -1785,7 +1807,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     // contatto per il clic sull'edificio chiuso
     const hb = new T.Mesh(G.box, M.hit); hb.scale.set(BW, H2 + .8, BD); hb.position.set(0, .24 + H2 / 2, 0); hb.userData.k = { t: 'zone', z: 'uffe' }; g.add(hb); pick.push(hb);
     [fac, roof].forEach(G2 => G2.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } }));
-    OFF = { g, inner, f0, f1, fac, roof, FM, rooms, OD, anc, u: OFF ? OFF.u : 0, want: OFF ? OFF.want : 0, FH, BD, BW, br: null, foc: null };
+    OFF = { g, inner, f0, f1, fac, roof, FM, rooms, OD, anc, acL, u: OFF ? OFF.u : 0, want: OFF ? OFF.want : 0, FH, BD, BW, br: null, foc: null };
     offApply();
   }
   function offApply() {
@@ -1798,13 +1820,14 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   function offTick(t, dt) {
     const O = OFF; if (!O) return; const target = O.want ? 1 : 0;
     if (Math.abs(O.u - target) > .001) { O.u += (target - O.u) * Math.min(1, dt * 2.4); if (Math.abs(O.u - target) < .004) O.u = target; offApply(); }
+    accTick(t, dt);
     if (O.foc) { O.foc.u = Math.min(1, O.foc.u + dt / .8); const s = 1 + (1 - easeOut(O.foc.u)) * .25 + Math.sin(t * 3) * .01; O.foc.br.grp.scale.set(s, s, s); O.foc.br.im.material.opacity = Math.min(1, O.foc.u * 2); O.foc.br.fill.material.opacity = .06 + Math.sin(t * 3) * .03; const p = offRoomW(O.foc.r, true); O.foc.br.grp.position.copy(p); }
   }
   // posizione di un ufficio a edificio aperto (o attuale)
   function offRoomW(r, cur) { const O = OFF, e = cur ? (O.u * O.u * (3 - 2 * O.u)) : 1, y = r.lvl ? .24 + O.FH + e * 6.4 : .24, z = r.lvl ? -e * 9.5 : 0; return new T.Vector3(O.g.position.x + r.x, y + 1.45, O.g.position.z + r.z + z); }
   function offFocus(kd, id) {
     offUnfocus(); const O = OFF; if (!O) return null; const r = O.rooms.find(q => q.e && q.kd === kd && q.e.id === String(id)); if (!r) return null;
-    const br = brackets(kd === 'cli' ? 0xf47b20 : 0x2f6db4, 1); br.set(r.w + .3, 3.2, r.d + .3); br.grp.visible = true; br.grp.position.copy(offRoomW(r, true)); O.foc = { r, br, u: 0 }; return r;
+    const br = brackets(kd === 'cli' ? 0xf47b20 : kd === 'acc' ? 0x2a8a4a : 0x2f6db4, 1); br.set(r.w + .3, 3.2, r.d + .3); br.grp.visible = true; br.grp.position.copy(offRoomW(r, true)); O.foc = { r, br, u: 0 }; return r;
   }
   function offUnfocus() { const O = OFF; if (O && O.foc) { WH && WH.remove(O.foc.br.grp); O.foc = null; } }
   function offView(kd, id) {
@@ -1835,12 +1858,197 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         ${extra}</div>`;
     }
     const L2 = OFT === 'cli' ? CL : FR, oC = CL.reduce((s, e) => s + e.open, 0), lC = CL.reduce((s, e) => s + e.late, 0), oF = FR.reduce((s, e) => s + e.open, 0), lF = FR.reduce((s, e) => s + e.late, 0);
-    return head(ic('office'), '', 'Edificio', 'Uffici', esc(C.orgName()) + ' · clienti e fornitori', 1) + `<div class="m3-pb">
+    return head(ic('office'), '', 'Edificio', 'Uffici', esc(C.orgName()) + ' · clienti, fornitori e amministrazione', 1) + `<div class="m3-pb">
       <div class="m3-grid">${stat('Clienti', CL.length, '', `${CL.filter(e => e.tot || e.ddt.length).length} attivi nell'anno`)}${stat('Da incassare', oC ? C.eur0(oC) : '—', '', lC ? `${C.eur0(lC)} scaduti` : 'niente di scaduto')}
       ${stat('Fornitori', FR.length, '', `${FR.filter(e => e.tot || e.rcv.length).length} attivi`)}${stat('Da pagare', oF ? C.eur0(oF) : '—', '', lF ? `${C.eur0(lF)} scaduti` : 'niente di scaduto')}</div>
+      ${ACC ? `<div class="m3-amm"><button type="button" data-acc="cont"><i style="--c:#2a8a4a">${ic('chart')}</i><span><b>Contabilità</b><small>utile del mese ${C.eur0(ACC.X.revM - ACC.X.costM)} · IVA ${ACC.X.qN} trim.</small></span></button><button type="button" data-acc="doc"><i style="--c:#7b5cc4">${ic('pdf')}</i><span><b>Archivio documenti</b><small>${N(ACC.X.tot)} documenti${ACC.X.fix.length ? ' · ' + ACC.X.fix.reduce((s2, r) => s2 + r[1], 0) + ' da sistemare' : ''}</small></span></button></div>` : ''}
       <div class="m3-seg2"><button type="button" data-oft="cli" class="${OFT === 'cli' ? 'on' : ''}">${ic('users')}Clienti <em>${CL.length}</em></button><button type="button" data-oft="for" class="${OFT === 'for' ? 'on' : ''}">${ic('factory')}Fornitori <em>${FR.length}</em></button></div>
       <div class="m3-leg"><span><i style="background:#2a8a4a"></i>In regola</span><span><i style="background:#d98a1c"></i>${OFT === 'cli' ? 'Da incassare' : 'Da pagare'}</span><span><i style="background:#d9452f"></i>Scaduto</span></div>
       <div class="m3-rows">${L2.slice(0, 60).map(offRow).join('') || `<div class="m3-empty">Nessun ${OFT === 'cli' ? 'cliente' : 'fornitore'} in anagrafica</div>`}</div></div>`;
+  }
+
+  /* ---------------- v287: amministrazione — contabilità e archivio documenti (1° piano degli uffici) ---------------- */
+  const DOCT = { fe: ['Fatture emesse', 0xf47b20, 'vendite'], fr: ['Fatture ricevute', 0x2f6db4, 'fatture'], dc: ['DDT ai clienti', 0x2a8a4a, 'vendite'], df: ['DDT dei fornitori', 0x7b5cc4, 'movimenti'], rc: ['Righe di costo', 0x8e959e, 'movimenti'] };
+  let ACC = null;
+  function accData(OD) {
+    const td = C.today(), V = C.fv ? C.fv() : [], FA = C.fatF ? C.fatF() : [], CO = C.costi ? C.costi() : [], DF = C.dfo ? C.dfo() : [], months = OD.months;
+    const imp = f => C.num(f.imponibile) || C.num(f.totale), iva = f => (C.num(f.imponibile) && C.num(f.totale)) ? Math.max(0, C.num(f.totale) - C.num(f.imponibile)) : 0;
+    const rowT = r => { try { return C.rowT ? C.num(C.rowT(r)) : C.num(r.prezzo) * (C.num(r.quantita) || 1); } catch { return 0; } };
+    const mOf = d => String(d || '').slice(0, 7), byM = (L2, val) => months.map(m => L2.reduce((s, x) => s + (mOf(x.data) === m ? val(x) : 0), 0));
+    const rev = byM(V, imp), costSrc = CO.length ? CO : FA, cost = byM(costSrc, CO.length ? rowT : imp);
+    const q0 = td.slice(0, 5) + String(Math.floor((Number(td.slice(5, 7)) - 1) / 3) * 3 + 1).padStart(2, '0'), qN = ['1°', '2°', '3°', '4°'][Math.floor((Number(td.slice(5, 7)) - 1) / 3)];
+    const ivaD = V.filter(f => String(f.data) >= q0).reduce((s, f) => s + iva(f), 0), ivaC = FA.filter(f => String(f.data) >= q0).reduce((s, f) => s + iva(f), 0);
+    const opV = V.filter(f => !isPaid(f)), opF = FA.filter(f => !isPaid(f)), late = f => f.scadenza && String(f.scadenza) < td;
+    const lim = dFwd(30), forK = f => { const k = fkey(f.fornitore), e = OD.FR.find(x => x.key === k); return e ? e.id : null; };
+    const sc = [...opV.filter(f => f.scadenza && String(f.scadenza) <= lim).map(f => { const c = C.cliOf ? C.cliOf(f.cliente) : null; return { k: 'in', f, d: String(f.scadenza), name: (c && c.nome) || 'Cliente', amt: C.num(f.totale), late: late(f), ofr: 'cli:' + f.cliente }; }),
+      ...opF.filter(f => f.scadenza && String(f.scadenza) <= lim).map(f => { const id = forK(f); return { k: 'out', f, d: String(f.scadenza), name: f.fornitore || 'Fornitore', amt: C.num(f.totale), late: late(f), ofr: id ? 'for:' + id : '' }; })].sort((a, b) => a.d.localeCompare(b.d));
+    const cliN = id => { const c = C.cliOf ? C.cliOf(id) : null; return (c && c.nome) || ''; };
+    const tm = td.slice(0, 7), srt = (a, b) => String(b.d).localeCompare(String(a.d));
+    const DOC = {
+      fe: V.map(f => ({ ty: 'fe', d: String(f.data || ''), t: 'Fattura ' + (f.numero || '—'), s: cliN(f.cliente), amt: C.num(f.totale), st: isPaid(f) ? 'g' : late(f) ? 'r' : 'a', ofr: 'cli:' + f.cliente })).sort(srt),
+      fr: FA.map(f => { const id = forK(f); return { ty: 'fr', d: String(f.data || ''), t: 'Fattura ' + (f.numero || '—'), s: f.fornitore || '', amt: C.num(f.totale), st: isPaid(f) ? 'g' : late(f) ? 'r' : 'a', ofr: id ? 'for:' + id : '' }; }).sort(srt),
+      dc: D.ddt.map((x, i) => ({ ty: 'dc', d: String(x.d.data || ''), t: 'DDT ' + C.dnum(x.d), s: x.cliN || cliN(x.d.cliente), amt: 0, st: x.d.fattura ? 'g' : 'a', ddt: x })).sort(srt),
+      df: DF.map(x => ({ ty: 'df', d: String(x.data || ''), t: 'DDT ' + (x.numero || x.ndoc || '—'), s: x.fornitore || '', amt: C.num(x.totale), st: x.fattura || x.fatt ? 'g' : 'n' })).sort(srt),
+      rc: CO.map(r => ({ ty: 'rc', d: String(r.data || ''), t: String(r.descrizione || r.categoria || 'Riga di costo').slice(0, 60), s: [r.fornitore, r.centro].filter(Boolean).join(' · '), amt: rowT(r), st: r.centro ? 'n' : 'a' })).sort(srt)
+    };
+    const fix = [
+      ['DDT senza fattura', D.ddt.filter(x => !x.d.fattura).length, 'vendite', 'da fatturare ai clienti'],
+      ['Fatture emesse scadute', opV.filter(late).length, 'vendite', 'da sollecitare'],
+      ['Fatture ricevute senza scadenza', opF.filter(f => !f.scadenza).length, 'fatture', 'non compaiono nelle scadenze'],
+      ['Righe di costo senza centro', CO.filter(r => !String(r.centro || '').trim()).length, 'movimenti', 'assegna il centro di costo'],
+      ['Righe di costo senza prezzo', CO.filter(r => !rowT(r)).length, 'movimenti', 'importo mancante']
+    ].filter(r => r[1] > 0);
+    const n = Object.fromEntries(Object.keys(DOC).map(k => [k, DOC[k].length])), nM = Object.fromEntries(Object.keys(DOC).map(k => [k, DOC[k].filter(x => x.d.slice(0, 7) === tm).length]));
+    const in30 = sc.filter(x => x.k === 'in').reduce((s, x) => s + x.amt, 0), out30 = sc.filter(x => x.k === 'out').reduce((s, x) => s + x.amt, 0);
+    return { months, rev, cost, revM: rev[11], costM: cost[11], revP: rev[10], costP: cost[10], rev12: rev.reduce((a, b) => a + b, 0), cost12: cost.reduce((a, b) => a + b, 0), costFromRows: !!CO.length,
+      q0, qN, ivaD, ivaC, opV: opV.reduce((s, f) => s + C.num(f.totale), 0), opF: opF.reduce((s, f) => s + C.num(f.totale), 0), lateV: opV.filter(late).reduce((s, f) => s + C.num(f.totale), 0), lateF: opF.filter(late).reduce((s, f) => s + C.num(f.totale), 0),
+      sc, in30, out30, DOC, n, nM, tot: Object.values(n).reduce((a, b) => a + b, 0), fix };
+  }
+  function dFwd(n) { const d = new Date(C.today() + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+  const eurK = v => { const a = Math.abs(v); return (v < 0 ? '−' : '') + (a >= 1e6 ? (a / 1e6).toFixed(1).replace('.', ',') + ' mln' : a >= 1e4 ? Math.round(a / 1e3) + 'k' : Math.round(a).toLocaleString('it-IT')) + ' €'; };
+  // schermo a parete della contabilità: 3 pagine che si alternano
+  function accScreen(A, page, u) {
+    const cv = A.cv, g = cv.getContext('2d'), w = cv.width, h = cv.height, X = A.X, F = 'Inter, system-ui, sans-serif';
+    g.fillStyle = '#121418'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#1c1f25'; g.fillRect(0, 0, w, 64);
+    g.font = `800 26px ${F}`; g.fillStyle = '#f47b20'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText('CONTABILITÀ', 28, 33);
+    const tl = ['Conto economico', `IVA · ${X.qN} trimestre (stima)`, 'Scadenze · 30 giorni'][page];
+    g.font = `600 22px ${F}`; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(tl, 210, 34);
+    g.textAlign = 'right'; g.fillStyle = (Math.floor(u * 4) % 2) ? '#5df08a' : '#2e7d4a'; g.beginPath(); g.arc(w - 120, 33, 7, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.75)'; g.font = `700 20px ${F}`; g.fillText('LIVE', w - 30, 34);
+    for (let i = 0; i < 3; i++) { g.fillStyle = i === page ? '#f47b20' : 'rgba(255,255,255,.18)'; g.fillRect(w / 2 - 54 + i * 40, h - 16, 32, 5); }
+    g.fillStyle = '#f47b20'; g.fillRect(0, 62, w * u, 3);
+    const big = (x, y, l, v, c, sub) => { g.textAlign = 'left'; g.font = `600 20px ${F}`; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText(l, x, y); g.font = `800 46px ${F}`; g.fillStyle = c; g.fillText(v, x, y + 46); if (sub) { g.font = `600 18px ${F}`; g.fillStyle = 'rgba(255,255,255,.45)'; g.fillText(sub, x, y + 86); } };
+    if (page === 0) {
+      const ut = X.revM - X.costM; big(36, 104, 'Ricavi del mese', eurK(X.revM), '#ffffff'); big(36, 214, 'Costi del mese', eurK(X.costM), '#c9ccd2'); big(36, 324 - 8, 'Utile', eurK(ut), ut >= 0 ? '#5df08a' : '#ff6b5b');
+      const x0 = 400, x1 = w - 36, y1 = h - 44, y0 = 96, mx = Math.max(1, ...X.rev, ...X.cost), bw = (x1 - x0) / 12;
+      g.strokeStyle = 'rgba(255,255,255,.08)'; g.lineWidth = 1; for (let i = 0; i <= 3; i++) { const y = y0 + (y1 - y0) * i / 3; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke(); }
+      const grow = Math.min(1, u * 3);
+      for (let i = 0; i < 12; i++) { const k = Math.min(1, Math.max(0, grow * 1.6 - i * .05)), hr = (y1 - y0) * X.rev[i] / mx * k, hc = (y1 - y0) * X.cost[i] / mx * k, bx2 = x0 + i * bw + bw * .14;
+        g.fillStyle = i === 11 ? '#f47b20' : '#8a5a33'; g.fillRect(bx2, y1 - hr, bw * .34, hr); g.fillStyle = i === 11 ? '#d6dae0' : '#4b5058'; g.fillRect(bx2 + bw * .38, y1 - hc, bw * .34, hc);
+        g.fillStyle = 'rgba(255,255,255,.4)'; g.font = `600 15px ${F}`; g.textAlign = 'center'; g.fillText('GFMAMGLASOND'[Number(X.months[i].slice(5)) - 1], x0 + i * bw + bw / 2, y1 + 18); }
+    } else if (page === 1) {
+      const sal = X.ivaD - X.ivaC; big(36, 104, 'IVA sulle vendite · a debito', eurK(X.ivaD), '#ffffff'); big(36, 214, 'IVA sugli acquisti · a credito', eurK(X.ivaC), '#c9ccd2');
+      g.fillStyle = sal >= 0 ? 'rgba(244,123,32,.14)' : 'rgba(93,240,138,.12)'; g.beginPath(); g.roundRect(520, 100, w - 556, 220, 18); g.fill();
+      g.textAlign = 'center'; g.font = `600 22px ${F}`; g.fillStyle = 'rgba(255,255,255,.65)'; g.fillText(sal >= 0 ? 'Saldo da versare' : 'Saldo a credito', 520 + (w - 556) / 2, 150);
+      g.font = `800 64px ${F}`; g.fillStyle = sal >= 0 ? '#f47b20' : '#5df08a'; g.fillText(eurK(Math.abs(sal)), 520 + (w - 556) / 2, 222);
+      g.font = `600 17px ${F}`; g.fillStyle = 'rgba(255,255,255,.4)'; g.fillText('dal totale − imponibile delle fatture registrate', 520 + (w - 556) / 2, 284);
+    } else {
+      big(36, 104, 'Entrate attese', eurK(X.in30), '#5df08a'); big(36, 214, 'Uscite previste', eurK(X.out30), '#ff9a6b'); big(36, 324 - 8, 'Saldo', eurK(X.in30 - X.out30), '#ffffff');
+      const L2 = X.sc.slice(0, 5); g.textAlign = 'left';
+      L2.forEach((s, i) => { const y = 104 + i * 54, k = Math.min(1, Math.max(0, u * 4 - i * .25)); g.globalAlpha = k; g.fillStyle = '#1c1f25'; g.beginPath(); g.roundRect(400 + (1 - k) * 40, y - 4, w - 436, 46, 10); g.fill();
+        g.fillStyle = s.late ? '#ff6b5b' : s.k === 'in' ? '#5df08a' : '#ff9a6b'; g.fillRect(400 + (1 - k) * 40, y - 4, 6, 46);
+        g.font = `700 19px ${F}`; g.fillStyle = '#fff'; g.fillText((s.name || '').slice(0, 26), 420 + (1 - k) * 40, y + 12); g.font = `600 15px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText((s.late ? 'scaduta il ' : 'scade il ') + C.dIt(s.d), 420 + (1 - k) * 40, y + 32);
+        g.textAlign = 'right'; g.font = `800 22px ${F}`; g.fillStyle = s.k === 'in' ? '#5df08a' : '#ff9a6b'; g.fillText((s.k === 'in' ? '+' : '−') + eurK(s.amt), w - 50, y + 20); g.textAlign = 'left'; g.globalAlpha = 1; });
+      if (!L2.length) { g.font = `600 22px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('Nessuna scadenza nei prossimi 30 giorni', 420, 200); }
+    }
+    A.tex.needsUpdate = true;
+  }
+  function accBuild(fg, B, glassI, people, OD) {
+    const X = accData(OD), tier = Q ? Q.tier : 2;
+    // pavimenti e parete in vetro tra le due stanze (porta al centro)
+    B.add('afl', G.box, mat(0xffffff), m4(0, .035, -3.2, 5.7, .02, 5.9), 0xe3efe6); B.add('afl', G.box, mat(0xffffff), m4(0, .035, 3.3, 5.7, .02, 5.9), 0xf2ebdf);
+    B.add('ast', G.box, mat(0xffffff), m4(0, .058, -.45, 5.4, .01, .12), 0x2a8a4a); B.add('ast', G.box, mat(0xffffff), m4(0, .058, 6.05, 5.4, .01, .12), 0x7b5cc4);
+    B.add('gw', G.box, glassI, m4(-1.6, 1.4, 0, 2.6, 2.7, .05)); B.add('gw', G.box, glassI, m4(1.8, 1.4, 0, 2.2, 2.7, .05)); B.add('gr', G.box, mat(0x2b2f35), m4(0, 2.76, 0, 5.8, .06, .08));
+    for (const x of [-.3, .7]) B.add('gp', G.box, mat(0x2b2f35), m4(x, 1.4, 0, .06, 2.7, .08));
+    // --- contabilità: due postazioni con doppio monitor, schermo a parete, stampante, cassaforte, cassettiere
+    const scrM = new T.MeshBasicMaterial({ color: 0xbfe3cc }); OWN.push(scrM);
+    for (const sx of [-1.35, 1.35]) {
+      B.add('desk', G.box, mat(0xfafafa), m4(sx, .76, -4.35, 1.7, .05, .8)); for (const lx of [-.78, .78]) B.add('dleg', G.box, mat(0x8e959e), m4(sx + lx, .38, -4.35, .05, .74, .7));
+      for (const mx2 of [-.36, .36]) { B.add('mon', G.box, mat(0x1d1f22), m4(sx + mx2, 1.08, -4.6, .62, .38, .03)); B.add('scr', G.box, scrM, m4(sx + mx2, 1.08, -4.58, .56, .32, .01)); B.add('mst', G.box, mat(0x1d1f22), m4(sx + mx2, .86, -4.6, .05, .2, .05)); }
+      B.add('kb', G.box, mat(0x2b2f35), m4(sx, .795, -4.12, .5, .02, .16)); B.add('ppr', G.box, mat(0xffffff), m4(sx + .6, .795, -4.15, .24, .02, .32)); B.add('calc', G.box, mat(0x3a3f46), m4(sx - .62, .8, -4.15, .14, .03, .2));
+    }
+    const nP = tier === 0 ? 1 : 2; for (let i = 0; i < nP; i++) { const sx = i ? 1.35 : -1.35, p = person(fg, sx, -3.73, 0x2a8a4a, null, { mode: 'work', shirt: 0xf4f4f2 }); p.position.y = 0; p.rotation.y = Math.PI; movers.push({ o: p, t: 'bob', ph: 20 + i }); people.push(p); }
+    if (nP < 2) { B.add('chs', G.box, mat(0x2a8a4a), m4(1.35, .5, -3.8, .5, .08, .5)); B.add('chb', G.box, mat(0x2a8a4a), m4(1.35, .82, -3.57, .5, .55, .07)); }
+    bxS(fg, 4.9, 2.1, .12, 0x1d1f22, 0, .9, -6.2);
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 400; const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; OWN.push(tex);
+    const sm = new T.MeshBasicMaterial({ map: tex }); OWN.push(sm); const scr = new T.Mesh(G.plane, sm); scr.scale.set(4.7, 1.836, 1); scr.position.set(0, 1.95, -6.13); fg.add(scr);
+    // stampante con foglio che esce
+    bxS(fg, .8, .55, .6, 0xc5cad1, 2.3, 0, -1.2); bxS(fg, .7, .4, .55, 0xf4f5f6, 2.3, .55, -1.2); bxS(fg, .5, .03, .14, 0x2b3440, 2.3, .82, -1.36, { ns: 1 });
+    const pap = new T.Mesh(G.box, mat(0xffffff)); pap.scale.set(.3, .006, .38); pap.position.set(2.3, .73, -.96); fg.add(pap);
+    // cassaforte, cassettiere, pianta
+    bxS(fg, .7, .9, .62, 0x3a3f46, -2.35, 0, -1.2); meshS(G.cyl, mat(0xc5cad1), -2.35, .58, -.875, fg, { s: [.16, .03, .16], rx: Math.PI / 2, ns: 1 }); bxS(fg, .05, .22, .04, 0xd9b44a, -2.15, .35, -.87, { ns: 1 });
+    for (const zz of [-5.55, -4.9]) { bxS(fg, .6, 1.3, .6, 0xd8dbe0, -2.45, 0, zz); for (let i = 1; i < 4; i++) bxS(fg, .5, .015, .02, 0x8e959e, -2.45, i * .32, zz + .31, { ns: 1 }); }
+    B.add('pot', G.cyl, mat(0xc9c4bb), m4(2.45, .3, -5.6, .38, .6, .38)); B.add('leaf', G.sph, mat(0x5e9e4a), m4(2.45, 1.0, -5.6, .7, .9, .7));
+    // --- archivio: scaffalature con raccoglitori colorati per tipo di documento, banco di scansione
+    const cases = [{ x: -2.55, z: 3.3, len: 4.6, ry: Math.PI / 2, ty: ['fe', 'fe', 'fe', 'dc', 'dc'] }, { x: 2.55, z: 3.3, len: 4.6, ry: -Math.PI / 2, ty: ['fr', 'fr', 'fr', 'df', 'df'] }, { x: 0, z: .62, len: 3.4, ry: 0, ty: ['rc', 'rc', 'rc', 'rc', 'rc'] }];
+    const slots = { fe: [], fr: [], dc: [], df: [], rc: [] }, tgt = [];
+    const cs = new Batch(fg);
+    cases.forEach(cc => {
+      const c = Math.cos(cc.ry), s = Math.sin(cc.ry), P2w = (u, y, v) => [cc.x + u * c + v * s, y, cc.z - u * s + v * c]; // u lungo lo scaffale, v verso il corridoio
+      const put = (k, mt, u, y, v, sx, sy, sz, col) => { const [x, y2, z] = P2w(u, y, v); cs.add(k, G.box, mt, m4(x, y2, z, sx, sy, sz, cc.ry), col); };
+      for (const e of [-1, 1]) put('cup', mat(0x3a3f46), e * cc.len / 2, 1.15, 0, .05, 2.3, .42);
+      put('cbk', mat(0xd8d6d1), 0, 1.15, -.19, cc.len, 2.3, .03);
+      for (let l = 0; l < 6; l++) put('csh', mat(0xc5cad1), 0, .1 + l * .44, 0, cc.len - .02, .025, .42);
+      cc.ty.forEach((ty, l) => { const per = Math.floor((cc.len - .2) / .085); for (let i = 0; i < per; i++) slots[ty].push({ cc, P2w, put, u: -cc.len / 2 + .14 + i * .085, y: .1 + l * .44 + .0125 }); });
+      const hb = new T.Mesh(G.box, M.hit); const [hx, , hz] = P2w(0, 0, .05); hb.scale.set(cc.len, 2.4, .6); hb.position.set(hx, 1.2, hz); hb.rotation.y = cc.ry; hb.userData.k = { t: 'acc', id: 'doc', ty: cc.ty[0] }; fg.add(hb); pick.push(hb);
+    });
+    Object.keys(slots).forEach(ty => { const L2 = slots[ty], nD = X.n[ty] || 0, fill = nD ? Math.max(2, Math.round(L2.length * (1 - Math.exp(-nD / 55)))) : 0, col = DOCT[ty][1];
+      L2.forEach((sl, i) => { if (i >= fill) return; const hh = .32 - (i % 5 === 3 ? .04 : 0), cc2 = mixC(col, 0xffffff, (i % 4) * .07);
+        sl.put('bnd', mat(0xffffff), sl.u, sl.y + hh / 2, .02, .07, hh, .3, cc2); sl.put('bnl', mat(0xffffff), sl.u, sl.y + hh * .62, .175, .05, .07, .02);
+        if (i % 7 === 2) tgt.push(sl.P2w(sl.u, sl.y + hh + .05, .1)); }); });
+    cs.flush();
+    // targhe sugli scaffali
+    const plate = (ty1, ty2, x, z, ry) => { const t = textTex([[DOCT[ty1][0], 30, 800, 34, null, hexC(DOCT[ty1][1])], [`${X.n[ty1]} documenti`, 24, 600, 70, null, '#3a3f46'], ...(ty2 ? [[DOCT[ty2][0] + ' · ' + X.n[ty2], 22, 700, 108, null, hexC(DOCT[ty2][1])]] : [])], { bg: '#ffffff', w: 400, h: ty2 ? 130 : 92, round: 10 }); const p = planeT(t, 1.7, ty2 ? .55 : .39, fg, x, 2.62, z, { ry }); p.renderOrder = 2; };
+    plate('fe', 'dc', -2.33, 3.3, Math.PI / 2); plate('fr', 'df', 2.33, 3.3, -Math.PI / 2); plate('rc', null, 0, .84, 0);
+    // banco di scansione e archivista
+    B.add('stb', G.box, mat(0xfafafa), m4(0, .76, 3.5, 1.5, .05, .75)); for (const lx of [-.68, .68]) B.add('stl', G.box, mat(0x8e959e), m4(lx, .38, 3.5, .05, .74, .65));
+    B.add('scn', G.box, mat(0x2b2f35), m4(-.3, .86, 3.42, .5, .14, .38)); B.add('scg', G.box, new T.MeshBasicMaterial({ color: 0x9fe8b4 }), m4(-.3, .936, 3.42, .42, .01, .3));
+    B.add('pst', G.box, mat(0xffffff), m4(.4, .8, 3.5, .24, .05, .32)); B.add('box2', G.box, mat(0xc9a273), m4(.9, .3, 5.2, .5, .6, .4)); B.add('box2', G.box, mat(0xb89466), m4(1.42, .3, 5.25, .5, .6, .4));
+    if (tier > 0) { const p = person(fg, 0, 4.2, 0x7b5cc4, null, { mode: 'scan' }); p.position.y = 0; p.rotation.y = Math.PI; movers.push({ o: p, t: 'bob', ph: 23 }); people.push(p); }
+    // fogli che volano dal banco agli scaffali
+    const shM = new T.MeshLambertMaterial({ color: 0xffffff, side: T.DoubleSide }); OWN.push(shM);
+    const sheets = []; if (tgt.length) for (let i = 0; i < (tier === 0 ? 2 : 4); i++) { const m = new T.Mesh(G.plane, shM); m.scale.set(.21, .297, 1); m.visible = false; fg.add(m); sheets.push({ m, ph: i / (tier === 0 ? 2 : 4), tg: null, cy: -1 }); }
+    // insegne delle stanze
+    const sgn = (t1, t2, c, z) => { const t = textTex([[t1, 34, 800, 44, null, '#16181b'], [t2, 21, 600, 84, null, c]], { bg: '#ffffff', w: 512, h: 112, round: 18 }); const p = planeT(t, 3.5, .77, fg, 0, 3.12, z, {}); p.renderOrder = 2; };
+    sgn('Contabilità', `Utile 12 mesi ${C.eur0(X.rev12 - X.cost12)}`, '#2a8a4a', .06); sgn('Archivio documenti', `${X.tot} documenti`, '#7b5cc4', 6.36);
+    // stanze per il clic e per le staffe di selezione
+    const hb1 = new T.Mesh(G.box, M.hit); hb1.scale.set(5.6, 3.2, 5.8); hb1.position.set(0, 1.6, -3.25); hb1.userData.k = { t: 'acc', id: 'cont' }; fg.add(hb1); pick.push(hb1);
+    const A = { X, cv, tex, page: 0, t0: 0, last: -1, sheets, tgt, pap, fg };
+    accScreen(A, 0, 0);
+    return A;
+  }
+  function accTick(t, dt) {
+    const A = ACC; if (!A || !OFF || OFF.u < .3) return;
+    const per = 7, page = Math.floor(t / per) % 3, u = (t % per) / per, q = Math.floor(t * 8);
+    if (q !== A.last) { A.last = q; accScreen(A, page, u); }
+    const pu = (t % 5.5) / 5.5, pk = pu < .35 ? pu / .35 : pu < .8 ? 1 : 1 - (pu - .8) / .2; A.pap.position.z = -.96 + pk * .22; A.pap.position.y = .73 - pk * .02; A.pap.visible = pu < .97;
+    A.sheets.forEach((s, i) => { const cyc = 3.4, x = (t / cyc + s.ph), cy = Math.floor(x), f = x - cy; if (cy !== s.cy) { s.cy = cy; s.tg = A.tgt[(cy * 7 + i * 13) % A.tgt.length]; }
+      const k = Math.min(1, f / .8), e = k * k * (3 - 2 * k), a = [-.3, .96, 3.42], b = s.tg; s.m.visible = f < .82;
+      s.m.position.set(a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e + Math.sin(e * Math.PI) * 1.1, a[2] + (b[2] - a[2]) * e);
+      s.m.rotation.set(-Math.PI / 2 + Math.sin(e * Math.PI) * .9, e * 2.4 + i, Math.sin(t * 3 + i) * .25 * Math.sin(e * Math.PI)); const sc2 = 1 - e * .55; s.m.scale.set(.21 * sc2, .297 * sc2, 1); });
+  }
+  const accRow = x => { const dt = DOCT[x.ty], at = x.ofr ? `data-ofr="${esc(x.ofr)}"` : x.ddt ? (() => { const i = trucks.findIndex(t2 => t2.d === x.ddt); return i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.ddt.d.id)}"`; })() : '';
+    return `<${at ? 'button type="button"' : 'div'} class="m3-row" ${at}><i class="m3-pi m3-dt" style="--c:${hexC(dt[1])}">${ic(x.ty === 'dc' || x.ty === 'df' ? 'truck' : x.ty === 'rc' ? 'chart' : 'pdf')}</i><span class="tx"><b>${esc(x.t)}</b><small>${esc([x.d ? C.dIt(x.d) : 'senza data', x.s].filter(Boolean).join(' · '))}</small></span>${x.amt ? `<span class="m3-chip ${x.st}">${x.st === 'g' || x.st === 'a' || x.st === 'r' ? '<i></i>' : ''}${C.eur0(x.amt)}</span>` : x.st === 'a' ? '<span class="m3-chip a"><i></i>da fatturare</span>' : ''}</${at ? 'button' : 'div'}>`; };
+  const goBtn = (h, l, icn, gh) => C.secOn && !C.secOn(h) ? '' : `<button type="button" class="m3-go${gh ? ' ghost' : ''}" data-m3="go:${h}">${ic(icn)}${l}</button>`;
+  function accPanel(Pn) {
+    const A = ACC; if (!A) return ''; const X = A.X, MS = 'GFMAMGLASOND';
+    if (Pn.id === 'doc') {
+      const ty = Pn.ty && DOCT[Pn.ty] ? Pn.ty : '', all = Object.values(X.DOC).flat().filter(x => x.d).sort((a, b) => b.d.localeCompare(a.d)), L2 = ty ? X.DOC[ty] : all;
+      return head(ic('pdf'), '', 'Amministrazione · 1° piano', 'Archivio documenti', `${N(X.tot)} documenti registrati nel gestionale`, 1) + `<div class="m3-pb">
+        <div class="m3-dtg">${Object.keys(DOCT).map(k => `<button type="button" data-acc="doc:${ty === k ? '' : k}" class="${ty === k ? 'on' : ''}" style="--c:${hexC(DOCT[k][1])}"><i></i><span>${DOCT[k][0]}</span><b>${N(X.n[k])}</b><em>${X.nM[k] ? `+${X.nM[k]} nel mese` : 'nessuno nel mese'}</em></button>`).join('')}</div>
+        ${X.fix.length ? `<div class="m3-h4">Da sistemare <em>${X.fix.length}</em></div><div class="m3-rows">${X.fix.map(r => `<button type="button" class="m3-row" data-m3="go:${r[2]}"><i class="m3-pi m3-dt" style="--c:#d98a1c">${ic('alert')}</i><span class="tx"><b>${esc(r[0])}</b><small>${esc(r[3])}</small></span><span class="m3-chip a"><i></i>${r[1]}</span></button>`).join('')}</div>` : ''}
+        <div class="m3-h4">${ty ? DOCT[ty][0] : 'Ultimi documenti'} <em>${N(L2.length)}</em></div>
+        <div class="m3-rows">${L2.slice(0, 40).map(accRow).join('') || '<div class="m3-empty">Nessun documento</div>'}</div>
+        <div class="m3-acts">${ty ? goBtn(DOCT[ty][2], 'Apri ' + DOCT[ty][0].toLowerCase(), 'pdf') : goBtn('vendite', 'Vendite', 'pdf') + goBtn('fatture', 'Fatture fornitori', 'pdf', 1)}<button type="button" class="m3-go ghost" data-acc="cont">${ic('chart')}Contabilità</button></div></div>`;
+    }
+    const ut = X.revM - X.costM, utP = X.revP - X.costP, ut12 = X.rev12 - X.cost12, sal = X.ivaD - X.ivaC, mx = Math.max(1, ...X.rev, ...X.cost);
+    const dlt = (a, b, inv) => { if (!b) return ''; const p = (a - b) / Math.abs(b) * 100, up = p >= 0, good = inv ? !up : up; return `<span class="m3-dl ${good ? 'g' : 'r'}">${up ? '▲' : '▼'} ${Math.abs(p).toFixed(0)}%</span>`; };
+    return head(ic('chart'), '', 'Amministrazione · 1° piano', 'Contabilità', 'Conto economico, IVA e scadenze dai documenti registrati', 1) + `<div class="m3-pb">
+      <div class="m3-grid">${stat('Ricavi del mese', C.eur0(X.revM), '', `${dlt(X.revM, X.revP)} imponibile fatture`)}${stat('Costi del mese', C.eur0(X.costM), '', `${dlt(X.costM, X.costP, 1)} ${X.costFromRows ? 'righe di costo' : 'fatture fornitori'}`)}
+      ${stat('Utile del mese', C.eur0(ut), '', X.revM ? `margine ${(ut / X.revM * 100).toFixed(0)}% · ${dlt(ut, utP)}` : 'nessun ricavo nel mese')}${stat('Utile 12 mesi', C.eur0(ut12), '', `ricavi ${C.eur0(X.rev12)}`)}</div>
+      <div class="m3-h4">Ricavi e costi · ultimi 12 mesi</div>
+      <div class="m3-rc">${X.rev.map((v, i) => `<div title="${esc(X.months[i])}: ricavi ${esc(C.eur0(v))} · costi ${esc(C.eur0(X.cost[i]))}"><span><i class="r" style="--h:${(v / mx * 100).toFixed(1)}%;--k:${i}"></i><i class="c" style="--h:${(X.cost[i] / mx * 100).toFixed(1)}%;--k:${i}"></i></span><small>${MS[Number(X.months[i].slice(5)) - 1]}</small></div>`).join('')}</div>
+      <div class="m3-leg"><span><i style="background:#f47b20"></i>Ricavi</span><span><i style="background:#9aa0a8"></i>Costi</span></div>
+      <div class="m3-h4">IVA · ${X.qN} trimestre <em>stima</em></div>
+      <div class="m3-kv"><div><span>Sulle vendite (a debito)</span><b>${C.eur0(X.ivaD)}</b></div><div><span>Sugli acquisti (a credito)</span><b>${C.eur0(X.ivaC)}</b></div><div><span>${sal >= 0 ? 'Saldo da versare' : 'Saldo a credito'}</span><b style="color:${sal >= 0 ? '#f47b20' : '#2a8a4a'}">${C.eur0(Math.abs(sal))}</b></div></div>
+      <p class="m3-note">Calcolata dalle fatture del trimestre (totale − imponibile). Verifica sempre con il commercialista.</p>
+      <div class="m3-h4">Crediti e debiti</div>
+      <div class="m3-grid">${stat('Da incassare', X.opV ? C.eur0(X.opV) : '—', '', X.lateV ? `${C.eur0(X.lateV)} scaduti` : 'niente di scaduto')}${stat('Da pagare', X.opF ? C.eur0(X.opF) : '—', '', X.lateF ? `${C.eur0(X.lateF)} scaduti` : 'niente di scaduto')}</div>
+      <div class="m3-h4">Scadenze · 30 giorni <em>${X.sc.length}</em></div>
+      <div class="m3-cf"><div><span>Entrate</span><b class="g">+${C.eur0(X.in30)}</b></div><div><span>Uscite</span><b class="r">−${C.eur0(X.out30)}</b></div><div><span>Saldo</span><b>${C.eur0(X.in30 - X.out30)}</b></div></div>
+      <div class="m3-rows">${X.sc.slice(0, 25).map(s => `<${s.ofr ? `button type="button" data-ofr="${esc(s.ofr)}"` : 'div'} class="m3-row"><i class="m3-pi m3-dt" style="--c:${s.k === 'in' ? '#2a8a4a' : '#d9452f'}">${ic(s.k === 'in' ? 'down' : 'right')}</i><span class="tx"><b>${esc(s.name)}</b><small>${esc(['Fattura ' + (s.f.numero || '—'), (s.late ? 'scaduta il ' : 'scade il ') + C.dIt(s.d)].join(' · '))}</small></span><span class="m3-chip ${s.late ? 'r' : s.k === 'in' ? 'g' : 'a'}"><i></i>${s.k === 'in' ? '+' : '−'}${C.eur0(s.amt)}</span></${s.ofr ? 'button' : 'div'}>`).join('') || '<div class="m3-empty">Nessuna scadenza nei prossimi 30 giorni</div>'}</div>
+      ${X.fix.length ? `<div class="m3-h4">Da sistemare <em>${X.fix.length}</em></div><div class="m3-rows">${X.fix.map(r => `<button type="button" class="m3-row" data-m3="go:${r[2]}"><i class="m3-pi m3-dt" style="--c:#d98a1c">${ic('alert')}</i><span class="tx"><b>${esc(r[0])}</b><small>${esc(r[3])}</small></span><span class="m3-chip a"><i></i>${r[1]}</span></button>`).join('')}</div>` : ''}
+      <div class="m3-acts">${goBtn('incassi', 'Incassi', 'down')}${goBtn('fatture', 'Fatture fornitori', 'pdf', 1)}${goBtn('analisi', 'Analisi', 'chart', 1)}<button type="button" class="m3-go ghost" data-acc="doc">${ic('pdf')}Archivio documenti</button></div></div>`;
   }
 
   /* ---------------- ricevimento merci (v276): banchine fornitori, corsie di sosta, accettazione ---------------- */
@@ -2337,6 +2545,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         ${stat('DDT del mese', D.ddtM.length, '', `${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli`)}${stat('Da fatturare', D.ddt.filter(x => !x.d.fattura).length, '', 'DDT senza fattura', D.ddt.length ? D.ddt.filter(x => x.d.fattura).length / D.ddt.length : 0)}</div>
         <button type="button" class="m3-go" data-gx="ddt-new">${ic('plus')}Nuovo DDT</button>
         <div class="m3-h4">Spedizioni <em>${D.ddt.length}</em></div><div class="m3-rows">${D.ddt.slice(0, 20).map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" class="m3-row" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('truck')}</i><span class="tx"><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc([C.dIt(x.d.data), C.num(x.d.colli) ? N(C.num(x.d.colli)) + ' colli' : '', x.R.length + ' righe'].filter(Boolean).join(' · '))}</small></span>${x.d.fattura ? '<span class="m3-chip g"><i></i>Fatturato</span>' : '<span class="m3-chip a"><i></i>Da fatturare</span>'}</button>`; }).join('') || '<div class="m3-empty">Nessun DDT</div>'}</div></div>`;
+    } else if (Pn.t === 'acc') {
+      h = accPanel(Pn); if (!h) return panel({ t: 'zone', z: 'uffe' });
     } else if (Pn.t === 'ofr' || (Pn.t === 'zone' && (Pn.z === 'uffe' || Pn.z === 'uff'))) {
       h = offPanel(Pn); if (!h) return panel({ t: 'zone', z: 'uffe' });
     } else if (Pn.t === 'zone') {
@@ -2374,11 +2584,12 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   }
   function select(k, noFly) {
     if (EDIT) return;
-    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || k.t !== 'ofr') offUnfocus(); if (CANO) CANO.want = k && k.t === 'fuel' ? .14 : 1; if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
+    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || k.t === 'acc' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || (k.t !== 'ofr' && k.t !== 'acc')) offUnfocus(); if (CANO) CANO.want = k && k.t === 'fuel' ? .14 : 1; if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
     else if (k.t === 'ofr') { zoneChip('uffe'); OFT = k.kd; if (!noFly) offView(k.kd, k.id); else offFocus(k.kd, k.id); }
+    else if (k.t === 'acc') { zoneChip('uffe'); const id = k.id === 'doc' ? 'doc' : 'cont'; if (!noFly) offView('acc', id); else offFocus('acc', id); }
     else if (k.t === 'ricl') { zoneChip('ric'); if (!k.key) return select({ t: 'zone', z: 'ric', id: k.id }, noFly); if (!noFly) ricView(k.key); else ricFocus(k.key); }
     else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x + .5, ty: 1.4, tz: F.st.z + 1, dist: 30, az: -0.55, pol: 1.0 }); } }
     else if (k.t === 'veh') { zoneChip('flotta'); const f = fleetVeh.find(x => x.v.p === k.p); if (f && !noFly) { const p2 = new T.Vector3(); f.o.getWorldPosition(p2); fly({ tx: p2.x, ty: 1, tz: p2.z, dist: 21, az: f.o.rotation.y + Math.PI / 2 - .7, pol: .86 }); } }
@@ -2425,6 +2636,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       + Dd.map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i>DDT</i><span><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc(C.dIt(x.d.data))}</small></span></button>`; }).join('')
       + (D.gas ? D.gas.V.filter(v => (v.p + ' ' + plFmt(v.p) + ' ' + v.name + ' ' + v.drv.join(' ')).toLowerCase().includes(s)).slice(0, 4).map(v => `<button type="button" data-veh3="${esc(v.p)}"><i>${ic('van', ' style="width:16px;height:16px"')}</i><span><b>${esc(plFmt(v.p))}${v.name ? ' · ' + esc(v.name) : ''}</b><small>${N(Math.round(v.lM))} L nel mese${v.drv.length ? ' · ' + esc(v.drv.join(', ')) : ''}</small></span></button>`).join('') : '')
       + (OFF ? [...OFF.OD.CL, ...OFF.OD.FR].filter(e => (e.name + ' ' + e.city + ' ' + ((e.o && e.o.piva) || '')).toLowerCase().includes(s)).slice(0, 5).map(e => `<button type="button" data-ofr="${e.kd}:${esc(e.id)}"><i>${e.kd === 'cli' ? 'CLI' : 'FOR'}</i><span><b>${esc(e.name)}</b><small>${esc([e.kd === 'cli' ? 'cliente' : 'fornitore', e.room ? 'ufficio ' + e.room : '', stTxt(e)].filter(Boolean).join(' · '))}</small></span></button>`).join('') : '')
+      + (ACC ? [['cont', 'Contabilità', 'conto economico · iva · scadenze', 'contabilita contabilità iva scadenze scadenzario utile ricavi costi bilancio conto economico amministrazione'], ['doc', 'Archivio documenti', `${ACC.X.tot} documenti`, 'archivio documenti fatture ddt righe costo amministrazione']].filter(r => r[3].includes(s) || r[1].toLowerCase().includes(s)).map(r => `<button type="button" data-acc="${r[0]}"><i>AMM</i><span><b>${r[1]}</b><small>${esc(r[2])}</small></span></button>`).join('') : '')
       + zs.map(z => `<button type="button" data-zsel="${z}"><i>${ZN(z)[1]}</i><span><b>${ZN(z)[0]}</b><small>reparto</small></span></button>`).join('');
     res.innerHTML = h || '<p>Nessun risultato</p>'; res.classList.add('on');
   }
@@ -2660,6 +2872,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     if (a === 'home') { if (EDIT) return fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.15, az: -0.15, pol: .42 }); select({ t: 'zone', z: 'all' }); return; }
     if (a === 'play') { if (tourOn) stopTour(); else startTour(); return; }
     if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else if (t.closest('.m3-co')) { unfocus(); if (sel && sel.art) sel = { t: 'rack', id: sel.id }; } else select(null); return; }
+    if (a && a.startsWith('go:')) { const h2 = a.slice(3); close(); setTimeout(() => { if (C.go) C.go(h2); else location.hash = '#' + h2; }, 350); return; }
     if (a === 'gocli' || a === 'gofor') { const f = a === 'gocli' ? C.goCli : C.goForn; close(); setTimeout(() => { if (f) f(); else location.hash = a === 'gocli' ? '#clienti' : '#fornitori'; }, 350); return; }
     if (a === 'gasan') { select({ t: 'fuel' }); return; }
     if (a === 'verify') return verify();
@@ -2694,6 +2907,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const fg = t.closest('[data-fgo]'); if (fg) { const [z, tb] = fg.dataset.fgo.split(':'); if (tb) OFT = tb; select({ t: 'zone', z }); return; }
     const sh = t.closest('[data-shot]'); if (sh) { stopTour(); const k = sh.dataset.shot, z = zoneTarget('stk'); ({ all: () => select({ t: 'zone', z: 'all' }), top: () => fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.2, az: 0, pol: .12 }), stk: () => { const r = P.racks.find(x => x.k === 'pallet') || P.racks[0]; if (r) { const g = rackG(r.id); g.updateMatrixWorld(); const p2 = g.localToWorld(new T.Vector3(-rackLen(r) / 2 - 3, 0, rackDep(r) / 2 + 1.7)); fly({ tx: p2.x + 6, ty: 2.5, tz: p2.z, dist: 12, az: r.r * Math.PI / 2 - 1.3, pol: 1.3 }); } }, spe: () => flyT(zoneTarget('spe')), pre: () => flyT(zoneTarget('pre')), low: () => fly({ tx: 0, tz: 4, dist: Math.max(L.W, L.D) * 1.6, az: -0.75, pol: 1.22 }) })[k](); return; }
     const ofr = t.closest('[data-ofr]'); if (ofr) { $('.m3-res').classList.remove('on'); const [kd, ...r2] = ofr.dataset.ofr.split(':'); select({ t: 'ofr', kd, id: r2.join(':') }); return; }
+    const acb = t.closest('[data-acc]'); if (acb) { $('.m3-res').classList.remove('on'); const [id, ty] = acb.dataset.acc.split(':'); select({ t: 'acc', id, ty: ty || '' }, !!(sel && sel.t === 'acc' && sel.id === id)); return; }
     const oft = t.closest('[data-oft]'); if (oft) { OFT = oft.dataset.oft; panel(sel); return; }
     const rv = t.closest('[data-rcv3]'); if (rv) { $('.m3-res').classList.remove('on'); const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); select({ t: 'ricl', key: rv.dataset.rcv3, id: z && z.id }); return; }
     const tb = t.closest('[data-tab3]'); if (tb) { table(tb.dataset.tab3); return; }
