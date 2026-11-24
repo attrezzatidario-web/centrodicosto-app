@@ -9088,7 +9088,7 @@
     if (!rows.length) mx = '<div class="card pv-mx"><div class="empty">Nessun articolo collegato a questo prodotto</div></div>';
     else if (useSz) mx = `<div class="card pv-mx"><div class="card-h"><h3>Taglie e colori disponibili</h3><span class="muted small">gli esauriti restano in grigio · tocca un numero per carico o scarico</span></div>
         <div class="pv-tw"><table class="pv-t"><thead><tr><th class="pv-ch">Colore</th>${used.map(z => `<th>${esc(z)}</th>`).join('')}<th>Pezzi</th></tr></thead><tbody>${rows.map(r => `<tr><td class="pv-ch"><span class="pv-cr">${pvThumb(cat, it, r.c, 'sm')}<span><b>${esc(r.c[1])}</b><small>${esc(r.c[0])}</small></span></span></td>${used.map(z => `<td class="pv-szc" data-l="${esc(z)}">${r.z.has(z) ? qb(r.z.get(z)) : ''}</td>`).join('')}<td class="pv-rt" data-l="Pezzi"><b>${fmtNum(r.n, r.n % 1 ? 2 : 0)}</b></td></tr>`).join('')}</tbody></table></div></div>`;
-    else mx = `<div class="card pv-mx"><div class="card-h"><h3>In magazzino</h3><span class="muted small">gli esauriti restano in grigio · tocca un numero per carico o scarico</span></div><div class="pv-vr">${rows.map(r => `<div class="pv-vrow"><span class="pv-vn"><b>${esc(r.c[1] || r.c[0])}</b><small>cod. ${esc(r.c[0])}</small></span>${qb({ a: r.first, g: r.n }, 1)}</div>`).join('')}</div></div>`;
+    else mx = `<div class="card pv-mx"><div class="card-h"><h3>In magazzino</h3><span class="muted small">gli esauriti restano in grigio · tocca un numero per carico o scarico</span></div><div class="pv-vr">${rows.map(r => `<div class="pv-vrow"><span class="pv-vn"><b>${esc(r.c[1] || r.c[0])}</b><small>cod. ${esc(r.c[0])}</small></span><button type="button" class="btn sm ghost mg-locb" data-artloc="${esc(r.first.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button>${qb({ a: r.first, g: r.n }, 1)}</div>`).join('')}</div></div>`;
     el.innerHTML = head + mx + mgStorico(cat, it);
   }
   /* v243: vista a schede (come i Preventivi): foto, nome, codice, giacenza, costo e prezzo */
@@ -9099,7 +9099,7 @@
         <span class="pv-cm">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria].filter(Boolean).join(' · '))}</small>
           <span class="mg-cq"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span>${num(a.scorta) ? `<small>scorta min. ${fmtNum(num(a.scorta), 0)}</small>` : ''}</span>
           <span class="pv-pr">${num(a.prezzo) ? `<strong>${eur(num(a.prezzo) * mgIva(a))}</strong>` : ''}<small>${num(a.costo) ? 'costo ' + eur(num(a.costo) * mgIva(a)) : 'costo da inserire'}</small></span>
-          <button type="button" class="btn sm ghost mg-pm" data-gx="mov-art" data-id="${esc(a.id)}" title="Carico / scarico">±</button></span></div>`; };
+          <button type="button" class="btn sm ghost mg-pm" data-gx="mov-art" data-id="${esc(a.id)}" title="Carico / scarico">±</button><button type="button" class="btn sm ghost mg-pm mg-locb mg-locc" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button></span></div>`; };
     const sc = (x, i) => `<div class="card pv-card mg-card" data-gx="srv-edit" data-id="${esc(x.id)}" role="button" tabindex="0"><span class="pv-img"><b class="ph">SV</b></span><span class="pv-cm"><b>${esc(x.d)}</b><small>${esc([x.cod, 'servizio'].filter(Boolean).join(' · '))}</small><span class="pv-pr">${num(x.p) ? `<strong>${eur(num(x.p) * (ivaOn ? 1 + num(x.iva) / 100 : 1))}</strong>` : ''}<small>${esc(x.um || '')}</small></span></span></div>`;
     const gcard = (g, i) => { const tot = g.arts.reduce((n, x) => n + (G.get(x.id) || 0), 0), cols = new Set(g.arts.map(x => (mgLink(x) || {}).c && mgLink(x).c[0])).size, a0 = g.arts[0], L0 = mgLink(a0);
       return `<div class="card pv-card mg-card" data-mgitem="${esc(g.key)}" role="button" tabindex="0" style="--d:${Math.min(i, 16) * 30}ms">${pvThumb(L0.cat, L0.it, L0.c)}<span class="pv-cm"><b>${esc(L0.it.n)}</b><small>${esc(pvCode(L0.it))} · ${esc(String(L0.it.cl || '').toLowerCase())}</small>
@@ -9146,7 +9146,7 @@
       <div class="gx-chips"><button type="button" class="chip-f${mgLow || mgAvail || mgOut ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgAvail ? ' on' : ''}" data-mgav="1">Disponibili <em>${A.filter(a => (G.get(a.id) || 0) > 0).length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button><button type="button" class="chip-f${mgOut ? ' on' : ''}" data-mgout="1">Esauriti <em>${A.filter(a => (G.get(a.id) || 0) <= 0).length}</em></button></div>
       <div class="mg-vw"><div class="tr-seg pv-gvw" role="group" aria-label="Vista"><button type="button" data-mgview="g" class="${mgGrid ? 'on' : ''}" title="Schede con foto"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" data-mgview="l" class="${mgGrid ? '' : 'on'}" title="Elenco"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div></div>
       ${mgGrid ? mgGridHtml(F, SF, G, low, mgIva) : `<div class="card gx-list"><table class="gx-tbl"><thead><tr><th>Articolo</th><th class="r">Giacenza</th><th class="r">Scorta min.</th><th class="r">Costo</th><th class="r">Prezzo</th><th class="r">Valore</th><th></th></tr></thead><tbody>
-      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<div class="mg-ar">${mgThumb(a)}<div class="mg-at"><b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
+      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<div class="mg-ar">${mgThumb(a)}<div class="mg-at"><b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost mg-locb" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
       </tbody></table>${mgSup === '__srv' ? `<div class="gx-act mg-sa"><button type="button" class="btn sm" data-gx="srv-new">+ Servizio</button></div>` : ''}${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}</div>`}`;
     } else {
       const M = GX.mov().map(m => ({ m, a: artOf(m.articolo) })).filter(x => !q || nh([x.a && x.a.codice, x.a && x.a.descrizione, x.m.causale].join(' ')).includes(q)).sort((x, y) => String(y.m.data).localeCompare(String(x.m.data)) || String(y.m.creato).localeCompare(String(x.m.creato)));
@@ -9163,10 +9163,26 @@
   /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
   async function mag3d() {
     if (mag3d.busy) return; mag3d.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=287'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=288'); }
     catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
     mag3d.busy = 0;
-    window.CDC_MG3D.open({
+    window.CDC_MG3D.open(mag3dCtx());
+  }
+  // v288: ubicazione dell'articolo scelta dalla mappa del magazzino (popup di magazzino3d.js, anche senza aprire il 3D)
+  async function artLoc(id) {
+    if (artLoc.busy) return; artLoc.busy = 1;
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=288'); }
+    catch { artLoc.busy = 0; return toast('Mappa non disponibile: controlla la connessione e riprova'); }
+    artLoc.busy = 0;
+    window.CDC_MG3D.pickLoc(mag3dCtx(), id, { toast, onSave: code => { document.querySelectorAll(`[data-artlocc="${CSS.escape(id)}"]`).forEach(el => { el.textContent = code || 'automatica'; }); } });
+  }
+  function artLocFill() {
+    if (!window.CDC_MG3D || !window.CDC_MG3D.locOf) return;
+    document.querySelectorAll('[data-artlocc]').forEach(el => { const p = window.CDC_MG3D.locOf(mag3dCtx(), el.dataset.artlocc); el.textContent = p ? p.code : 'da scegliere'; });
+  }
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-artloc]'); if (!b) return; e.preventDefault(); e.stopPropagation(); artLoc(b.dataset.artloc); }, true);
+  function mag3dCtx() {
+    return {
       art: () => GX.art(), mov: () => GX.mov(), ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
       mag: () => mgMag, setMag: m => { mgMag = m; renderMag(); }, num, esc, eur0, fmtNum, dIt, today, orgName: () => ORG.n || 'Magazzino', secPerm,
       ivaOn: () => ivaOn, ivaRate, ivaLbl, xiTransito, xiNum, xiPz, onClose: () => {},
@@ -9178,7 +9194,7 @@
       // v287: contabilità e archivio documenti (uffici, 1° piano)
       costi: () => db.movimenti || [], rowT: r => sumT([r]), dfo: () => GX.dfo(), go: h => { location.hash = '#' + h; },
       secOn: k => { try { return (typeof modOn !== 'function' || modOn(k)) && !!secPerm(k); } catch { return false; } }
-    });
+    };
   }
   // v147: movimenti dell'articolo dentro la sua scheda (carichi, scarichi, inventari)
   function artMovHtml(a) {
@@ -9200,6 +9216,7 @@
       <label class="f"><span>Categoria</span><input name="categoria" list="art-cats" value="${esc(a.categoria || '')}"><datalist id="art-cats">${CAT.map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
       <div class="f-row f3">${f('costo', 'Costo d\'acquisto €', 'number', 'IVA esclusa')}${f('prezzo', 'Prezzo di vendita €', 'number', 'IVA esclusa')}<label class="f"><span>IVA</span><select name="iva">${IVE.map(v => `<option value="${v}"${num(a.iva) === v ? ' selected' : ''}>${v}%</option>`).join('')}</select></label></div>
       <div class="f-row">${f('scorta', 'Scorta minima', 'number', 'avviso sotto questa quantità')}${n ? f('giac0', 'Giacenza iniziale', 'number', '0') : `<div class="f"><span>Giacenza attuale</span><div class="gx-giac"><b>${fmtNum(g, g % 1 ? 2 : 0)} ${esc(a.um || '')}</b><button type="button" class="btn sm" data-gx="mov-art" data-id="${esc(a.id)}">Carico / scarico</button></div></div>`}</div>
+      ${n ? '' : `<div class="f"><span>Ubicazione in magazzino</span><div class="gx-giac"><b data-artlocc="${esc(a.id)}">${window.CDC_MG3D && window.CDC_MG3D.locOf ? esc((window.CDC_MG3D.locOf(mag3dCtx(), a.id) || { code: 'da scegliere' }).code) : 'sulla mappa'}</b><button type="button" class="btn sm" data-artloc="${esc(a.id)}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Scegli sulla mappa</button></div></div>`}
       <label class="f"><span>Note</span><input name="note" value="${esc(a.note || '')}"></label>${n ? '' : artMovHtml(a)}`, fd => {
       const o = { ...a };
       ['descrizione', 'codice', 'codForn', 'um', 'barcode', 'categoria', 'fornitore', 'note'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });

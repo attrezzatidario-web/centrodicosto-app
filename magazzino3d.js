@@ -1,5 +1,5 @@
-/* Magazzino 3D (v287) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
-   Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
+/* Magazzino 3D (v288) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+   Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen(), pickLoc(ctx, idArticolo, {toast, onSave}), locOf(ctx, id) }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
    Le giacenze vengono da articoli e movimenti; carichi, scarichi e DDT passano dai pulsanti data-gx del gestionale. */
@@ -2653,6 +2653,151 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     if (saveLayout(L2, 'Ubicazione salvata')) { L = L2; rebuild(); focusArt(artId); }
   }
 
+  /* ---------------- v288: scelta dell'ubicazione dalla mappa del magazzino (popup 2D, si apre anche senza il 3D) ---------------- */
+  const LCSS = `
+.m3l{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:18px;background:rgba(18,20,24,.46);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:m3lf .25s ease both;font-family:Inter,system-ui,sans-serif;color:#16181b}
+@keyframes m3lf{from{opacity:0}}@keyframes m3lu{from{opacity:0;transform:translateY(14px) scale(.985)}}
+.m3l-c{width:min(1100px,100%);max-height:min(860px,100%);display:flex;flex-direction:column;background:#fff;border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.28);overflow:hidden;animation:m3lu .35s cubic-bezier(.2,.8,.2,1) both}
+.m3l-h{display:flex;align-items:center;gap:12px;padding:16px 18px 12px;border-bottom:1px solid #efeeeb}
+.m3l-h .pi{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#fff1e6;color:#f47b20}.m3l-h .pi svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.m3l-h div{flex:1;min-width:0}.m3l-h small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#f47b20}.m3l-h div>b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m3l-h em{font-style:normal;font-size:12.5px;color:#6b6e73}
+.m3l-x{all:unset;cursor:pointer;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;color:#6b6e73;background:#f5f4f2}.m3l-x:hover{background:#ecebe8}.m3l-x svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+.m3l-b{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);overflow:hidden}
+.m3l-s{min-width:0}
+.m3l-map{position:relative;background:#f6f5f2;overflow:hidden;min-height:260px;touch-action:none}
+.m3l-map svg{width:100%;height:100%;display:block;cursor:grab}.m3l-map svg.dr{cursor:grabbing}
+.m3l-map .rk{cursor:pointer}.m3l-map .rk rect.b{transition:fill .2s,stroke .2s}.m3l-map .rk:hover rect.b{stroke:#f47b20;stroke-width:.25}
+.m3l-map .rk.on rect.b{stroke:#f47b20;stroke-width:.35;fill:#fff1e6}
+.m3l-zm{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:6px}.m3l-zm button{all:unset;cursor:pointer;width:34px;height:34px;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);display:grid;place-items:center;font-size:18px;font-weight:700;color:#3a3f46}
+.m3l-hint{position:absolute;left:10px;top:10px;font-size:11.5px;color:#6b6e73;background:rgba(255,255,255,.9);padding:5px 9px;border-radius:9px}
+.m3l-s{display:flex;flex-direction:column;min-height:0;border-left:1px solid #efeeeb}
+.m3l-rks{display:flex;gap:6px;overflow-x:auto;padding:12px 14px 8px;scrollbar-width:none}.m3l-rks::-webkit-scrollbar{display:none}
+.m3l-rks button{all:unset;flex:none;cursor:pointer;padding:6px 10px;border-radius:10px;background:#f5f4f2;font-size:12.5px;font-weight:700;display:flex;gap:6px;align-items:center;transition:background .2s}
+.m3l-rks button em{font-style:normal;font-weight:600;color:#8a8d93;font-size:11px}.m3l-rks button.on{background:#16181b;color:#fff}.m3l-rks button.on em{color:rgba(255,255,255,.6)}.m3l-rks button.cur::before{content:'';width:7px;height:7px;border-radius:50%;background:#f47b20}
+.m3l-sc{flex:1;min-height:0;overflow:auto;padding:4px 14px 12px}
+.m3l-rt{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 8px}.m3l-rt b{font-size:15px}.m3l-rt span{font-size:12px;color:#8a8d93}
+.m3l-g{display:grid;grid-template-columns:22px repeat(var(--n),minmax(30px,1fr));gap:4px;min-width:max-content}
+.m3l-g .lv{font-size:10.5px;color:#8a8d93;display:grid;place-items:center}.m3l-g .bh{font-size:10px;color:#8a8d93;text-align:center}
+.m3l-g button{all:unset;box-sizing:border-box;cursor:pointer;height:34px;border-radius:8px;background:#fff;border:1.5px dashed #d6d4cf;position:relative;transition:transform .15s,box-shadow .15s;animation:m3lu .3s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d)}
+.m3l-g button:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.1)}
+.m3l-g button.o{border:none;background:var(--c)}.m3l-g button.o::after{content:'';position:absolute;inset:auto 5px 5px 5px;height:4px;border-radius:2px;background:rgba(255,255,255,.55)}
+.m3l-g button.me{background:#f47b20;border:none}.m3l-g button.me::before{content:'';position:absolute;inset:0;margin:auto;width:10px;height:10px;border-radius:50%;background:#fff}
+.m3l-g button.lo{box-shadow:inset 0 0 0 2px #d9452f}
+.m3l-g button.k{outline:3px solid #16181b;outline-offset:2px;z-index:1}
+.m3l-lg{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 2px;font-size:11.5px;color:#6b6e73}.m3l-lg span{display:flex;gap:5px;align-items:center}.m3l-lg i{width:12px;height:12px;border-radius:4px;display:block}
+.m3l-st{margin:12px 0 0;padding:11px 12px;border-radius:12px;font-size:13px;line-height:1.4;display:flex;gap:9px;align-items:flex-start;background:#eef7f0;color:#1e6b3a}.m3l-st.w{background:#fff6e5;color:#8a5a00}.m3l-st.n{background:#f5f4f2;color:#5b5e63}
+.m3l-f{display:flex;gap:8px;padding:12px 14px 14px;border-top:1px solid #efeeeb;flex-wrap:wrap}
+.m3l-f button{all:unset;cursor:pointer;box-sizing:border-box;padding:11px 16px;border-radius:12px;font-size:14px;font-weight:700;background:#f5f4f2;color:#16181b;text-align:center}
+.m3l-f .p{flex:1;background:#f47b20;color:#fff}.m3l-f .p:hover{background:#e46d14}.m3l-f button[disabled]{opacity:.45;cursor:not-allowed}
+.m3l-s.na .m3l-g button{animation:none}
+.m3l-no{flex-basis:100%;font-size:12.5px;color:#8a8d93}
+.m3l-e{padding:30px 20px;text-align:center;color:#6b6e73;font-size:14px}
+@media (max-width:760px){.m3l{padding:0;place-items:end stretch}.m3l-c{max-height:94vh;border-radius:22px 22px 0 0}.m3l-b{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(200px,36vh) minmax(0,1fr);overflow:auto}.m3l-s{border-left:none;border-top:1px solid #efeeeb}.m3l-f{padding-bottom:calc(14px + env(safe-area-inset-bottom))}}
+`;
+  let LP = null;
+  function pickLoc(ctx, artId, opt) {
+    opt = opt || {};
+    if (!open) { C = ctx; T = window.THREE || T; D = data(); L = getLayout(); P = place(); }
+    const x = D.arts.find(a => a.id === artId); if (!x) { (opt.toast || alert)('Articolo non trovato'); return; }
+    if (!document.getElementById('m3l-css')) { const s = document.createElement('style'); s.id = 'm3l-css'; s.textContent = LCSS; document.head.appendChild(s); }
+    if (LP) LP.el.remove();
+    const cur = P.byArt.get(x.id), racks = P.racks;
+    const rk0 = cur ? cur.rk : racks.find(r => r.cat && r.cat === x.cat) || racks[0];
+    const el = document.createElement('div'); el.className = 'm3l'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Scegli l\'ubicazione');
+    LP = { el, x, opt, rk: rk0 || null, b: cur ? cur.b : null, l: cur ? cur.l : null, vb: lpFit() };
+    if (LP.rk && LP.b == null) { const f = firstFree(LP.rk); if (f) { LP.b = f[0]; LP.l = f[1]; } }
+    document.body.appendChild(el); lpRender(true);
+    el.addEventListener('click', lpClick); el.addEventListener('keydown', e => { if (e.key === 'Escape') lpClose(); });
+    const onKey = e => { if (e.key === 'Escape' && LP) lpClose(); }; document.addEventListener('keydown', onKey); LP.off = () => document.removeEventListener('keydown', onKey);
+  }
+  function lpFit() { const R2 = P.racks; if (!R2.length) return null; let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; R2.forEach(r => { const b = box2(r); x0 = Math.min(x0, b.x0); x1 = Math.max(x1, b.x1); z0 = Math.min(z0, b.z0); z1 = Math.max(z1, b.z1); }); const m = 4; return [x0 - m, z0 - m, x1 - x0 + m * 2, z1 - z0 + m * 2]; }
+  const firstFree = rk => { for (let l = 0; l < rk.lv; l++) for (let b = 0; b < rk.bays; b++) if (!P.cells.has(P.ck(rk.id, b, l))) return [b, l]; return null; };
+  const rkUse = rk => { let n = 0; for (let l = 0; l < rk.lv; l++) for (let b = 0; b < rk.bays; b++) if (P.cells.has(P.ck(rk.id, b, l))) n++; return n; };
+  const svgI = p => `<svg viewBox="0 0 24 24">${p}</svg>`;
+  const PIN = '<path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>';
+  function lpMap() {
+    const W = L.W, Dd = L.D, cur = P.byArt.get(LP.x.id), hx = c => '#' + c.toString(16).padStart(6, '0'), e = C.esc;
+    let zt = '';
+    let s = `<rect x="${-W / 2}" y="${-Dd / 2}" width="${W}" height="${Dd}" rx=".6" fill="#ffffff" stroke="#c9c6bf" stroke-width=".3"/>`;
+    L.items.filter(i => i.t === 'zone').forEach(z => { const b = box2(z), Z2 = ZONE[z.k] || ZONE.free; s += `<rect x="${b.x0}" y="${b.z0}" width="${b.x1 - b.x0}" height="${b.z1 - b.z0}" rx=".4" fill="${hx(Z2[1])}" stroke="rgba(0,0,0,.06)" stroke-width=".15"/>`; zt += `<text x="${b.x0 + .8}" y="${b.z0 + 1.9}" font-size="1.35" font-weight="700" fill="rgba(60,62,66,.6)" pointer-events="none">${e(z.name || Z2[0])}</text>`; });
+    L.items.filter(i => i.t === 'wall' || i.t === 'belt' || i.t === 'desk' || i.t === 'dock').forEach(i => { const b = box2(i), c = i.t === 'wall' ? '#8e959e' : i.t === 'dock' ? '#f2c418' : i.t === 'belt' ? '#b9bec5' : '#dcd8d0'; s += `<rect x="${b.x0}" y="${b.z0}" width="${b.x1 - b.x0}" height="${b.z1 - b.z0}" rx=".15" fill="${c}"/>`; });
+    racks().forEach(rk => { const b = box2(rk), w = b.x1 - b.x0, h = b.z1 - b.z0, u = rkUse(rk) / Math.max(1, rk.bays * rk.lv), on = LP.rk === rk, vert = h > w, fs = Math.min(1.5, Math.max(.8, Math.min(w, h) * .9));
+      s += `<g class="rk${on ? ' on' : ''}" data-lrk="${e(rk.id)}"><rect class="b" x="${b.x0}" y="${b.z0}" width="${w}" height="${h}" rx=".2" fill="${rk.k === 'shelf' ? '#e9edf3' : '#e3ecf7'}" stroke="${rk.k === 'shelf' ? '#9aa0a8' : '#2f6db4'}" stroke-width=".18"/>`;
+      s += vert ? `<rect x="${b.x0 + .12}" y="${b.z1 - .12 - (h - .24) * u}" width="${Math.max(.1, w * .22)}" height="${(h - .24) * u}" fill="#f47b20" opacity=".75"/>` : `<rect x="${b.x0 + .12}" y="${b.z1 - .12 - Math.max(.1, h * .22)}" width="${(w - .24) * u}" height="${Math.max(.1, h * .22)}" fill="#f47b20" opacity=".75"/>`;
+      s += `<text x="${(b.x0 + b.x1) / 2}" y="${(b.z0 + b.z1) / 2 + fs * .36}" font-size="${fs}" font-weight="800" text-anchor="middle" fill="#16181b">${e(rk.code)}</text>`;
+      if (cur && cur.rk === rk) s += `<g transform="translate(${(b.x0 + b.x1) / 2 + Math.min(w, h) * .0 + (vert ? 0 : w / 2 - 1)},${(b.z0 + b.z1) / 2 - (vert ? h / 2 - 1 : 1.6)})"><circle r="1.05" fill="#f47b20" stroke="#fff" stroke-width=".3"/><circle r=".38" fill="#fff"/></g>`;
+      s += '</g>'; });
+    s += zt; const vb = LP.vb || [-W / 2 - 2, -Dd / 2 - 2, W + 4, Dd + 4];
+    return `<svg viewBox="${vb.join(' ')}" preserveAspectRatio="xMidYMid meet">${s}</svg>`;
+  }
+  const racks = () => P.racks.slice().sort((a, b) => String(a.code).localeCompare(String(b.code), 'it', { numeric: true }));
+  function lpSide() {
+    const rk = LP.rk, x = LP.x, e = C.esc, cur = P.byArt.get(x.id), RS = racks();
+    if (!rk) return `<div class="m3l-e">Nel magazzino non ci sono scaffali.<br>Disegnali con <b>Progetta</b> nella vista 3D.</div>`;
+    let g = `<div class="m3l-g" style="--n:${rk.bays}"><span></span>${Array.from({ length: rk.bays }, (_, b) => `<span class="bh">${String(b + 1).padStart(2, '0')}</span>`).join('')}`;
+    for (let l = rk.lv - 1; l >= 0; l--) { g += `<span class="lv">${l + 1}</span>`; for (let b = 0; b < rk.bays; b++) { const y = P.cells.get(P.ck(rk.id, b, l)), me = y && y.id === x.id, cc = y && D.catOf.get(y.cat); g += `<button type="button" data-lc="${b}|${l}" class="${me ? 'me' : y ? 'o' : ''}${y && y.low ? ' lo' : ''}${LP.b === b && LP.l === l ? ' k' : ''}" style="--d:${Math.min(40, (rk.lv - 1 - l) * rk.bays + b) * 8}ms${cc ? ';--c:' + cc.colH : ''}" title="${e(locCode(rk, b, l) + (y ? ' · ' + y.a.descrizione : ' · libero'))}" aria-label="${e(locCode(rk, b, l))}"></button>`; } }
+    g += '</div>';
+    let st = '';
+    if (LP.b != null) { const y = P.cells.get(P.ck(rk.id, LP.b, LP.l)), code = locCode(rk, LP.b, LP.l);
+      st = !y ? `<div class="m3l-st">${svgI(PIN).replace('<svg', '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"')}<span><b>${e(code)}</b> è libero: l'articolo va qui.</span></div>`
+        : y.id === x.id ? `<div class="m3l-st n"><span><b>${e(code)}</b> è l'ubicazione attuale.</span></div>`
+        : `<div class="m3l-st w"><span><b>${e(code)}</b> è occupato da <b>${e(y.a.descrizione)}</b>: ${cur ? `i due articoli si scambiano di posto (va in ${e(cur.code)}).` : 'quell\'articolo torna in automatico.'}</span></div>`; }
+    return `<div class="m3l-rks">${RS.map(r => `<button type="button" data-lrk="${e(r.id)}" class="${r === rk ? 'on' : ''}${cur && cur.rk === r ? ' cur' : ''}">${e(r.code)}<em>${rkUse(r)}/${r.bays * r.lv}</em></button>`).join('')}</div>
+      <div class="m3l-sc"><div class="m3l-rt"><b>Scaffale ${e(rk.code)}${rk.cat ? ' · ' + e(rk.cat) : ''}</b><span>${rk.bays} campate × ${rk.lv} livelli · ${KIND[rk.k].n.toLowerCase()}</span></div>${g}
+      <div class="m3l-lg"><span><i style="background:#fff;border:1.5px dashed #d6d4cf"></i>Libero</span><span><i style="background:#9fc47e"></i>Occupato</span><span><i style="background:#f47b20"></i>Questo articolo</span><span><i style="box-shadow:inset 0 0 0 2px #d9452f;background:#fff"></i>Sotto scorta</span></div>${st}</div>`;
+  }
+  function lpRender(first) {
+    const x = LP.x, cur = P.byArt.get(x.id), e = C.esc, ok = canEdit(), sel2 = LP.rk && LP.b != null ? P.cells.get(P.ck(LP.rk.id, LP.b, LP.l)) : null, same = sel2 && sel2.id === x.id;
+    const em = `${cur ? `ora in <b>${e(cur.code)}</b>${cur.auto ? ' · scelta automatica' : ' · scelta a mano'}` : 'senza ubicazione'}${x.a.codice ? ' · cod. ' + e(x.a.codice) : ''}`;
+    const foot = `${ok ? '' : '<span class="m3l-no">Solo il titolare può cambiare le ubicazioni.</span>'}${L.loc[x.id] && ok ? '<button type="button" data-lauto>Torna automatica</button>' : ''}<button type="button" data-lx>Annulla</button><button type="button" class="p" data-lsave${!ok || !LP.rk || LP.b == null || same ? ' disabled' : ''}>${LP.rk && LP.b != null ? (same ? 'Già in ' : 'Metti in ') + e(locCode(LP.rk, LP.b, LP.l)) : 'Scegli un vano'}</button>`;
+    if (first) LP.el.innerHTML = `<div class="m3l-c"><div class="m3l-h"><i class="pi">${svgI(PIN)}</i><div><small>Ubicazione articolo</small><b>${e(x.a.descrizione)}</b><em>${em}</em></div><button type="button" class="m3l-x" data-lx aria-label="Chiudi">${svgI('<path d="M6 6l12 12M18 6 6 18"/>')}</button></div>
+      <div class="m3l-b"><div class="m3l-map">${lpMap()}<span class="m3l-hint">Tocca uno scaffale · trascina per spostarti</span><div class="m3l-zm"><button type="button" data-lz="1" aria-label="Avvicina">+</button><button type="button" data-lz="-1" aria-label="Allontana">−</button><button type="button" data-lz="0" aria-label="Vedi tutto" style="font-size:13px">⤢</button></div></div><div class="m3l-s">${lpSide()}</div></div>
+      <div class="m3l-f">${foot}</div></div>`;
+    else {
+      const S2 = LP.el.querySelector('.m3l-s'), sc = S2.querySelector('.m3l-sc'), top = sc ? sc.scrollTop : 0, left = sc ? sc.scrollLeft : 0, rk0 = LP.lastRk;
+      LP.el.querySelector('.m3l-h em').innerHTML = em; LP.el.querySelector('.m3l-map svg').outerHTML = lpMap(); S2.innerHTML = lpSide(); LP.el.querySelector('.m3l-f').innerHTML = foot;
+      S2.classList.toggle('na', rk0 === LP.rk); const sc2 = S2.querySelector('.m3l-sc'); if (sc2 && rk0 === LP.rk) { sc2.scrollTop = top; sc2.scrollLeft = left; }
+    }
+    LP.lastRk = LP.rk; lpDrag();
+    const k = LP.el.querySelector('.m3l-g .k'); if (k && first) setTimeout(() => k.scrollIntoView({ block: 'nearest', inline: 'center' }), 60);
+  }
+  // spostare e ingrandire la mappa
+  function lpDrag() {
+    const sv = LP.el.querySelector('.m3l-map svg'); if (!sv) return;
+    const vb = () => LP.vb || [-L.W / 2 - 2, -L.D / 2 - 2, L.W + 4, L.D + 4];
+    const setVb = v => { LP.vb = v; sv.setAttribute('viewBox', v.join(' ')); };
+    const pts = new Map(); let st = null, moved = 0;
+    sv.onpointerdown = ev => { pts.set(ev.pointerId, [ev.clientX, ev.clientY]); st = { v: vb().slice(), p: [...pts.values()].map(p => p.slice()) }; moved = 0; };
+    sv.onpointermove = ev => { if (!pts.has(ev.pointerId) || !st) return; pts.set(ev.pointerId, [ev.clientX, ev.clientY]); const r = sv.getBoundingClientRect(), k = Math.max(st.v[2] / r.width, st.v[3] / r.height), P1 = [...pts.values()];
+      if (P1.length === 1 && st.p.length === 1) { const dx = P1[0][0] - st.p[0][0], dy = P1[0][1] - st.p[0][1]; if (Math.abs(dx) + Math.abs(dy) > 4) { moved = 1; sv.classList.add('dr'); try { sv.setPointerCapture(ev.pointerId); } catch {} } if (moved) setVb([st.v[0] - dx * k, st.v[1] - dy * k, st.v[2], st.v[3]]); }
+      else if (P1.length >= 2 && st.p.length >= 2) { moved = 1; const d0 = Math.hypot(st.p[0][0] - st.p[1][0], st.p[0][1] - st.p[1][1]), d1 = Math.hypot(P1[0][0] - P1[1][0], P1[0][1] - P1[1][1]); lpZoomV(st.v, d0 / Math.max(1, d1), setVb); } };
+    sv.onpointerup = sv.onpointercancel = ev => { pts.delete(ev.pointerId); sv.classList.remove('dr'); st = pts.size ? { v: vb().slice(), p: [...pts.values()].map(p => p.slice()) } : null; if (moved) { LP.noClick = Date.now(); } };
+    sv.onwheel = ev => { ev.preventDefault(); const r = sv.getBoundingClientRect(), v = vb(), k = Math.max(v[2] / r.width, v[3] / r.height), f = Math.exp(ev.deltaY * .0015), cx = v[0] + (ev.clientX - r.left) * k - (r.width * k - v[2]) / 2, cy = v[1] + (ev.clientY - r.top) * k - (r.height * k - v[3]) / 2, w = clamp(v[2] * f, 8, L.W + 40), h = v[3] * w / v[2]; setVb([cx - (cx - v[0]) * w / v[2], cy - (cy - v[1]) * h / v[3], w, h]); };
+  }
+  function lpZoomV(v, f, setVb) { const w = clamp(v[2] * f, 8, L.W + 40), h = v[3] * w / v[2], cx = v[0] + v[2] / 2, cy = v[1] + v[3] / 2; setVb([cx - w / 2, cy - h / 2, w, h]); }
+  function lpClick(ev) {
+    const t = ev.target; if (!LP) return;
+    if (t === LP.el || t.closest('[data-lx]')) return lpClose();
+    const z = t.closest('[data-lz]'); if (z) { const sv = LP.el.querySelector('.m3l-map svg'), set = v => { LP.vb = v; sv.setAttribute('viewBox', v.join(' ')); }; const f = +z.dataset.lz; if (!f) set(LP.vb && LP.vb.join() === String(lpFit()) ? [-L.W / 2 - 2, -L.D / 2 - 2, L.W + 4, L.D + 4] : (lpFit() || [-L.W / 2 - 2, -L.D / 2 - 2, L.W + 4, L.D + 4])); else lpZoomV(LP.vb || [-L.W / 2 - 2, -L.D / 2 - 2, L.W + 4, L.D + 4], f > 0 ? .7 : 1.4, set); return; }
+    const r = t.closest('[data-lrk]'); if (r) { if (LP.noClick && Date.now() - LP.noClick < 250) return; const rk = P.racks.find(q => q.id === r.dataset.lrk); if (rk && rk !== LP.rk) { LP.rk = rk; const cur = P.byArt.get(LP.x.id); if (cur && cur.rk === rk) { LP.b = cur.b; LP.l = cur.l; } else { const f = firstFree(rk); LP.b = f ? f[0] : null; LP.l = f ? f[1] : null; } lpRender(); const k = LP.el.querySelector('.m3l-g .k'); if (k) k.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); } return; }
+    const c = t.closest('[data-lc]'); if (c) { const [b, l] = c.dataset.lc.split('|').map(Number); LP.b = b; LP.l = l; lpRender(); return; }
+    if (t.closest('[data-lsave]') && !t.closest('[disabled]')) return lpSave(false);
+    if (t.closest('[data-lauto]')) return lpSave(true);
+  }
+  function lpSave(auto) {
+    if (!canEdit()) return; const x = LP.x, L2 = clone(L), cur = P.byArt.get(x.id), rk = LP.rk;
+    if (auto) delete L2.loc[x.id];
+    else { if (!rk || LP.b == null) return; const occ = P.cells.get(P.ck(rk.id, LP.b, LP.l)); if (occ && occ.id !== x.id) { if (cur) L2.loc[occ.id] = { r: cur.rk.id, b: cur.b, l: cur.l }; else delete L2.loc[occ.id]; } L2.loc[x.id] = { r: rk.id, b: LP.b, l: LP.l }; }
+    C.write([{ action: 'upsert', sheet: 'Config', row: { chiave: lkey(), valore: JSON.stringify(L2) } }]);
+    L = L2; P = place(); const nw = P.byArt.get(x.id), code = nw ? nw.code : '';
+    (LP.opt.toast || toast)(auto ? 'Ubicazione automatica' + (code ? ': ' + code : '') : 'Ubicazione salvata: ' + code);
+    if (LP.opt.onSave) try { LP.opt.onSave(code, !auto); } catch {}
+    if (open) { try { rebuild(); focusArt(x.id); } catch {} }
+    LP.el.querySelector('.m3l-c').style.cssText = 'transition:transform .25s,opacity .25s;transform:scale(.97);opacity:0'; setTimeout(lpClose, 220);
+  }
+  function lpClose() { if (!LP) return; if (LP.off) LP.off(); LP.el.remove(); LP = null; }
+  function locOf(ctx, artId) { try { if (!open) { C = ctx; T = window.THREE || T; D = data(); L = getLayout(); P = place(); } const p = P.byArt.get(artId); return p ? { code: p.code, auto: !!p.auto } : null; } catch { return null; } }
+
   /* ---------------- editor della disposizione (Progetta) ---------------- */
   const PALETTE = [
     ['Scaffali', [['pallet', 'Portapallet', 'pallet campate da 2,7 m', 'pallet'], ['shelf', 'A ripiani', 'cassette per minuteria', 'shelf']]],
@@ -3075,5 +3220,5 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     document.documentElement.style.overflow = '';
     sel = null; if (C && C.onClose) C.onClose();
   }
-  window.CDC_MG3D = { open: openView, refresh, close, isOpen: () => open };
+  window.CDC_MG3D = { open: openView, refresh, close, isOpen: () => open, pickLoc, locOf };
 })();

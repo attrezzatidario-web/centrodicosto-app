@@ -4443,3 +4443,9 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 /* v271 · pulsante Magazzino 3D nella barra del Magazzino */
 .mg-3d { display: inline-flex; align-items: center; gap: 6px; }
 .mg-3d svg { width: 16px; height: 16px; fill: none; stroke: #f47b20; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* v288 · ubicazione dalla mappa (pulsante con il segnaposto) */
+.mg-locb { display: inline-grid; place-items: center; padding-left: 8px; padding-right: 8px; margin-right: 4px; }
+.mg-locb svg { width: 16px; height: 16px; fill: none; stroke: #f47b20; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mg-card .mg-pm.mg-locc { right: 42px; margin-right: 0; }
+.pv-vrow .mg-locb { margin-left: auto; }
