@@ -1,4 +1,4 @@
-/* Magazzino 3D (v289) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v290) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen(), pickLoc(ctx, idArticolo, {toast, onSave}), locOf(ctx, id) }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -352,6 +352,21 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-b12{grid-template-columns:repeat(12,1fr)!important}
 .m3-acts{display:flex;gap:8px;flex-wrap:wrap}.m3-acts .m3-go{flex:1 1 140px;margin:0}
 
+/* v290: preparazione e controllo */
+.m3-pk{display:flex;flex-direction:column;gap:6px;margin-bottom:6px;position:relative}
+.m3-pk::before{content:'';position:absolute;left:17px;top:14px;bottom:14px;width:2px;background:repeating-linear-gradient(#f6b27c 0 6px,transparent 6px 11px)}
+.m3-pk button{all:unset;box-sizing:border-box;position:relative;cursor:pointer;display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;gap:9px;align-items:center;padding:8px 10px 8px 0;border-radius:12px;transition:background .2s;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*50ms)}
+.m3-pk button:hover{background:#f8f7f5}
+.m3-pk i{width:28px;height:28px;margin-left:4px;border-radius:50%;background:#f47b20;color:#fff;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:13px;box-shadow:0 0 0 4px #fff}
+.m3-pk span{display:flex;flex-direction:column;min-width:0}.m3-pk span b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m3-pk span small{font-size:11px;color:#8a8d93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-pk .loc{font-style:normal;font-size:11.5px;font-weight:800;padding:4px 7px;border-radius:7px;background:#fff1e6;color:#c2560c;font-variant-numeric:tabular-nums}
+.m3-pk .q{font-size:15px;min-width:38px;text-align:right}.m3-pk .q small{font-size:10px;color:#8a8d93;margin-left:2px;font-weight:600}
+.m3-pkr{animation:m3in .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*40ms)}
+.m3-cqh{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:center;padding:12px 14px;border-radius:16px;background:linear-gradient(160deg,#f1f9f3,#e4f2e8);margin-bottom:10px;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-cqh .ring{width:96px;height:96px;border-radius:50%;display:grid;place-content:center;text-align:center;background:radial-gradient(closest-side,#fff 78%,transparent 79% 100%),conic-gradient(var(--c) calc(var(--p)*100%),#dfe7e1 0);animation:m3pop .6s cubic-bezier(.2,1.4,.4,1) both}
+.m3-cqh .ring b{font-size:22px;font-weight:800;line-height:1}.m3-cqh .ring small{font-size:10px;color:#6b6e73;margin-top:3px}
+.m3-cqh span{font-size:11.5px;font-weight:700;color:#2a7a45;text-transform:uppercase;letter-spacing:.04em}.m3-cqh div>b{display:block;font-size:15px;margin:3px 0}.m3-cqh em{font-style:normal;font-size:12px;color:#6b6e73}
+.m3-chip.r{background:#fdecea;color:#c0392b}
 /* v289: corriere GLS */
 .m3-gl{display:grid;place-items:center;width:100%;height:100%;font-weight:900;font-size:17px;color:#16181b;background:#f2c418;border-radius:inherit}
 .m3-gch{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;scrollbar-width:none}.m3-gch::-webkit-scrollbar{display:none}
@@ -939,7 +954,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     P = place();
     L.items.filter(i => i.t === 'zone').forEach(buildZone);
     L.items.filter(i => i.t !== 'zone').forEach(it => ({ rack: buildRack, dock: buildDock, wall: buildWall, belt: buildBelt, desk: buildDesk })[it.t](it));
-    buildRoadTrucks(); buildPeople(); buildFleet(); buildGls();
+    buildRoadTrucks(); buildPeople(); buildFleet(); buildGls(); prepBuild();
     if (EDIT) { const v = []; for (let x = -hw; x <= hw + .01; x += 1) v.push(x, .53, -hd, x, .53, hd); for (let z = -hd; z <= hd + .01; z += 1) v.push(-hw, .53, z, hw, .53, z); const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(v, 3)); const gm = new T.LineBasicMaterial({ color: 0xcdbfb0, transparent: true, opacity: .45 }); WH.add(new T.LineSegments(gg, gm)); OWN.push(gg, gm); }
     hiMesh = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0xf47b20, transparent: true, opacity: .35, depthWrite: false, depthTest: false })); hiMesh.renderOrder = 10; hiMesh.visible = false; WH.add(hiMesh); OWN.push(hiMesh.material);
     const eg = new T.LineSegments(new T.EdgesGeometry(G.box), new T.LineBasicMaterial({ color: 0xf47b20, depthTest: false })); eg.renderOrder = 11; hiMesh.add(eg); OWN.push(eg.geometry, eg.material);
@@ -2271,6 +2286,257 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     return `<div class="m3-amm" style="grid-template-columns:minmax(0,1fr)"><button type="button" data-gls=""><i style="--c:#b58a00"><b style="font-weight:900">C</b></i><span><b>Corriere GLS</b><small>${X.n ? `${esc(mLab(X.m))} · ${X.n} spedizioni · ${esc(gEu(X.T))}${X.chk.length ? ' · ' + X.chk.length + ' da controllare' : ''}` : 'nessuna spedizione caricata'}</small></span></button></div>`;
   }
 
+  /* ---------------- v290: preparazione ordini e controllo (scena, schermi, liste di prelievo, conta ciclica) ---------------- */
+  let PRP = null, PICK = null;
+  const dIso = n => { const d = new Date(C.today() + 'T12:00:00'); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const DOW = ['D', 'L', 'M', 'M', 'G', 'V', 'S'];
+  function prepData() {
+    const td = C.today(), d14 = Array.from({ length: 14 }, (_, i) => dIso(13 - i)), w0 = dIso(6);
+    const per = d14.map(d => { const L2 = D.ddt.filter(x => String(x.d.data) === d); return { d, n: L2.length, pz: L2.reduce((s, x) => s + x.pz, 0) }; });
+    const M2 = D.ddtM, righe = M2.reduce((s, x) => s + x.R.length, 0), pz = M2.reduce((s, x) => s + x.pz, 0), colli = M2.reduce((s, x) => s + C.num(x.d.colli), 0);
+    const oggi = D.ddt.filter(x => String(x.d.data) === td), sett = D.ddt.filter(x => String(x.d.data) >= w0);
+    const s30 = D.scar.filter(m => String(m.data) >= dIso(30)), byA = new Map(); s30.forEach(m => { const k = m.articolo; byA.set(k, (byA.get(k) || 0) + Math.abs(C.num(m.quantita))); });
+    const topA = [...byA].map(([id, q]) => ({ id, q, a: C.artOf(id), p: P.byArt.get(id) })).filter(x => x.a).sort((a, b) => b.q - a.q).slice(0, 8);
+    const byC = new Map(); M2.forEach(x => { const k = x.cliN; const o = byC.get(k) || { n: 0, pz: 0, cli: x.d.cliente }; o.n++; o.pz += x.pz; byC.set(k, o); });
+    const topC = [...byC].map(([k, o]) => ({ k, ...o })).sort((a, b) => b.pz - a.pz).slice(0, 6);
+    const noLoc = M2.reduce((s, x) => s + x.R.filter(l => l.art && !P.byArt.get(l.art)).length, 0), noArt = M2.reduce((s, x) => s + x.R.filter(l => !l.art).length, 0);
+    return { per, righe, pz, colli, n: M2.length, oggi, sett, topA, topC, noLoc, noArt, rpo: M2.length ? righe / M2.length : 0 };
+  }
+  function cqData() {
+    const nA = Math.max(1, D.nArt), cnt = new Set(D.ret90.map(m => m.articolo)), costOf = id => { const a = C.artOf(id); return a ? C.num(a.costo) : 0; };
+    let vP = 0, vM = 0, qP = 0, qM = 0; D.ret90.forEach(m => { const q = C.num(m.quantita), v = Math.abs(q) * costOf(m.articolo); if (q >= 0) { vP += v; qP += q; } else { vM += v; qM += -q; } });
+    const ms = Array.from({ length: 6 }, (_, i) => { const d = new Date(C.today() + 'T12:00:00'); d.setDate(1); d.setMonth(d.getMonth() - 5 + i); return d.toISOString().slice(0, 7); });
+    const ser = ms.map(m => { const L2 = D.ret.filter(r => String(r.data).slice(0, 7) === m); return { m, p: L2.filter(r => C.num(r.quantita) > 0).length, n: L2.filter(r => C.num(r.quantita) < 0).length }; });
+    const neg = D.arts.filter(x => x.g < 0), why = new Map();
+    neg.forEach(x => why.set(x.id, ['Giacenza negativa', 'r']));
+    D.arts.filter(x => x.out && x.s > 0).forEach(x => { if (!why.has(x.id)) why.set(x.id, ['Esaurito', 'r']); });
+    D.arts.filter(x => x.low).forEach(x => { if (!why.has(x.id)) why.set(x.id, ['Sotto scorta', 'a']); });
+    D.arts.filter(x => !cnt.has(x.id) && x.g > 0).sort((a, b) => b.val - a.val).slice(0, 8).forEach(x => { if (!why.has(x.id)) why.set(x.id, ['Alto valore, non contato da 90 gg', 'n']); });
+    const todo = [...why].map(([id, w]) => ({ x: D.arts.find(a => a.id === id), w })).filter(o => o.x).slice(0, 18);
+    return { acc: 1 - cnt.size / nA, nCnt: cnt.size, vP, vM, qP, qM, ser, neg, todo };
+  }
+  // ----- schermi
+  function prpScreen(S, kind, page, u) {
+    const g = S.cv.getContext('2d'), w = S.cv.width, h = S.cv.height, F = 'Inter, system-ui, sans-serif', acc = kind === 'pre' ? '#f47b20' : '#2fb36b';
+    g.fillStyle = '#0f1216'; g.fillRect(0, 0, w, h); g.fillStyle = '#171b21'; g.fillRect(0, 0, w, 64);
+    g.textBaseline = 'middle'; g.textAlign = 'left'; g.font = `800 25px ${F}`; g.fillStyle = acc; g.fillText(kind === 'pre' ? 'PREPARAZIONE ORDINI' : 'CONTROLLO E INVENTARIO', 26, 33);
+    g.textAlign = 'right'; g.fillStyle = (Math.floor(u * 6) % 2) ? '#5df08a' : '#2e7d4a'; g.beginPath(); g.arc(w - 112, 33, 7, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.75)'; g.font = `700 19px ${F}`; g.fillText('LIVE', w - 28, 34);
+    g.fillStyle = acc; g.fillRect(0, 62, w * u, 3);
+    for (let i = 0; i < 2; i++) { g.fillStyle = i === page ? acc : 'rgba(255,255,255,.18)'; g.fillRect(w / 2 - 36 + i * 40, h - 14, 32, 5); }
+    const kp = (x, y, l, v, c, s) => { g.textAlign = 'left'; g.font = `600 17px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText(l, x, y); g.font = `800 40px ${F}`; g.fillStyle = c || '#fff'; g.fillText(v, x, y + 40); if (s) { g.font = `600 15px ${F}`; g.fillStyle = 'rgba(255,255,255,.42)'; g.fillText(s, x, y + 72); } };
+    if (kind === 'pre') { const X = S.X;
+      if (page === 0) {
+        kp(30, 98, 'Ordini oggi', N(X.oggi.length), '#fff', `${N(X.oggi.reduce((s, x) => s + x.pz, 0))} pezzi`); kp(250, 98, 'Ultimi 7 giorni', N(X.sett.length), '#fff', `${N(X.sett.reduce((s, x) => s + x.pz, 0))} pezzi`);
+        kp(470, 98, 'Nel mese', N(X.n), acc, `${N(X.righe)} righe · ${N(X.colli)} colli`); kp(720, 98, 'Righe per ordine', X.rpo.toFixed(1).replace('.', ','), '#fff', 'media del mese');
+        const x0 = 30, x1 = w - 30, y1 = h - 50, y0 = 230, mx = Math.max(1, ...X.per.map(p => p.n)), bw = (x1 - x0) / 14;
+        g.textAlign = 'left'; g.font = `700 16px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('Ordini evasi · ultimi 14 giorni', x0, y0 - 18);
+        X.per.forEach((p, i) => { const k = Math.min(1, Math.max(0, u * 3 - i * .05)), hh = (y1 - y0 - 24) * p.n / mx * k; g.fillStyle = i === 13 ? acc : '#5b3a1f'; g.beginPath(); g.roundRect(x0 + i * bw + bw * .2, y1 - hh, bw * .6, Math.max(2, hh), 5); g.fill();
+          if (p.n) { g.fillStyle = 'rgba(255,255,255,.8)'; g.font = `700 14px ${F}`; g.textAlign = 'center'; g.fillText(p.n, x0 + i * bw + bw / 2, y1 - hh - 12); }
+          g.fillStyle = 'rgba(255,255,255,.4)'; g.font = `600 13px ${F}`; g.textAlign = 'center'; g.fillText(DOW[new Date(p.d + 'T12:00:00').getDay()] + ' ' + p.d.slice(8), x0 + i * bw + bw / 2, y1 + 18); });
+      } else {
+        g.textAlign = 'left'; g.font = `700 16px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('Ultimi ordini preparati', 30, 92);
+        D.ddt.slice(0, 6).forEach((x, i) => { const y = 108 + i * 64, k = Math.min(1, Math.max(0, u * 4 - i * .2)); g.globalAlpha = k; g.fillStyle = i === Math.floor(u * 12) % 6 ? '#232830' : '#171b21'; g.beginPath(); g.roundRect(30 + (1 - k) * 30, y, w - 60, 54, 10); g.fill(); g.fillStyle = acc; g.fillRect(30 + (1 - k) * 30, y, 6, 54);
+          g.textAlign = 'left'; g.font = `800 19px ${F}`; g.fillStyle = '#fff'; g.fillText(`DDT ${C.dnum(x.d)} · ${String(x.cliN).slice(0, 30)}`, 52, y + 21); g.font = `600 14px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText(`${C.dIt(x.d.data)} · ${x.R.length} righe · ${N(x.pz)} pezzi${C.num(x.d.colli) ? ' · ' + N(C.num(x.d.colli)) + ' colli' : ''}`, 52, y + 41);
+          g.textAlign = 'right'; g.font = `800 16px ${F}`; g.fillStyle = x.d.fattura ? '#5df08a' : '#ffb27a'; g.fillText(x.d.fattura ? 'FATTURATO' : 'DA FATTURARE', w - 50, y + 28); g.globalAlpha = 1; });
+        if (!D.ddt.length) { g.font = `600 22px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('Nessun DDT emesso', 30, 160); }
+      }
+    } else { const X = S.X;
+      if (page === 0) {
+        const cx = 170, cy = 290, r = 120, a0 = -Math.PI / 2, k = Math.min(1, u * 2.5), acc2 = X.acc;
+        g.lineWidth = 22; g.strokeStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.stroke();
+        g.strokeStyle = acc2 >= .95 ? '#2fb36b' : acc2 >= .85 ? '#f2c418' : '#ff6b5b'; g.lineCap = 'round'; g.beginPath(); g.arc(cx, cy, r, a0, a0 + Math.PI * 2 * acc2 * k); g.stroke(); g.lineCap = 'butt';
+        g.textAlign = 'center'; g.font = `800 52px ${F}`; g.fillStyle = '#fff'; g.fillText(Math.round(acc2 * 100 * k) + '%', cx, cy - 4); g.font = `600 16px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('accuratezza', cx, cy + 36); g.fillText('ultimi 90 giorni', cx, cy + 56);
+        kp(360, 98, 'Rettifiche 90 gg', N(D.ret90.length), '#fff', `${N(X.nCnt)} articoli corretti`); kp(620, 98, 'Da contare', N(X.todo.length), X.todo.length ? '#ffb27a' : '#5df08a', `${X.neg.length} con giacenza negativa`);
+        kp(360, 230, 'Eccedenze', '+' + C.eur0(X.vP), '#5df08a', `${N(X.qP)} pezzi in più`); kp(620, 230, 'Ammanchi', '−' + C.eur0(X.vM), '#ff9a6b', `${N(X.qM)} pezzi in meno`);
+        const mx = Math.max(1, ...X.ser.map(s => s.p + s.n)), x0 = 360, bw = 100; X.ser.forEach((s, i) => { const hp = 70 * s.p / mx * k, hn = 70 * s.n / mx * k; g.fillStyle = '#2fb36b'; g.fillRect(x0 + i * bw + 20, 440 - hp, 26, hp); g.fillStyle = '#ff9a6b'; g.fillRect(x0 + i * bw + 50, 440 - hn, 26, hn); g.fillStyle = 'rgba(255,255,255,.4)'; g.font = `600 13px ${F}`; g.textAlign = 'center'; g.fillText(MESL[Number(s.m.slice(5)) - 1], x0 + i * bw + 48, 462); });
+      } else {
+        g.textAlign = 'left'; g.font = `700 16px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText('Conta ciclica · da verificare', 30, 92);
+        X.todo.slice(0, 6).forEach((o, i) => { const y = 108 + i * 64, k = Math.min(1, Math.max(0, u * 4 - i * .2)), p = P.byArt.get(o.x.id), cc = o.w[1] === 'r' ? '#ff6b5b' : o.w[1] === 'a' ? '#ffb27a' : '#7fb6d6'; g.globalAlpha = k; g.fillStyle = '#171b21'; g.beginPath(); g.roundRect(30 + (1 - k) * 30, y, w - 60, 54, 10); g.fill(); g.fillStyle = cc; g.fillRect(30 + (1 - k) * 30, y, 6, 54);
+          g.textAlign = 'left'; g.font = `800 19px ${F}`; g.fillStyle = '#fff'; g.fillText(String(o.x.a.descrizione).slice(0, 40), 52, y + 21); g.font = `600 14px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText(`${o.w[0]} · giacenza ${N(o.x.g)}${o.x.s ? ' · scorta ' + N(o.x.s) : ''}`, 52, y + 41);
+          g.textAlign = 'right'; g.font = `800 20px ${F}`; g.fillStyle = cc; g.fillText(p ? p.code : '—', w - 50, y + 29); g.globalAlpha = 1; });
+        if (!X.todo.length) { g.font = `700 26px ${F}`; g.fillStyle = '#5df08a'; g.fillText('✓ Niente da verificare', 30, 160); }
+      }
+    }
+    S.tex.needsUpdate = true;
+  }
+  function screen3(par, x, z, ry, w, kind, X) {
+    const g = new T.Group(); g.position.set(x, .5, z); g.rotation.y = ry; par.add(g); const h = w * .54;
+    bxS(g, w + .22, h + .22, .14, 0x1b1d20, 0, 1.15, 0); for (const s of [-1, 1]) { bxS(g, .12, 1.2, .12, 0x3a3f46, s * w * .36, 0, 0); bxS(g, .5, .05, .5, 0x3a3f46, s * w * .36, 0, 0, { ns: 1 }); }
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 552; const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; OWN.push(tex);
+    const sm = new T.MeshBasicMaterial({ map: tex }); OWN.push(sm); const m = new T.Mesh(G.plane, sm); m.scale.set(w, h, 1); m.position.set(0, 1.26 + h / 2, .08); g.add(m);
+    const S = { cv, tex, X, kind, last: -1 }; prpScreen(S, kind, 0, 0); return S;
+  }
+  // ----- carrello di prelievo con ceste
+  function pickCart(par) {
+    const j = new T.Group(); par.add(j); const FR = mat(0x3a3f46), LG = mat(0xc5cad1), BK = mat(0x17191c);
+    partS(G.box, LG, 0, .72, 0, j, [.62, .03, 1.0]); partS(G.box, LG, 0, 1.12, 0, j, [.62, .03, 1.0]);
+    for (const [x, z] of [[-.3, -.48], [.3, -.48], [-.3, .48], [.3, .48]]) { partS(G.box, FR, x, .95, z, j, [.03, .58, .03]); partS(G.cyl, BK, x, .57, z, j, [.11, .05, .11], [0, 0, Math.PI / 2]); }
+    for (const x of [-.3, .3]) partS(G.box, FR, x, 1.42, -.5, j, [.03, .6, .03]); partS(G.cyl, mat(0xf47b20), 0, 1.7, -.5, j, [.04, .62, .04], [0, 0, Math.PI / 2]);
+    [[0xf47b20, .74, -.24], [0x2f6db4, .74, .24], [0x2fb36b, 1.14, -.24], [0xf2c418, 1.14, .24]].forEach(([c, y, z]) => { partS(G.box, mat(c), 0, y + .13, z, j, [.5, .24, .4]); partS(G.box, mat(0xe2b27a), .05, y + .29, z, j, [.24, .1, .2]); });
+    const t2 = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0x9fe8b4 })); t2.scale.set(.2, .13, .012); t2.position.set(0, 1.55, -.46); t2.rotation.x = -.5; j.add(t2);
+    j.traverse(e => { if (e.isMesh) { e.castShadow = false; e.receiveShadow = false; } });
+    return j;
+  }
+  function pcartTick(m, t, dt) {
+    if (m.w > 0) { m.w -= dt; return; }
+    const p = m.pts[m.i], o = m.o.position, dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), st = m.sp * dt;
+    if (d <= st) { o.x = p.x; o.z = p.z; m.w = p.w || 0; m.i = (m.i + 1) % m.pts.length; return; }
+    o.x += dx / d * st; o.z += dz / d * st;
+    let tg = Math.atan2(dx, dz), df = tg - m.o.rotation.y; while (df > Math.PI) df -= 2 * Math.PI; while (df < -Math.PI) df += 2 * Math.PI; m.o.rotation.y += df * Math.min(1, dt * 6);
+  }
+  // percorso «a corsie»: banco → testata della corsia → vani → testata → banco
+  function pickPath(start, stops) {
+    const out = [start.clone()], byR = new Map();
+    stops.forEach(s => { if (!byR.has(s.rk.id)) byR.set(s.rk.id, []); byR.get(s.rk.id).push(s); });
+    let cur = start.clone();
+    const R3 = [...byR.values()].map(L2 => { const rk = L2[0].rk, g = rackG(rk.id); g.updateMatrixWorld(); const len = rackLen(rk), dep = rackDep(rk), ends = [-1, 1].map(sx => g.localToWorld(new T.Vector3(sx * (len / 2 + 1.3), 0, dep / 2 + 1.35))); return { rk, g, L2, len, dep, ends }; });
+    R3.sort((a, b) => Math.min(...a.ends.map(e => e.distanceTo(start))) - Math.min(...b.ends.map(e => e.distanceTo(start))));
+    R3.forEach(r => {
+      const e = r.ends[0].distanceTo(cur) <= r.ends[1].distanceTo(cur) ? 0 : 1, E = r.ends[e];
+      out.push(new T.Vector3(E.x, 0, cur.z), E.clone());
+      const pts = r.L2.map(s => { const c = cellBox(r.rk, s.b, s.l).c; const w2 = r.g.localToWorld(new T.Vector3(c.x, 0, r.dep / 2 + 1.35)); return { s, w: w2, d: w2.distanceTo(E) }; }).sort((a, b) => a.d - b.d);
+      pts.forEach(p => { p.s.w = p.w; out.push(p.w.clone()); });
+      out.push(E.clone()); cur = E.clone();
+    });
+    out.push(new T.Vector3(cur.x, 0, start.z), start.clone());
+    return out.filter((p, i) => !i || p.distanceTo(out[i - 1]) > .05);
+  }
+  function deskStart() { const dk = L.items.find(i => i.t === 'desk'), z = L.items.find(i => i.t === 'zone' && i.k === 'pre'); if (dk) { const g = WH.children.find(c => c.userData.eid === dk.id); if (g) { g.updateMatrixWorld(); return g.localToWorld(new T.Vector3(0, 0, -1.6)).setY(0); } } return z ? new T.Vector3(z.x, 0, z.z) : new T.Vector3(0, 0, 0); }
+  function pickStops(x) { const st = []; x.R.forEach((l, i) => { const p = l.art && P.byArt.get(l.art); if (p) st.push({ li: l, i, rk: p.rk, b: p.b, l: p.l, code: p.code }); }); return st; }
+  function pickClear() { if (!PICK) return; WH.remove(PICK.g); PICK.dis.forEach(o => o.dispose()); PICK = null; }
+  function pickShow(x, noFly) {
+    pickClear(); const stops = pickStops(x); if (!stops.length) return null;
+    const start = deskStart(), path = pickPath(start, stops), g = new T.Group(); WH.add(g); const dis = [];
+    const ct = cvTex(256, 64, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = 'rgba(244,123,32,.9)'; for (let i = 0; i < 2; i++) { const x0 = i * 128 + 30; c.beginPath(); c.moveTo(x0, 10); c.lineTo(x0 + 50, 32); c.lineTo(x0, 54); c.lineTo(x0 + 22, 32); c.closePath(); c.fill(); } }); ct.wrapS = T.RepeatWrapping; dis.push(ct);
+    const pos = [], uv = [], idx = []; let acc = 0;
+    for (let i = 1; i < path.length; i++) { const a = path[i - 1], b = path[i], d = a.distanceTo(b); if (d < .05) continue; const nx = -(b.z - a.z) / d * .32, nz = (b.x - a.x) / d * .32, y = .6 + (i % 2) * .004, k = pos.length / 3;
+      pos.push(a.x + nx, y, a.z + nz, a.x - nx, y, a.z - nz, b.x + nx, y, b.z + nz, b.x - nx, y, b.z - nz); uv.push(acc / 1.4, 1, acc / 1.4, 0, (acc + d) / 1.4, 1, (acc + d) / 1.4, 0); idx.push(k, k + 2, k + 1, k + 1, k + 2, k + 3); acc += d; }
+    const bg = new T.BufferGeometry(); bg.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); bg.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); bg.setIndex(idx); dis.push(bg);
+    const rm = new T.MeshBasicMaterial({ map: ct, transparent: true, depthWrite: false, side: T.DoubleSide }); dis.push(rm); const rib = new T.Mesh(bg, rm); rib.renderOrder = 6; g.add(rib);
+    const bgL = new T.BufferGeometry().setFromPoints(path.map(p => new T.Vector3(p.x, .59, p.z))); dis.push(bgL); const lm = new T.LineBasicMaterial({ color: 0xf47b20, transparent: true, opacity: .45 }); dis.push(lm); g.add(new T.Line(bgL, lm));
+    const ord = stops.filter(s => s.w).sort((a, b) => path.findIndex(p => p.distanceTo(a.w) < .02) - path.findIndex(p => p.distanceTo(b.w) < .02));
+    ord.forEach((s, i) => { s.n = i + 1;
+      const tx = cvTex(256, 128, (c, w, h) => { c.fillStyle = '#16181b'; c.beginPath(); c.roundRect(4, 4, w - 8, h - 8, 26); c.fill(); c.fillStyle = '#f47b20'; c.beginPath(); c.arc(62, 64, 40, 0, 7); c.fill(); c.fillStyle = '#fff'; c.font = '900 46px Inter, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(String(i + 1), 62, 66); c.textAlign = 'left'; c.font = '800 30px Inter, sans-serif'; c.fillText(s.code, 116, 48); c.font = '700 24px Inter, sans-serif'; c.fillStyle = 'rgba(255,255,255,.65)'; c.fillText(`${N(C.num(s.li.q))} ${String(s.li.um || 'pz').slice(0, 4)}`, 116, 86); }); dis.push(tx);
+      const sm = new T.SpriteMaterial({ map: tx, depthTest: false, transparent: true }); dis.push(sm); const sp = new T.Sprite(sm); sp.scale.set(3.2, 1.6, 1); sp.position.set(s.w.x, 3.6, s.w.z); sp.renderOrder = 12; g.add(sp);
+      const pole = new T.Mesh(G.cyl, mat(0xf47b20)); pole.scale.set(.05, 2.6, .05); pole.position.set(s.w.x, 1.8, s.w.z); g.add(pole);
+      const ring = new T.Mesh(new T.RingGeometry(.42, .58, 32), new T.MeshBasicMaterial({ color: 0xf47b20, transparent: true, depthWrite: false, side: T.DoubleSide })); dis.push(ring.geometry, ring.material); ring.rotation.x = -Math.PI / 2; ring.position.set(s.w.x, .62, s.w.z); ring.renderOrder = 7; g.add(ring); s.ring = ring; });
+    const sr = new T.Mesh(new T.CircleGeometry(.7, 32), new T.MeshBasicMaterial({ color: 0x2fb36b, transparent: true, opacity: .8, depthWrite: false })); dis.push(sr.geometry, sr.material); sr.rotation.x = -Math.PI / 2; sr.position.set(start.x, .62, start.z); g.add(sr);
+    let len = 0; for (let i = 1; i < path.length; i++) len += path[i].distanceTo(path[i - 1]);
+    PICK = { g, dis, tex: ct, stops: ord, x, len, path };
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; path.forEach(p => { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z); });
+    if (!noFly) fly({ tx: (x0 + x1) / 2, ty: 0, tz: (z0 + z1) / 2 + 2, dist: Math.max(x1 - x0, z1 - z0) * 1.3 + 26, az: -0.25, pol: .62 });
+    return PICK;
+  }
+  function prepBuild() {
+    const was = PICK && PICK.x && PICK.x.d.id; if (PICK) { PICK.dis.forEach(o => o.dispose()); PICK = null; }
+    PRP = null; const zp = L.items.find(i => i.t === 'zone' && i.k === 'pre'), zc = L.items.find(i => i.t === 'zone' && i.k === 'cq'), lite = Q && Q.tier === 0, R = { scr: [], wrap: null, cq: null };
+    if (zp) { const b = box2(zp), w = b.x1 - b.x0, d = b.z1 - b.z0, X = prepData(), B = new Batch(WH);
+      if (w >= 12 && d >= 9) {
+        R.scr.push(screen3(WH, b.x0 + w * .62, b.z0 + d * .5, 0, Math.min(5.2, w * .2), 'pre', X));
+        // avvolgipallet: piatto che gira, colonna, carrello del film che sale e scende
+        const wx = b.x0 + 3.2, wz = b.z1 - 4.6, wg = new T.Group(); wg.position.set(wx, .5, wz); WH.add(wg);
+        bxS(wg, 2.0, .14, 2.0, 0x3a3f46, 0, 0, 0); const tt = new T.Group(); tt.position.y = .14; wg.add(tt); meshS(G.cyl, mat(0xc5cad1), 0, .04, 0, tt, { s: [1.75, .08, 1.75] });
+        const pb = new Batch(tt); palletStack(pb, 0, .08, 0, .85, PAL[0], 3, null); pb.flush();
+        const film = new T.Mesh(G.cyl, new T.MeshLambertMaterial({ color: 0xdfe9f2, transparent: true, opacity: .4, depthWrite: false })); film.scale.set(1.32, 1.0, 1.32); film.position.y = .9; OWN.push(film.material); tt.add(film);
+        bxS(wg, .3, 2.9, .3, 0xf47b20, 1.25, .14, 0); bxS(wg, .5, .3, .5, 0x3a3f46, 1.25, 0, 0); const car = new T.Group(); car.position.set(1.08, .9, 0); wg.add(car); meshS(G.box, mat(0xfafafa), 0, 0, 0, car, { s: [.28, .5, .36] }); meshS(G.cyl, mat(0xdfe9f2), -.18, 0, 0, car, { s: [.18, .42, .18] });
+        bxS(wg, .45, .55, .3, 0xe9eaec, 1.25, 1.1, .45); B.add('wl', G.box, new T.MeshBasicMaterial({ color: 0x5df08a }), m4(1.25, 1.82, .61, .08, .08, .02));
+        R.wrap = { tt, car, film };
+        // scaffale delle ceste vuote e bancale di cartoni piegati
+        const sx = b.x1 - 3, sz = b.z1 - 3.2; for (const x of [-1, 1]) bxS(WH, .05, 1.8, .05, 0x3a3f46, sx + x * .9, .5, sz - .3), bxS(WH, .05, 1.8, .05, 0x3a3f46, sx + x * .9, .5, sz + .3);
+        for (let l = 0; l < 4; l++) { B.add('csh', G.box, mat(0xc5cad1), m4(sx, .62 + l * .42, sz, 1.85, .03, .62)); for (let i = 0; i < 3; i++) B.add('tote', G.box, mat(0xffffff), m4(sx - .6 + i * .6, .62 + l * .42 + .14, sz, .52, .26, .5), [0xf47b20, 0x2f6db4, 0x2fb36b, 0xf2c418][(l + i) % 4]); }
+        B.add('cbp', G.box, mat(0xc9a273), m4(sx - 2.4, .58, sz, 1.2, .14, 1.0)); for (let i = 0; i < 6; i++) B.add('cbf', G.box, mat(0xd9b07a), m4(sx - 2.4, .7 + i * .06, sz, 1.1, .05, .9));
+        // cartelli dei banchi con l'ordine in lavorazione
+        L.items.filter(i => i.t === 'desk').slice(0, 6).forEach((dk, i) => { const x = D.ddt[i]; if (!x) return; const dg = WH.children.find(c => c.userData.eid === dk.id); if (!dg) return; dg.updateMatrixWorld(); const p = dg.localToWorld(new T.Vector3(0, 0, 0));
+          const t = textTex([[`BANCO ${i + 1}`, 22, 800, 28, null, '#f47b20'], [`DDT ${C.dnum(x.d)}`, 34, 800, 66, null, '#16181b'], [String(x.cliN).slice(0, 24), 22, 600, 100, null, '#5b5e63'], [`${x.R.length} righe · ${N(x.pz)} pz`, 20, 700, 130, null, '#2f6db4']], { bg: '#ffffff', w: 360, h: 150, round: 14 });
+          const pl = planeT(t, 1.7, .71, WH, p.x, 3.15, p.z, { ds: 1 }); pl.renderOrder = 2; bxS(WH, .02, .55, .02, 0x3a3f46, p.x - .6, 3.5, p.z, { ns: 1 }); bxS(WH, .02, .55, .02, 0x3a3f46, p.x + .6, 3.5, p.z, { ns: 1 });
+          const h2 = new T.Mesh(G.box, M.hit); h2.scale.set(1.8, .8, .3); h2.position.set(p.x, 3.15, p.z); h2.userData.k = { t: 'pick', id: x.d.id }; WH.add(h2); pick.push(h2); });
+        // carrelli di prelievo che girano tra i banchi e le corsie
+        if (!lite) D.ddt.slice(0, 2).forEach((x, k) => { const st = pickStops(x).slice(0, 4); if (!st.length) return; try { const s0 = deskStart(); s0.x += k * 6.4; const path = pickPath(s0, st); const cg = new T.Group(); cg.position.copy(path[0]); WH.add(cg); const op = person(cg, 0, -1.0, k ? 0x2fb36b : 0xf47b20, null, { mode: 'push' }); pickCart(cg); cg.userData.rig = op.userData.rig;
+          movers.push({ o: cg, t: 'pcart', pts: path.map((p, i) => ({ x: p.x, z: p.z, w: st.some(s => s.w && s.w.distanceTo(p) < .05) ? 2.2 : i === path.length - 1 ? 4 : 0 })), i: 1, w: k * 3, sp: 1.05 }); } catch {} });
+      }
+      B.flush();
+    }
+    if (zc) { const b = box2(zc), w = b.x1 - b.x0, d = b.z1 - b.z0, X = cqData(), B = new Batch(WH);
+      if (w >= 9 && d >= 9) {
+        R.scr.push(screen3(WH, b.x0 + w * .5, b.z0 + d * .55, 0, Math.min(4.6, w * .38), 'cq', X));
+        // gabbia quarantena «da verificare»
+        const qx = b.x1 - 2.6, qz = b.z1 - 3.0, qw = 3.4, qd = 2.8;
+        for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]]) B.add('qp', G.box, mat(0xe0322a), m4(qx + x * qw / 2, 1.0, qz + z * qd / 2, .07, 1.0, .07));
+        for (const y of [.9, 1.4]) { B.add('qc', G.box, mat(0xffffff), m4(qx, y, qz - qd / 2, qw, .04, .02), 0xe0322a); B.add('qc', G.box, mat(0xffffff), m4(qx, y, qz + qd / 2, qw, .04, .02), 0xffffff); B.add('qc', G.box, mat(0xffffff), m4(qx - qw / 2, y, qz, .02, .04, qd), 0xffffff); B.add('qc', G.box, mat(0xffffff), m4(qx + qw / 2, y, qz, .02, .04, qd), 0xe0322a); }
+        const nq = Math.min(4, X.todo.filter(o => o.w[1] !== 'n').length); for (let i = 0; i < nq; i++) palletStack(B, qx - .8 + (i % 2) * 1.6, .6, qz - .6 + Math.floor(i / 2) * 1.2, .5, PAL[(i + 1) % 4], 2, null, true);
+        const qt = textTex([['DA VERIFICARE', 30, 900, 38, null, '#ffffff'], [`${X.todo.length} articoli · conta ciclica`, 20, 700, 74, null, 'rgba(255,255,255,.85)']], { bg: '#d9452f', w: 360, h: 96, round: 10 }); const qp = planeT(qt, 1.9, .5, WH, qx, 2.0, qz + qd / 2 + .03, { ds: 1 }); qp.renderOrder = 2;
+        // postazione di conta: carrello con tablet, operatore con lettore
+        const cx = b.x0 + 2.4, cz = b.z1 - 2.6; bxS(WH, 1.2, .9, .7, 0xfafafa, cx, .5, cz); B.add('ctb', G.box, mat(0x1d1f22), m4(cx - .2, 1.47, cz, .36, .02, .26)); B.add('cts', G.box, new T.MeshBasicMaterial({ color: 0x9fe8b4 }), m4(cx - .2, 1.485, cz, .32, .005, .22)); B.add('cbx', G.box, mat(0xe2b27a), m4(cx + .3, 1.55, cz, .34, .2, .3));
+        if (!lite) { const p = person(WH, cx + 1.0, cz - .1, 0x2fb36b, null, { mode: 'scan' }); p.rotation.y = -Math.PI / 2; movers.push({ o: p, t: 'bob', ph: 41 }); }
+        // varco sul nastro: laser, pesatura, espulsore degli scarti
+        const belt = L.items.find(i => i.t === 'belt'); if (belt) { const g2 = WH.children.find(c => c.userData.eid === belt.id); if (g2) { g2.updateMatrixWorld(); let x0 = null; for (let x = -belt.len / 2 + 1; x < belt.len / 2 - 6; x += .5) { const wp = g2.localToWorld(new T.Vector3(x, 0, 0)); if (wp.x > b.x0 + 2 && wp.x < b.x1 - 2 && wp.z > b.z0 && wp.z < b.z1) { x0 = x; break; } }
+          if (x0 != null) { const lz = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: .35, depthWrite: false })); lz.scale.set(.02, 1.1, 1.5); lz.position.set(x0, 1.9, 0); g2.add(lz); OWN.push(lz.material);
+            const sw = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0xff6b5b })); sw.scale.set(.03, .02, 1.5); sw.position.set(x0, 1.9, 0); g2.add(sw);
+            const xs = x0 + 2.4; bxS(g2, 1.3, .1, 1.6, 0x8e959e, xs, 1.06, 0, { ns: 1 }); bxS(g2, .08, 1.4, .08, 0x3a3f46, xs, .5, -1.0); bxS(g2, .5, .3, .1, 0x1d1f22, xs, 1.9, -1.0);
+            const kcv = document.createElement('canvas'); kcv.width = 160; kcv.height = 64; const ktx = new T.CanvasTexture(kcv); ktx.colorSpace = T.SRGBColorSpace; OWN.push(ktx); const km = new T.MeshBasicMaterial({ map: ktx }); OWN.push(km); const kd = new T.Mesh(G.plane, km); kd.scale.set(.44, .18, 1); kd.position.set(xs, 2.05, -.94); g2.add(kd);
+            const lamp = new T.Mesh(G.cyl, new T.MeshBasicMaterial({ color: 0x2fb36b })); lamp.scale.set(.12, .12, .12); lamp.position.set(xs, 2.32, -1.0); g2.add(lamp); OWN.push(lamp.material);
+            const xp = x0 + 4.3; bxS(g2, .3, 1.0, .3, 0x3a3f46, xp, .5, -1.05); const arm = new T.Mesh(G.box, mat(0xf47b20)); arm.scale.set(.5, .22, .1); arm.position.set(xp, 1.5, -.85); g2.add(arm);
+            bxS(g2, 1.6, .06, 1.1, 0xc5cad1, xp, 1.1, 1.45); for (const sx2 of [-.75, .75]) for (const sz2 of [1.0, 1.9]) bxS(g2, .05, .6, .05, 0x8e959e, xp + sx2, .5, sz2, { ns: 1 });
+            const rj = new T.Mesh(G.box, M.carton || mat(0xe2b27a)); rj.scale.set(.5, .36, .44); rj.visible = false; g2.add(rj);
+            const rt = textTex([['SCARTI', 24, 900, 30, null, '#ffffff']], { bg: '#d9452f', w: 200, h: 56, round: 8 }); const rp = planeT(rt, .8, .22, g2, xp, 1.35, 2.02, { ds: 1 }); rp.renderOrder = 2;
+            R.cq = { lz, sw, ktx, kcv, lamp, arm, rj, x0, xs, xp, last: -1 }; } } }
+      }
+      B.flush();
+    }
+    PRP = R;
+    if (was && sel && sel.t === 'pick') { const x = D.ddt.find(y => y.d.id === was); if (x) pickShow(x, true); }
+  }
+  function prepTick(t, dt) {
+    if (PICK) { PICK.tex.offset.x -= dt * .9; PICK.stops.forEach((s, i) => { if (!s.ring) return; const u = ((t * .8 + i * .15) % 1); s.ring.scale.setScalar(1 + u * .7); s.ring.material.opacity = .9 * (1 - u); }); }
+    if (!PRP) return;
+    const per = 8, page = Math.floor(t / per) % 2, u = (t % per) / per, q = Math.floor(t * 6);
+    PRP.scr.forEach(S => { if (q !== S.last) { S.last = q; prpScreen(S, S.kind, page, u); } });
+    if (PRP.wrap) { const W2 = PRP.wrap, c = (t % 14) / 14; W2.tt.rotation.y = t * 1.6; W2.car.position.y = .9 + (c < .5 ? c * 2 : 2 - c * 2) * 1.4; W2.film.scale.y = Math.max(.05, Math.min(1, (c < .5 ? c * 2 : 1) * 1.0)); W2.film.position.y = .3 + W2.film.scale.y * .6; }
+    const Q2 = PRP.cq; if (Q2) { const c = (t % 5) / 5;
+      Q2.sw.position.y = 1.4 + Math.abs(Math.sin(t * 3.2)) * 1.0; Q2.lz.material.opacity = .22 + Math.sin(t * 9) * .08;
+      const rej = Math.floor(t / 5) % 4 === 3; Q2.lamp.material.color.setHex(rej && c > .35 ? 0xff3b30 : 0x2fb36b);
+      const ap = rej && c > .45 && c < .75 ? Math.sin((c - .45) / .3 * Math.PI) : 0; Q2.arm.position.z = -.85 + ap * 1.1;
+      Q2.rj.visible = rej && c > .5; if (Q2.rj.visible) { const k = Math.min(1, (c - .5) / .2); Q2.rj.position.set(Q2.xp, 1.45 - k * .17 + (k < 1 ? Math.sin(k * Math.PI) * .15 : 0), k * 1.45); }
+      const qq = Math.floor(t * 4); if (qq !== Q2.last) { Q2.last = qq; const g2 = Q2.kcv.getContext('2d'); g2.fillStyle = '#0f1a14'; g2.fillRect(0, 0, 160, 64); const on = c > .2 && c < .5, kg = 2.2 + ((Math.floor(t / 5) * 37) % 50) / 10; g2.fillStyle = rej ? '#ff6b5b' : '#5df08a'; g2.font = '700 30px ui-monospace, Menlo, monospace'; g2.textAlign = 'right'; g2.textBaseline = 'middle'; g2.fillText(on ? kg.toFixed(2) : rej && c >= .5 ? 'ERR' : ' OK ', 118, 33); g2.font = '700 14px Inter, sans-serif'; g2.fillText('kg', 152, 37); Q2.ktx.needsUpdate = true; } }
+  }
+  // ----- pannelli
+  const sparkD = (per, col) => { const mx = Math.max(1, ...per.map(p => p.n)); return `<div class="m3-b14" style="grid-template-columns:repeat(${per.length},1fr)">${per.map((p, i) => `<div title="${esc(C.dIt(p.d))}: ${p.n} ordini · ${N(p.pz)} pezzi"><i style="--h:${(p.n / mx * 100).toFixed(1)}%;--k:${i}${i === per.length - 1 ? ';background:' + col : ''}"></i><small>${DOW[new Date(p.d + 'T12:00:00').getDay()]}</small></div>`).join('')}</div>`; };
+  function prepPanel(Pn) {
+    const X = prepData(), last = D.ddt.slice(0, 14);
+    return head(ic('hand'), '', Pn.t === 'belt' ? 'Nastro trasportatore' : Pn.t === 'desk' ? 'Bancone di preparazione' : 'Zona', 'Preparazione ordini', 'Liste di prelievo · percorso tra le corsie · imballo · DDT', 1) + `<div class="m3-pb">
+      <div class="m3-grid">${stat('Ordini oggi', N(X.oggi.length), '', `${N(X.sett.length)} negli ultimi 7 giorni`)}${stat('Ordini del mese', N(X.n), '', `${N(X.righe)} righe · ${N(X.pz)} pezzi`)}${stat('Righe per ordine', X.rpo.toFixed(1).replace('.', ','), '', 'media del mese')}${stat('Colli del mese', N(X.colli), '', X.n ? `${(X.colli / X.n).toFixed(1).replace('.', ',')} per ordine` : 'dai DDT')}</div>
+      <button type="button" class="m3-go" data-gx="ddt-new">${ic('plus')}Nuovo DDT</button>
+      <div class="m3-h4">Ordini · ultimi 14 giorni</div>${sparkD(X.per, '#f47b20')}
+      ${X.noLoc || X.noArt ? `<div class="m3-warn">${ic('alert')}<span>${X.noLoc ? `<b>${X.noLoc} righe</b> del mese su articoli senza ubicazione. ` : ''}${X.noArt ? `<b>${X.noArt} righe</b> scritte a mano (senza articolo): non entrano nel percorso.` : ''}</span></div>` : ''}
+      <div class="m3-h4">Liste di prelievo <em>tocca per il percorso</em></div>
+      <div class="m3-rows">${last.map((x, i) => { const st = pickStops(x).length; return `<button type="button" class="m3-row m3-pkr" data-pick="${esc(x.d.id)}" style="--k:${i}"><i class="m3-pi m3-dt" style="--c:#f47b20">${ic('route')}</i><span class="tx"><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc([C.dIt(x.d.data), `${x.R.length} righe`, `${N(x.pz)} pz`, st ? `${st} ubicazioni` : 'nessuna ubicazione'].join(' · '))}</small></span><span class="m3-chip ${st ? 'g' : 'n'}">${st ? '<i></i>percorso' : '—'}</span></button>`; }).join('') || '<div class="m3-empty">Nessun DDT: crea il primo con «Nuovo DDT»</div>'}</div>
+      ${X.topA.length ? `<div class="m3-h4">Più prelevati · 30 giorni</div><div class="m3-hb">${X.topA.map((o, i) => `<button type="button" data-art3="${esc(o.id)}" style="--k:${i}"><span><b>${esc(o.a.descrizione)}</b><small>${o.p ? esc(o.p.code) + ' · ' : ''}${N(o.q)} pz</small></span><u><i style="--w:${(o.q / X.topA[0].q * 100).toFixed(1)}%;--c:#f47b20"></i></u></button>`).join('')}</div>` : ''}
+      ${X.topC.length ? `<div class="m3-h4">Clienti del mese</div><div class="m3-hb">${X.topC.map((o, i) => `<div style="--k:${i}"><span><b>${esc(o.k)}</b><small>${o.n} ordini · ${N(o.pz)} pz</small></span><u><i style="--w:${(o.pz / Math.max(1, X.topC[0].pz) * 100).toFixed(1)}%;--c:#2f6db4"></i></u></div>`).join('')}</div>` : ''}
+      <div class="m3-h4">Ultimi scarichi <em>${D.scar.length}</em></div><div class="m3-rows">${D.scar.slice(0, 10).map(mvRow).join('') || '<div class="m3-empty">Nessuno scarico</div>'}</div></div>`;
+  }
+  function pickPanel(Pn) {
+    const x = D.ddt.find(y => y.d.id === Pn.id); if (!x) return '';
+    const PK = PICK && PICK.x === x ? PICK : null, stops = PK ? PK.stops : pickStops(x), loose = x.R.filter(l => !l.art || !P.byArt.get(l.art)), i3 = trucks.findIndex(t2 => t2.d === x);
+    const mins = PK ? Math.round(PK.len / 1.1 / 60 + stops.length * .5) : 0;
+    return head(ic('route'), '', 'Lista di prelievo', `DDT ${esc(C.dnum(x.d))}`, `${esc(x.cliN)}${x.citta ? ' · ' + esc(x.citta) : ''} · ${esc(C.dIt(x.d.data))}`, 1) + `<div class="m3-pb">
+      <div class="m3-grid">${stat('Righe', N(x.R.length), '', `${N(x.pz)} pezzi`)}${stat('Ubicazioni', N(stops.length), '', loose.length ? `${loose.length} righe fuori percorso` : 'tutte a scaffale')}${PK ? stat('Percorso', N(Math.round(PK.len)), 'm', `circa ${Math.max(1, mins)} min a piedi`) + stat('Colli', C.num(x.d.colli) ? N(C.num(x.d.colli)) : '—', '', esc(x.d.aspetto || '')) : ''}</div>
+      ${stops.length ? `<div class="m3-h4">Percorso <em>banco → corsie → banco</em></div><div class="m3-pk">${stops.map((s, i) => `<button type="button" data-art3="${esc(s.li.art)}" style="--k:${i}"><i>${s.n || i + 1}</i><span><b>${esc(s.li.d || (C.artOf(s.li.art) || {}).descrizione || 'Articolo')}</b><small>${esc([s.li.c, 'scaffale ' + s.rk.code + ' · campata ' + (s.b + 1) + ' · livello ' + (s.l + 1)].filter(Boolean).join(' · '))}</small></span><em class="loc">${esc(s.code)}</em><b class="q">${N(C.num(s.li.q))}<small>${esc(s.li.um || 'pz')}</small></b></button>`).join('')}</div>` : `<div class="m3-warn">${ic('alert')}<span>Nessuna riga di questo DDT ha un'ubicazione a scaffale: il percorso non si può disegnare.</span></div>`}
+      ${loose.length ? `<div class="m3-h4">Fuori percorso <em>${loose.length}</em></div><div class="m3-rows">${loose.map(l => `<div class="m3-row"><i class="m3-pi m3-dt" style="--c:#9aa0a8">${ic('box')}</i><span class="tx"><b>${esc(l.d || 'Riga')}</b><small>${esc(l.art ? 'articolo senza ubicazione' : 'riga scritta a mano')}</small></span><span class="m3-chip n">${N(C.num(l.q))} ${esc(l.um || '')}</span></div>`).join('')}</div>` : ''}
+      <div class="m3-acts"><button type="button" class="m3-go" data-gx="ddt-pdf" data-id="${esc(x.d.id)}">${ic('pdf')}Apri il DDT</button>${i3 >= 0 ? `<button type="button" class="m3-go ghost" data-trk3="${i3}">${ic('truck')}Camion in banchina</button>` : ''}<button type="button" class="m3-go ghost" data-zsel="pre">${ic('hand')}Tutte le liste</button></div></div>`;
+  }
+  function cqPanel() {
+    const X = cqData(), a = Math.round(X.acc * 100), mx = Math.max(1, ...X.ser.map(s => Math.max(s.p, s.n)));
+    return head(ic('shield'), '', 'Zona', 'Controllo e inventario', 'Varco sul nastro · conta ciclica · rettifiche', 1) + `<div class="m3-pb">
+      <div class="m3-cqh"><div class="ring" style="--p:${X.acc};--c:${X.acc >= .95 ? '#2fb36b' : X.acc >= .85 ? '#e0b100' : '#d9452f'}"><b>${a}%</b><small>accuratezza</small></div><div><span>Inventario · ultimi 90 giorni</span><b>${X.nCnt ? `${N(X.nCnt)} articoli corretti su ${N(D.nArt)}` : 'Nessuna rettifica: giacenze mai corrette'}</b><em>${D.ret[0] ? 'ultima rettifica il ' + esc(C.dIt(D.ret[0].data)) : 'fai una conta ciclica per verificare'}</em></div></div>
+      <div class="m3-grid">${stat('Eccedenze', '+' + C.eur0(X.vP), '', `${N(X.qP)} pezzi trovati in più`)}${stat('Ammanchi', '−' + C.eur0(X.vM), '', `${N(X.qM)} pezzi mancanti`)}${stat('Da contare', N(X.todo.length), '', 'conta ciclica suggerita')}${stat('Giacenze negative', N(X.neg.length), '', X.neg.length ? 'da correggere subito' : 'nessuna')}</div>
+      ${canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('check')}Rettifica di inventario</button>` : ''}
+      <div class="m3-h4">Rettifiche per mese <em>+ eccedenze · − ammanchi</em></div>
+      <div class="m3-rc">${X.ser.map((s, i) => `<div title="${esc(MESF[Number(s.m.slice(5)) - 1])}: ${s.p} in più · ${s.n} in meno"><span><i class="r" style="--h:${(s.p / mx * 100).toFixed(1)}%;--k:${i};background:#7fcf9b"></i><i class="c" style="--h:${(s.n / mx * 100).toFixed(1)}%;--k:${i};background:#f3a98a"></i></span><small>${MESL[Number(s.m.slice(5)) - 1]}</small></div>`).join('')}</div>
+      <div class="m3-h4">Conta ciclica <em>${X.todo.length}</em></div>
+      <div class="m3-rows">${X.todo.map(o => { const p = P.byArt.get(o.x.id); return `<button type="button" class="m3-row" data-art3="${esc(o.x.id)}"><i class="m3-pi m3-dt" style="--c:${o.w[1] === 'r' ? '#d9452f' : o.w[1] === 'a' ? '#d98a1c' : '#2f6db4'}">${ic(o.w[1] === 'n' ? 'check' : 'alert')}</i><span class="tx"><b>${esc(o.x.a.descrizione)}</b><small>${esc([o.w[0], 'giacenza ' + N(o.x.g), o.x.s ? 'scorta ' + N(o.x.s) : ''].filter(Boolean).join(' · '))}</small></span><span class="m3-chip ${o.w[1]}">${p ? esc(p.code) : 'senza vano'}</span></button>`; }).join('') || '<div class="m3-empty">Niente da verificare</div>'}</div>
+      <div class="m3-h4">Ultime rettifiche <em>${D.ret.length}</em></div><div class="m3-rows">${D.ret.slice(0, 12).map(mvRow).join('') || '<div class="m3-empty">Nessuna rettifica di inventario</div>'}</div></div>`;
+  }
+
   /* ---------------- ricevimento merci (v276): banchine fornitori, corsie di sosta, accettazione ---------------- */
   const hashS = s => { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
   const dAgoN = d => { const a = new Date(String(d).slice(0, 10) + 'T12:00:00'), b = new Date(C.today() + 'T12:00:00'); return Math.round((b - a) / 864e5); };
@@ -2646,6 +2912,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       else if (m.t === 'walk' && m.o.userData.rig) strollTick(m, t, dt);
       else if (m.t === 'walk') { const u = (Math.sin(s) + 1) / 2, dir = Math.cos(s) >= 0 ? 1 : -1; m.o.position.x = m.a.x + (m.b.x - m.a.x) * u; m.o.position.z = m.a.z + (m.b.z - m.a.z) * u; m.o.rotation.y = Math.atan2((m.b.x - m.a.x) * dir, (m.b.z - m.a.z) * dir); m.o.position.y = .5 + Math.abs(Math.sin(t * 6 + m.ph)) * .05; }
       else if (m.t === 'route') routeTick(m, t, dt);
+      else if (m.t === 'pcart') pcartTick(m, t, dt);
       else if (m.t === 'bob' && m.o.userData.rig) { }
       else if (m.t === 'bob') m.o.position.y = .5 + Math.abs(Math.sin(t * 2 + m.ph)) * .03;
       else if (m.t === 'spin') m.o.rotation.y = Math.sin(t * m.sp) * 1.3;
@@ -2657,7 +2924,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       if (m.t !== 'fork' && m.o && m.o.userData && m.o.userData.rig) rigTick(m.o, t, dt);
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
-    focusTick(t, dt); ricTick(t, dt); offTick(t, dt); canoTick(dt); glsTick(t, dt);
+    focusTick(t, dt); ricTick(t, dt); offTick(t, dt); canoTick(dt); glsTick(t, dt); prepTick(t, dt);
   }
 
   /* ---------------- interfaccia ---------------- */
@@ -2749,17 +3016,11 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     } else if (Pn.t === 'ricl' || (Pn.t === 'zone' && Pn.z === 'ric')) {
       h = ricPanel(Pn); if (!h) return panel({ t: 'zone', z: 'ric' });
     } else if ((Pn.t === 'zone' && Pn.z === 'pre') || Pn.t === 'belt' || Pn.t === 'desk') {
-      const pz = D.ddtM.reduce((s, x) => s + x.pz, 0);
-      h = head(ic('hand'), '', Pn.t === 'belt' ? 'Nastro trasportatore' : Pn.t === 'desk' ? 'Bancone di preparazione' : 'Zona', 'Preparazione ordini', 'Prelievo dagli scaffali · imballo · DDT', 1) + `<div class="m3-pb"><div class="m3-grid">
-        ${stat('DDT del mese', D.ddtM.length, '', `${N(pz)} pezzi preparati`)}${stat('Colli del mese', N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0)), '', 'dai DDT')}</div>
-        <button type="button" class="m3-go" data-gx="ddt-new">${ic('plus')}Nuovo DDT</button>
-        <div class="m3-h4">Ultimi scarichi <em>${D.scar.length}</em></div><div class="m3-rows">${D.scar.slice(0, 16).map(mvRow).join('') || '<div class="m3-empty">Nessuno scarico</div>'}</div></div>`;
+      h = prepPanel(Pn);
+    } else if (Pn.t === 'pick') {
+      h = pickPanel(Pn); if (!h) return panel({ t: 'zone', z: 'pre' });
     } else if (Pn.t === 'zone' && Pn.z === 'cq') {
-      h = head(ic('shield'), '', 'Zona', 'Controllo e inventario', 'Verifica dei colli · rettifiche di inventario', 1) + `<div class="m3-pb"><div class="m3-grid">
-        ${stat('Rettifiche in 90 gg', D.ret90.length, '', D.ret[0] ? 'ultima ' + C.dIt(D.ret[0].data) : 'nessuna')}${stat('Da verificare', D.low.length + D.out.length, '', 'sotto scorta o esauriti', D.nArt ? 1 - (D.low.length + D.out.length) / D.nArt : 1)}</div>
-        ${D.out.length ? `<div class="m3-warn">${ic('alert')}<span><b>${D.out.length} ${D.out.length === 1 ? 'articolo esaurito' : 'articoli esauriti'}</b> con scorta minima impostata · conta e rettifica se la giacenza non torna.</span></div>` : ''}
-        ${canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('check')}Rettifica di inventario</button>` : ''}
-        <div class="m3-h4">Ultime rettifiche <em>${D.ret.length}</em></div><div class="m3-rows">${D.ret.slice(0, 16).map(mvRow).join('') || '<div class="m3-empty">Nessuna rettifica di inventario</div>'}</div></div>`;
+      h = cqPanel();
     } else if (Pn.t === 'zone' && Pn.z === 'spe') {
       h = head(ic('truck'), '', 'Zona', 'Spedizioni', 'Banchine · carico camion · corriere · consegne ai clienti', 1) + `<div class="m3-pb">${glsCard()}<div class="m3-grid">
         ${stat('DDT del mese', D.ddtM.length, '', `${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli`)}${stat('Da fatturare', D.ddt.filter(x => !x.d.fattura).length, '', 'DDT senza fattura', D.ddt.length ? D.ddt.filter(x => x.d.fattura).length / D.ddt.length : 0)}</div>
@@ -2806,11 +3067,12 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   }
   function select(k, noFly) {
     if (EDIT) return;
-    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || k.t === 'acc' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || (k.t !== 'ofr' && k.t !== 'acc')) offUnfocus(); if (CANO) CANO.want = k && k.t === 'fuel' ? .14 : 1; if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
+    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || k.t === 'acc' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || (k.t !== 'ofr' && k.t !== 'acc')) offUnfocus(); if (!k || k.t !== 'pick') pickClear(); if (CANO) CANO.want = k && k.t === 'fuel' ? .14 : 1; if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
     else if (k.t === 'ofr') { zoneChip('uffe'); OFT = k.kd; if (!noFly) offView(k.kd, k.id); else offFocus(k.kd, k.id); }
+    else if (k.t === 'pick') { zoneChip('pre'); const x = D.ddt.find(y => y.d.id === k.id); if (x && (!PICK || PICK.x !== x)) pickShow(x, noFly); }
     else if (k.t === 'gls') { zoneChip('spe'); if (k.m) { GLSM = k.m; if (GLS3) GLS3.X = glsData(GLSM); } if (!noFly && GLS3) fly({ tx: GLS3.wp.x, ty: 1.2, tz: GLS3.wp.z, dist: 25, az: GLS3.ry - 0.35, pol: .86 }); }
     else if (k.t === 'acc') { zoneChip('uffe'); const id = k.id === 'doc' ? 'doc' : 'cont'; if (!noFly) offView('acc', id); else offFocus('acc', id); }
     else if (k.t === 'ricl') { zoneChip('ric'); if (!k.key) return select({ t: 'zone', z: 'ric', id: k.id }, noFly); if (!noFly) ricView(k.key); else ricFocus(k.key); }
@@ -3276,6 +3538,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const fg = t.closest('[data-fgo]'); if (fg) { const [z, tb] = fg.dataset.fgo.split(':'); if (tb) OFT = tb; select({ t: 'zone', z }); return; }
     const sh = t.closest('[data-shot]'); if (sh) { stopTour(); const k = sh.dataset.shot, z = zoneTarget('stk'); ({ all: () => select({ t: 'zone', z: 'all' }), top: () => fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.2, az: 0, pol: .12 }), stk: () => { const r = P.racks.find(x => x.k === 'pallet') || P.racks[0]; if (r) { const g = rackG(r.id); g.updateMatrixWorld(); const p2 = g.localToWorld(new T.Vector3(-rackLen(r) / 2 - 3, 0, rackDep(r) / 2 + 1.7)); fly({ tx: p2.x + 6, ty: 2.5, tz: p2.z, dist: 12, az: r.r * Math.PI / 2 - 1.3, pol: 1.3 }); } }, spe: () => flyT(zoneTarget('spe')), pre: () => flyT(zoneTarget('pre')), low: () => fly({ tx: 0, tz: 4, dist: Math.max(L.W, L.D) * 1.6, az: -0.75, pol: 1.22 }) })[k](); return; }
     const ofr = t.closest('[data-ofr]'); if (ofr) { $('.m3-res').classList.remove('on'); const [kd, ...r2] = ofr.dataset.ofr.split(':'); select({ t: 'ofr', kd, id: r2.join(':') }); return; }
+    const pkb = t.closest('[data-pick]'); if (pkb) { $('.m3-res').classList.remove('on'); select({ t: 'pick', id: pkb.dataset.pick }); return; }
     const glb = t.closest('[data-gls]'); if (glb) { $('.m3-res').classList.remove('on'); select({ t: 'gls', m: glb.dataset.gls || GLSM, q: glb.dataset.glsq || '' }, !!(sel && sel.t === 'gls') && !glb.dataset.glsq); return; }
     const acb = t.closest('[data-acc]'); if (acb) { $('.m3-res').classList.remove('on'); const [id, ty] = acb.dataset.acc.split(':'); select({ t: 'acc', id, ty: ty || '' }, !!(sel && sel.t === 'acc' && sel.id === id)); return; }
     const oft = t.closest('[data-oft]'); if (oft) { OFT = oft.dataset.oft; panel(sel); return; }

@@ -9163,7 +9163,7 @@
   /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
   async function mag3d() {
     if (mag3d.busy) return; mag3d.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=289'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=290'); }
     catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
     mag3d.busy = 0;
     window.CDC_MG3D.open(mag3dCtx());
@@ -9171,7 +9171,7 @@
   // v288: ubicazione dell'articolo scelta dalla mappa del magazzino (popup di magazzino3d.js, anche senza aprire il 3D)
   async function artLoc(id) {
     if (artLoc.busy) return; artLoc.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=289'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=290'); }
     catch { artLoc.busy = 0; return toast('Mappa non disponibile: controlla la connessione e riprova'); }
     artLoc.busy = 0;
     window.CDC_MG3D.pickLoc(mag3dCtx(), id, { toast, onSave: code => { document.querySelectorAll(`[data-artlocc="${CSS.escape(id)}"]`).forEach(el => { el.textContent = code || 'automatica'; }); } });
