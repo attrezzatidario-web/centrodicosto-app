@@ -1,4 +1,4 @@
-/* Magazzino 3D (v280) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v281) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -373,6 +373,32 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
  .m3-edbar{bottom:12px}
 }
 @media (max-width:760px) and (max-height:700px){.m3-panel{max-height:62%!important}}
+
+/* v281: telefono, impaginazione compatta (una riga in alto, niente flusso, schede dal fondo) */
+@media (max-width:760px){
+ .m3-top{flex-wrap:nowrap!important;height:auto!important;padding:calc(6px + env(safe-area-inset-top)) 8px 6px!important;gap:6px!important}
+ .m3-x{order:0!important;flex:none;width:42px!important;height:42px!important}
+ .m3-zone{order:1!important;flex:1 1 auto!important;min-width:0!important;height:42px!important;border-radius:13px}
+ .m3-zone [data-m3="next"]{display:none}
+ .m3-zone .m3-zc{width:34px!important;height:32px!important;font-size:11px!important}
+ .m3-search{order:2!important;flex:0 0 42px!important;width:42px!important;min-width:0!important;height:42px!important;padding:0!important;justify-content:center;margin:0!important;border-radius:13px}
+ .m3-search input{position:absolute;opacity:0;width:1px;pointer-events:none}.m3-search kbd{display:none}
+ .m3-search:focus-within{position:absolute;left:8px;right:8px;top:calc(6px + env(safe-area-inset-top));width:auto!important;z-index:9;padding:0 12px!important;justify-content:flex-start;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+ .m3-search:focus-within input{position:static;opacity:1;width:auto;pointer-events:auto}
+ .m3-bell{order:3!important;flex:none}
+ .m3-shots,.m3-edit,.m3-live,.m3-sel{display:none!important}
+ .m3-flow{display:none!important}
+ .m3-tools{bottom:calc(16px + env(safe-area-inset-bottom))!important;right:12px!important;padding:3px;border-radius:14px}
+ .m3-tools [data-m3="zin"],.m3-tools [data-m3="zout"],.m3-tools [data-m3="play"]{display:none!important}
+ .m3-tools button{width:44px!important;height:44px!important}
+ .m3-panel{max-height:42%!important;padding-bottom:env(safe-area-inset-bottom)}
+ .m3-panel.big{max-height:calc(100% - 70px - env(safe-area-inset-top))!important}
+ .m3-co{top:auto!important;bottom:0!important;left:0!important;right:0!important;width:auto!important;border-radius:22px 22px 0 0!important;max-height:46%;padding-bottom:calc(12px + env(safe-area-inset-bottom))!important;box-shadow:0 -12px 40px rgba(20,24,18,.18)!important}
+ .m3.co-on .m3-panel{transform:translateY(105%)!important;pointer-events:none}
+ .m3.co-on .m3-tools{opacity:0;pointer-events:none}
+ .m3-lb{height:22px;font-size:11px;padding:0 8px}
+ .m3-toast{top:calc(64px + env(safe-area-inset-top))!important;max-width:calc(100% - 24px);white-space:normal;text-align:center}
+}
 `;
 
   /* ---------------- icone ---------------- */
@@ -1672,7 +1698,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   // scheda ancorata al vano, con linea di collegamento
   function callout(on) {
     const co = $('.m3-co'), ld = $('.m3-lead'); if (!co) return;
-    if (!on || !FOC || !FOC.art) { co.classList.remove('on'); ld.classList.remove('on'); return; }
+    if (!on || !FOC || !FOC.art) { co.classList.remove('on'); ld.classList.remove('on'); root.classList.remove('co-on'); return; }
+    root.classList.add('co-on');
     const x = D.arts.find(a => a.id === FOC.art), p2 = P.byArt.get(FOC.art); if (!x || !p2) return;
     const last = C.mov().filter(m => m.articolo === x.id).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.creato || '').localeCompare(String(a.creato || '')))[0];
     const ref = Math.max(x.s * 3, x.g, 1), pg = clamp(Math.max(0, x.g) / ref, 0, 1), ps = x.s ? clamp(x.s / ref, 0, 1) : 0;
@@ -2146,7 +2173,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const st = t.closest('[data-step]'); if (st) { const inp = $(`[data-f="${st.dataset.step}"]`); const nv2 = Math.round((parseFloat(inp.value) + parseFloat(st.dataset.d)) * 100) / 100; inp.value = nv2; return edField(st.dataset.step, nv2); }
     const lc = t.closest('[data-lcell]'); if (lc && sel && sel.t === 'loc') { const [bb, ll] = lc.dataset.lcell.split('|').map(Number); return panel({ t: 'loc', art: sel.art, r: sel.r, b: bb, l: ll }); }
     const lo = t.closest('[data-loc3]'); if (lo) { e.stopPropagation(); if (!canEdit()) return toast('Solo il titolare può cambiare le ubicazioni'); const p2 = P.byArt.get(lo.dataset.loc3); return panel({ t: 'loc', art: lo.dataset.loc3, r: p2 && p2.rk.id }); }
-    const zs = t.closest('[data-zsel]'); if (zs) { $('.m3-res').classList.remove('on'); select({ t: 'zone', z: zs.dataset.zsel }); return; }
+    const zs = t.closest('[data-zsel]'); if (zs) { $('.m3-res').classList.remove('on'); $$('.m3-menu.on').forEach(m => m.classList.remove('on')); select({ t: 'zone', z: zs.dataset.zsel }); return; }
     const fg = t.closest('[data-fgo]'); if (fg) { select({ t: 'zone', z: fg.dataset.fgo }); return; }
     const sh = t.closest('[data-shot]'); if (sh) { stopTour(); const k = sh.dataset.shot, z = zoneTarget('stk'); ({ all: () => select({ t: 'zone', z: 'all' }), top: () => fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.2, az: 0, pol: .12 }), stk: () => { const r = P.racks.find(x => x.k === 'pallet') || P.racks[0]; if (r) { const g = rackG(r.id); g.updateMatrixWorld(); const p2 = g.localToWorld(new T.Vector3(-rackLen(r) / 2 - 3, 0, rackDep(r) / 2 + 1.7)); fly({ tx: p2.x + 6, ty: 2.5, tz: p2.z, dist: 12, az: r.r * Math.PI / 2 - 1.3, pol: 1.3 }); } }, spe: () => flyT(zoneTarget('spe')), pre: () => flyT(zoneTarget('pre')), low: () => fly({ tx: 0, tz: 4, dist: Math.max(L.W, L.D) * 1.6, az: -0.75, pol: 1.22 }) })[k](); return; }
     const rv = t.closest('[data-rcv3]'); if (rv) { $('.m3-res').classList.remove('on'); const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); select({ t: 'ricl', key: rv.dataset.rcv3, id: z && z.id }); return; }
@@ -2189,7 +2216,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     stepCam(dt); animate(t, dt); shadowFollow();
     const w = R.domElement.clientWidth, h = R.domElement.clientHeight, ph = w <= 760, want = !ph && root.classList.contains('pn') ? (EDIT ? 60 : 180) : 0;
     if (ph && (!loop.f || ++loop.f > 5)) { loop.f = 1; const rt = root.getBoundingClientRect(), tb = $('.m3-top'), pn = root.classList.contains('pn') ? $('.m3-panel') : null, fl = $('.m3-flow'), co = $('.m3-co.on');
-      const yT = (tb ? tb.getBoundingClientRect().bottom - rt.top : 0) + (co ? co.offsetHeight + 12 : 0), yB = pn ? pn.getBoundingClientRect().top - rt.top : fl && !EDIT ? fl.getBoundingClientRect().top - rt.top : h;
+      const yT = tb ? tb.getBoundingClientRect().bottom - rt.top : 0, yB = co ? co.getBoundingClientRect().top - rt.top : pn ? pn.getBoundingClientRect().top - rt.top : h;
       loop.wy = clamp(h / 2 - (yT + Math.max(yT + 60, yB)) / 2, -h * .35, h * .35); } else if (!ph) loop.wy = 0;
     viewOff += (want - viewOff) * (1 - Math.exp(-dt * 4)); viewOffY += ((loop.wy || 0) - viewOffY) * (1 - Math.exp(-dt * 5));
     if (Math.abs(viewOff) > .5 || Math.abs(viewOffY) > .5) cam.setViewOffset(w, h, viewOff, viewOffY, w, h); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
