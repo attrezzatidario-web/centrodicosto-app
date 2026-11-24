@@ -1,4 +1,4 @@
-/* Magazzino 3D (v284) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v285) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -687,10 +687,6 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     for (let x = -800; x < 800; x += 800) { bx(P2, 1600, .1, .45, 0xe9e7df, 0, 0, rz - 5.8, { ns: 1 }); bx(P2, 1600, .1, .45, 0xe9e7df, 0, 0, rz + 5.8, { ns: 1 }); break; }
     // linee del piazzale camion
     for (let i = 0; i < 7; i++) dsh(hw + 20, -hd + 2 + i * (Dd - 4) / 6, 12, .22);
-    // parcheggio con pensiline fotovoltaiche
-    const px = -hw * .45, pz = hd + 13;
-    bx(P2, 34, .2, 18, 0x60666e, px, 0, pz, { ns: 1 });
-    for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++) { const x = px - 13.5 + i * 5.2, z = pz - 4.5 + r * 9; B2.add('pv', G.box, mat(0x27416e), m4(x, 3.3, z, 4.8, .16, 5.6, 0, r ? -.12 : .12)); B2.add('pvp', G.box, mat(0xdedfe1), m4(x, 1.6, z, .18, 3.2, .18)); for (let k = 0; k < 4; k++) B2.add('pvl', G.box, mat(0x6f8fb8), m4(x - 1.8 + k * 1.2, 3.42, z, .03, .02, 5.4, 0, r ? -.12 : .12)); if ((i + r) % 3 !== 2) B2.add('car', G.box, mat(0xffffff), m4(x, .75, z, 2, 1.1, 4.2), [0xffffff, 0xd0d4da, 0x2f3540, 0xc94b3c, 0x6f8fa8][(i * 2 + r) % 5]); }
     // sfera arancione all'ingresso
     const orb = mesh(G.sph, mat(0xf47b20), 0, 3.6, hd + 10, P2, { s: [4.4, 4.4, 4.4] }); bx(P2, 4, .8, 4, 0x2b2f35, 0, 0, hd + 10); movers.push({ o: orb, t: 'float', y: 3.6 });
     // alberi
@@ -698,7 +694,150 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     let n = 0; while (n < 680) { const near = rr() < .38, x = (rr() - .5) * (near ? W + 160 : 620), z = (rr() - .5) * (near ? Dd + 140 : 480) - (near ? 5 : 30); if (!free(x, z)) continue; n++; const s = .55 + rr() * .6;
       if (rr() < .22) B2.add('pine', G.pine, mat(0x4f9a43), m4(x, 0, z, s, s * 1.15, s)); else { B2.add('tree', G.tree, mat(0xffffff), m4(x, 2.6 * s + 1.1, z, s, s, s), [0x7cbf4f, 0x8cc95a, 0x6fb347, 0x98cf62][Math.floor(rr() * 4)]); B2.add('trunk', G.trunk, mat(0x8a6a4f), m4(x, 0, z, s, s, s)); } }
     for (let i = 0; i < 28; i++) B2.add('bush', G.tree, mat(0x86c457), m4(-hw + 2 + i * (W - 4) / 27, .7, hd + 3.2 + (i % 2) * .6, .5, .42, .5));
+    buildOutdoor(P2, hw, hd, rz, yardW);
     B2.flush();
+  }
+
+  /* ---------------- esterni (v285): prato, giardino con laghetto e fontana, recinzione, cancello, bandiere, insegna, lampioni, traffico, cielo ---------------- */
+  function lawnTex() { if (TX.lawn) return TX.lawn; const t = cvTex(256, 256, (gx, w, h) => { for (let i = 0; i < 8; i++) { gx.fillStyle = i % 2 ? '#8cca5b' : '#97d365'; gx.fillRect(0, i * h / 8, w, h / 8); } for (let i = 0; i < 1600; i++) { gx.fillStyle = `rgba(${50 + rr() * 50},${110 + rr() * 70},40,.16)`; gx.fillRect(rr() * w, rr() * h, 1.6, 1.6); } }); t.wrapS = t.wrapT = T.RepeatWrapping; return (TX.lawn = t); }
+  function paveTex() { if (TX.pave) return TX.pave; const t = cvTex(128, 128, (gx, w, h) => { gx.fillStyle = '#d9d5cc'; gx.fillRect(0, 0, w, h); gx.strokeStyle = '#c4bfb4'; gx.lineWidth = 2; for (let i = 0; i <= 4; i++) { gx.beginPath(); gx.moveTo(i * w / 4, 0); gx.lineTo(i * w / 4, h); gx.stroke(); } for (let j = 0; j <= 2; j++) { gx.beginPath(); gx.moveTo(0, j * h / 2); gx.lineTo(w, j * h / 2); gx.stroke(); } }); t.wrapS = t.wrapT = T.RepeatWrapping; return (TX.pave = t); }
+  function fenceTex() { if (TX.fence) return TX.fence; const t = cvTex(128, 128, (gx, w, h) => { gx.clearRect(0, 0, w, h); gx.strokeStyle = '#3d5a45'; gx.lineWidth = 2.2; for (let i = 0; i <= 8; i++) { gx.beginPath(); gx.moveTo(i * w / 8, 0); gx.lineTo(i * w / 8, h); gx.stroke(); } for (let j = 0; j <= 4; j++) { gx.beginPath(); gx.moveTo(0, j * h / 4); gx.lineTo(w, j * h / 4); gx.stroke(); } gx.lineWidth = 5; gx.strokeRect(1, 1, w - 2, h - 2); }); return (TX.fence = t); }
+  function waterTex() { if (TX.water) return TX.water; const t = cvTex(256, 256, (gx, w, h) => { gx.fillStyle = '#4fa9cf'; gx.fillRect(0, 0, w, h); for (let i = 0; i < 90; i++) { const x = rr() * w, y = rr() * h, r = 8 + rr() * 26; gx.strokeStyle = `rgba(255,255,255,${.08 + rr() * .14})`; gx.lineWidth = 1.5; gx.beginPath(); gx.ellipse(x, y, r, r * .35, 0, 0, Math.PI * 2); gx.stroke(); } }); t.wrapS = t.wrapT = T.RepeatWrapping; return (TX.water = t); }
+  function flagTex(k) {
+    const key = 'flag_' + k; if (TX[key]) return TX[key];
+    return (TX[key] = cvTex(384, 256, (gx, w, h) => {
+      if (k === 'it') { ['#009246', '#f4f5f0', '#ce2b37'].forEach((c, i) => { gx.fillStyle = c; gx.fillRect(i * w / 3, 0, w / 3 + 1, h); }); }
+      else if (k === 'eu') { gx.fillStyle = '#003399'; gx.fillRect(0, 0, w, h); gx.fillStyle = '#ffcc00'; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, x = w / 2 + Math.cos(a) * 72, y = h / 2 + Math.sin(a) * 72; gx.beginPath(); for (let j = 0; j < 10; j++) { const r2 = j % 2 ? 5 : 12, b = -Math.PI / 2 + j * Math.PI / 5; gx.lineTo(x + Math.cos(b) * r2, y + Math.sin(b) * r2); } gx.fill(); } }
+      else { gx.fillStyle = '#f47b20'; gx.fillRect(0, 0, w, h); gx.fillStyle = '#fff'; gx.beginPath(); gx.roundRect(36, 78, 100, 100, 22); gx.fill(); gx.fillStyle = '#f47b20'; gx.font = '800 62px Inter, system-ui, sans-serif'; gx.textAlign = 'center'; gx.textBaseline = 'middle'; gx.fillText(String(C.orgName() || 'A').trim()[0].toUpperCase(), 86, 130);
+        gx.fillStyle = '#fff'; gx.textAlign = 'left'; let fs = 40; const nm = String(C.orgName() || '').toUpperCase().slice(0, 22); gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; while (fs > 20 && gx.measureText(nm).width > w - 170) { fs -= 2; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; } gx.fillText(nm, 156, 130); }
+    }));
+  }
+  // automobile generica (stesso profilo delle auto aziendali, colore libero, senza livrea)
+  function plainCar(par, color) {
+    const P = VP.car, g = new T.Group(); par.add(g); const bev = .09, glass = M.glass || (M.glass = new T.MeshLambertMaterial({ color: 0x2c3e55 }));
+    mesh(vgeo('vb_car', P.body, P.w - 2 * bev, bev), mat(color), 0, 0, 0, g); mesh(vgeo('vg_car', P.side, P.w + .06, 0), glass, 0, 0, 0, g, { ns: 1 });
+    P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) mesh(G.cyl, mat(0x15171a), wx, r, s * (P.w / 2 - .12), g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2, ns: 1 }); });
+    for (const s of [-1, 1]) { mesh(G.box, mat(0xfff3d1), 2.33, .7, s * (P.w / 2 - .3), g, { s: [.05, .13, .3], ns: 1 }); mesh(G.box, mat(0xd8322a), -2.36, .82, s * (P.w / 2 - .14), g, { s: [.05, .2, .16], ns: 1 }); }
+    return g;
+  }
+  function bench(par, x, z, ry) {
+    const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = ry; par.add(g);
+    for (let i = 0; i < 3; i++) bx(g, 1.8, .05, .14, 0xb98756, 0, .46, -.2 + i * .17, { ns: 1 });
+    for (let i = 0; i < 2; i++) bx(g, 1.8, .12, .04, 0xb98756, 0, .62 + i * .17, -.34, { ns: 1, rx: -.12 });
+    for (const sx of [-.75, .75]) { bx(g, .06, .46, .5, 0x2b2f35, sx, 0, -.05); bx(g, .06, .4, .05, 0x2b2f35, sx, .5, -.33, { ns: 1 }); }
+    return g;
+  }
+  function ornTree(par, x, z, s, col) {
+    const g = new T.Group(); g.position.set(x, 0, z); par.add(g);
+    mesh(G.trunk, mat(0x7a5a40), 0, 0, 0, g, { s: [s * .8, s, s * .8] });
+    mesh(G.tree, mat(col), 0, 2.6 * s + .9, 0, g, { s: [s * .82, s * .9, s * .82] }); mesh(G.tree, mat(mixC(col, 0xffffff, .12)), .5 * s, 2.9 * s + 1.4, .3 * s, g, { s: [s * .5, s * .5, s * .5] });
+    movers.push({ o: g, t: 'sway', ph: rr() * 6, a: .018 + rr() * .012 }); return g;
+  }
+  function buildOutdoor(P2, hw, hd, rz, yardW) {
+    const B = new Batch(P2), lite = Q && Q.tier === 0, zF = hd + 12, zW = rz - 7.1, ox = hw * .5, gx0 = hw + 18;
+    // prato rasato a strisce tra piazzale e marciapiede
+    { const w = hw * 2 + 24, d = zW - 1.15 - zF; const m = new T.MeshLambertMaterial({ map: lawnTex() }); m.map.repeat.set(w / 18, d / 18); OWN.push(m); const p = new T.Mesh(G.plane, m); p.scale.set(w, d, 1); p.rotation.x = -Math.PI / 2; p.position.set(2, .03, zF + d / 2); p.receiveShadow = true; P2.add(p); }
+    // marciapiede con cordolo, interrotto agli accessi e davanti agli uffici
+    const gaps = [[-hw - 25.3, -hw - 15.7], [ox - 7.2, ox + 7.2], [gx0 - 5.7, gx0 + 5.7]], segs = []; let x0 = -420;
+    gaps.sort((a, b) => a[0] - b[0]).forEach(([a, b]) => { segs.push([x0, a]); x0 = b; }); segs.push([x0, 420]);
+    const pvM = new T.MeshLambertMaterial({ map: paveTex() }); OWN.push(pvM);
+    segs.forEach(([a, b]) => { if (b - a < .5) return; const w = b - a, m2 = pvM.clone(); m2.map = paveTex().clone(); m2.map.needsUpdate = true; m2.map.repeat.set(w / 2.4, 1); OWN.push(m2, m2.map); mesh(G.box, m2, (a + b) / 2, .1, zW, P2, { s: [w, .2, 2.2], ns: 1 }).receiveShadow = true; bx(P2, w, .24, .22, 0xbdb9b0, (a + b) / 2, 0, zW + 1.2, { ns: 1 }); });
+    // vialetto pedonale fino agli uffici e cancello pedonale
+    bx(P2, 2.6, .14, zW - 1.1 - (hd + 24.9), 0xd9d5cc, ox, 0, (zW - 1.1 + hd + 24.9) / 2, { ns: 1 });
+    // ---- giardino con laghetto e fontana (al posto del parcheggio)
+    const pcx = -hw * .45, pcz = hd + 16.9;
+    bx(P2, 13.2, .16, 11, 0xe4dccb, pcx, 0, pcz, { ns: 1 });
+    mesh(G.cyl, mat(0xbfb9ad), pcx, .32, pcz, P2, { s: [9.0, .32, 9.0] });
+    const wm = new T.MeshLambertMaterial({ map: waterTex(), transparent: true, opacity: .94 }); OWN.push(wm); const wtr = mesh(G.cyl, wm, pcx, .42, pcz, P2, { s: [8.2, .2, 8.2], ns: 1 }); wtr.receiveShadow = true;
+    const rim = new T.Mesh(new T.TorusGeometry(4.2, .26, 8, 48), mat(0xd9d4c8)); OWN.push(rim.geometry); rim.rotation.x = Math.PI / 2; rim.position.set(pcx, .52, pcz); rim.castShadow = true; P2.add(rim);
+    movers.push({ t: 'tex', tx: wm.map, sx: .012, sy: .007 });
+    // fontana: vasca centrale e getti d'acqua animati
+    mesh(G.cyl, mat(0xd9d4c8), pcx, .75, pcz, P2, { s: [1.1, .9, 1.1] }); mesh(G.cyl, mat(0xd9d4c8), pcx, 1.25, pcz, P2, { s: [2.3, .18, 2.3] }); mesh(G.cyl, new T.MeshLambertMaterial({ color: 0x6cc0e0 }), pcx, 1.33, pcz, P2, { s: [2.0, .04, 2.0], ns: 1 });
+    { const nD = lite ? 36 : 84, dm = new T.MeshLambertMaterial({ color: 0xe3f5ff, transparent: true, opacity: .85 }); OWN.push(dm); const im = new T.InstancedMesh(G.sph, dm, nD); im.frustumCulled = false; P2.add(im);
+      const rings = [0, 1, 2].map(i => { const m2 = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .4, depthWrite: false }); OWN.push(m2); const r = new T.Mesh(new T.TorusGeometry(1, .035, 4, 40), m2); OWN.push(r.geometry); r.rotation.x = Math.PI / 2; r.position.set(pcx, .54, pcz); P2.add(r); return r; });
+      movers.push({ t: 'ftn', im, n: nD, cx: pcx, cz: pcz, rings }); }
+    // panchine, aiuole fiorite, alberi ornamentali, lampioncini
+    [[0, -5.0, 0], [0, 5.0, Math.PI], [-5.6, 0, Math.PI / 2], [5.6, 0, -Math.PI / 2]].forEach(([dx, dz, ry]) => bench(P2, pcx + dx, pcz + dz, ry));
+    const FC = [0xf06292, 0xffffff, 0xffd54f, 0xba68c8, 0xff8a65, 0x64b5f6];
+    [[-6.3, -4.4], [6.3, -4.4], [-6.3, 4.4], [6.3, 4.4], [-8.5, 0], [8.5, 0]].forEach(([dx, dz], k) => { const fx = pcx + dx, fz = pcz + dz; mesh(G.cyl, mat(0xbfb9ad), fx, .14, fz, P2, { s: [2.25, .28, 2.25], ns: 1 }); mesh(G.cyl, mat(0x6b4a33), fx, .3, fz, P2, { s: [2.0, .06, 2.0], ns: 1 });
+      for (let i = 0; i < (lite ? 10 : 22); i++) { const a = rr() * Math.PI * 2, r = rr() * .85; B.add('flw', G.sph, mat(0xffffff), m4(fx + Math.cos(a) * r, .42 + rr() * .12, fz + Math.sin(a) * r, .2, .16, .2), FC[(i + k) % FC.length]); B.add('flwl', G.sph, mat(0x5e9e4a), m4(fx + Math.cos(a + .4) * r * .9, .34, fz + Math.sin(a + .4) * r * .9, .24, .14, .24)); } });
+    [[-10.5, -4.6], [-10.5, 4.4], [10.5, -4.6], [10.5, 4.4], [13.6, 0]].forEach(([dx, dz], i) => ornTree(P2, pcx + dx, pcz + dz, .78 + (i % 3) * .1, [0x7cbf4f, 0xf3a6c0, 0x6fb347, 0x98cf62, 0xe9b3c9][i]));
+    for (const [dx, dz] of [[-6.6, -5.5], [6.6, -5.5], [-6.6, 5.5], [6.6, 5.5]]) { B.add('bol', G.cyl, mat(0x2b2f35), m4(pcx + dx, .5, pcz + dz, .16, .9, .16)); B.add('bolL', G.cyl, new T.MeshBasicMaterial({ color: 0xfff2cc }), m4(pcx + dx, 1.0, pcz + dz, .18, .12, .18)); }
+    // siepi basse lungo il prato
+    for (const [x, z, w, d] of [[-hw - 7, zW - 1.9, 6, .7], [ox - 11.5, zW - 1.9, 6.5, .7], [ox + 11.5, zW - 1.9, 6.5, .7], [hw - 1, zW - 1.9, 8, .7]]) { bx(P2, w, .9, d, 0x5f9e45, x, 0, z); bx(P2, w - .2, .12, d - .2, 0x6fb24f, x, .9, z, { ns: 1 }); }
+    // ---- bandiere al vento (Italia, Europa, azienda)
+    [['it', 1.2], ['eu', 3.5], ['co', 5.8]].forEach(([k, x], i) => {
+      const fx = x, fz = hd + 21; bx(P2, .9, .3, .9, 0xcfcac0, fx, 0, fz); mesh(G.cyl, mat(0xf2f3f5), fx, 4.75, fz, P2, { s: [.13, 9, .13] }); mesh(G.sph, mat(0xd9b24a), fx, 9.3, fz, P2, { s: [.22, .22, .22], ns: 1 });
+      const geo = new T.PlaneGeometry(2.6, 1.7, 16, 8).translate(1.3, 0, 0); OWN.push(geo); const fm = new T.MeshLambertMaterial({ map: flagTex(k), side: T.DoubleSide }); OWN.push(fm);
+      const fl = new T.Mesh(geo, fm); fl.position.set(fx + .07, 8.25, fz); fl.rotation.y = -.25; fl.castShadow = true; P2.add(fl);
+      movers.push({ t: 'flag', geo, base: Float32Array.from(geo.attributes.position.array), ph: i * 1.7, n: 0 }); });
+    // ---- insegna monolitica all'ingresso merci
+    { const mx = hw + 8.5, mz = hd + 21.2; bx(P2, 3.2, .35, 1.6, 0xcfcac0, mx, 0, mz); bx(P2, 2.2, 5.6, .7, 0x1d1f22, mx, .35, mz); bx(P2, .25, 5.6, .74, 0xf47b20, mx - .99, .35, mz, { ns: 1 });
+      const t2 = textTex([[String(C.orgName() || '').toUpperCase().slice(0, 18), 38, 800, 52, null, '#ffffff'], ['INGRESSO MERCI', 26, 700, 110, null, '#f47b20'], ['Accettazione · Spedizioni', 22, 600, 150, null, 'rgba(255,255,255,.75)']], { w: 360, h: 190 });
+      planeT(t2, 1.85, .98, P2, mx + .1, 4.6, mz + .365); planeT(t2, 1.85, .98, P2, mx + .1, 4.6, mz - .365, { ry: Math.PI });
+      for (const s of [-1, 1]) { mesh(G.cyl, mat(0x6b4a33), mx + s * 2.3, .2, mz + .9, P2, { s: [1.1, .4, 1.1], ns: 1 }); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; B.add('flw', G.sph, mat(0xffffff), m4(mx + s * 2.3 + Math.cos(a) * .32, .5, mz + .9 + Math.sin(a) * .32, .18, .15, .18), FC[i % FC.length]); } } }
+    // ---- portineria e sbarra sull'accesso camion (si alza quando esce un'auto)
+    const gz = hd + 20.5, gpx = gx0 + 5.9;
+    { const hx = gx0 + 8.6; bx(P2, 3.6, .3, 3.2, 0xcfcac0, hx, 0, gz); bx(P2, 3.2, 2.6, 2.8, 0xf4f5f6, hx, .3, gz); for (const s of [-1, 1]) { bx(P2, 2.6, 1.3, .04, 0x2c3e55, hx, 1.2, gz + s * 1.42, { ns: 1 }); bx(P2, .04, 1.3, 2.2, 0x2c3e55, hx + s * 1.62, 1.2, gz, { ns: 1 }); }
+      bx(P2, 4.2, .28, 3.8, 0xffffff, hx, 2.9, gz); bx(P2, 4.24, .12, 3.84, 0xf47b20, hx, 3.0, gz, { ns: 1 });
+      planeT(textTex([['PORTINERIA', 34, 800, 44, null, '#16181b']], { bg: '#ffffff', w: 320, h: 80, round: 8 }), 1.6, .4, P2, hx, 2.62, gz + 1.48);
+      const gp = person(P2, hx - .3, gz - .4, 0x2f6db4, null, { mode: 'work' }); gp.position.y = .3; gp.rotation.y = -Math.PI / 2; movers.push({ o: gp, t: 'bob', ph: 4 }); }
+    bx(P2, .4, 1.1, .4, 0xf2c418, gpx, 0, gz); bx(P2, .5, .3, .5, 0x1d1f22, gpx, 1.1, gz);
+    const barTex = cvTex(256, 16, (g2, w, h) => { for (let i = 0; i < 8; i++) { g2.fillStyle = i % 2 ? '#ffffff' : '#d62b1f'; g2.fillRect(i * w / 8, 0, w / 8, h); } }); OWN.push(barTex);
+    const arm = new T.Group(); arm.position.set(gpx, 1.25, gz); P2.add(arm); const am = new T.MeshLambertMaterial({ map: barTex }); OWN.push(am); mesh(G.box, am, -5.4, 0, 0, arm, { s: [10.6, .12, .12] }); mesh(G.box, mat(0x2b2f35), .1, 0, 0, arm, { s: [.5, .22, .2] });
+    bx(P2, .3, 1.19, .3, 0xf2c418, gx0 - 5.6, 0, gz); bx(P2, 11, .02, .45, 0xf4f4f2, gx0, .15, gz - 1.6, { ns: 1 });
+    for (let i = 0; i < 5; i++) B.add('bump', G.box, mat(0xffffff), m4(gx0 - 4.4 + i * 2.2, .19, gz - 4.5, 2.2, .08, .6), i % 2 ? 0x1d1f22 : 0xf2c418);
+    { const car = plainCar(P2, 0x3a4352), A = new T.Vector3(gx0 - 2.7, .16, hd - 2), Bp = new T.Vector3(gx0 - 2.7, .16, gz - 2.6);
+      const C2 = new T.CatmullRomCurve3([Bp.clone(), new T.Vector3(gx0 - 2.7, .16, rz - 6.4), new T.Vector3(gx0 + .5, .155, rz - 3.2), new T.Vector3(gx0 + 8, .148, rz - 2.5), new T.Vector3(gx0 + 150, .148, rz - 2.5)]);
+      movers.push({ t: 'gate', car, arm, A, B: Bp, C: C2, ph: 3 }); }
+    // ---- recinzione perimetrale (pannelli a rete su montanti), con aperture agli accessi
+    { const fm = new T.MeshLambertMaterial({ map: fenceTex(), transparent: true, alphaTest: .35, side: T.DoubleSide }); OWN.push(fm);
+      const X0 = -hw - 37.5, X1 = hw + yardW + 1.5, Z0 = -hd - 10.5, Z1 = zW - 1.4, PW = 2.5, fg = [[-hw - 25.3, -hw - 15.7], [ox - 15.4, ox + 15.4], [gx0 - 5.7, gx0 + 9.5 + 1.2]];
+      const run = (ax, az, bxx, bz) => { const L2 = Math.hypot(bxx - ax, bz - az), n = Math.max(1, Math.round(L2 / PW)), ry = Math.atan2(-(bz - az), bxx - ax);
+        for (let i = 0; i < n; i++) { const u0 = i / n, u1 = (i + 1) / n, cx = ax + (bxx - ax) * (u0 + u1) / 2, cz = az + (bz - az) * (u0 + u1) / 2; if (az === bz && az === Z1 && fg.some(([a, b]) => cx > a - .6 && cx < b + .6)) continue;
+          B.add('fpan', G.plane, fm, m4(cx, 1.05, cz, L2 / n, 1.9, 1, ry)); B.add('fpost', G.box, mat(0x3d5a45), m4(ax + (bxx - ax) * u0, 1.05, az + (bz - az) * u0, .08, 2.1, .08)); } };
+      run(X0, Z1, X1, Z1); run(X0, Z0, X1, Z0); run(X0, Z0, X0, Z1); run(X1, Z0, X1, Z1); }
+    // ---- lampioni lungo il marciapiede e attraversamento pedonale
+    for (let x = -176; x <= 176; x += 22) { if (gaps.some(([a, b]) => x > a - 1 && x < b + 1)) continue; B.add('lp', G.cyl, mat(0x4a4f57), m4(x, 3.6, zW - .9, .16, 7.2, .16)); B.add('lpa', G.box, mat(0x4a4f57), m4(x, 7.1, zW + .1, .1, .1, 2.2)); B.add('lph', G.box, mat(0x2b2f35), m4(x, 7.05, zW + 1.15, .5, .16, .8)); B.add('lpl', G.box, new T.MeshBasicMaterial({ color: 0xfff4d6 }), m4(x, 6.96, zW + 1.15, .4, .02, .66)); }
+    for (let i = 0; i < 10; i++) B.add('zeb', G.box, mat(0xf6f6f4), m4(ox, .148, rz - 4.95 + i * 1.1, 3, .012, .55));
+    for (const s of [-1, 1]) { const zz = rz + s * 7.6; B.add('sgp', G.cyl, mat(0x8e959e), m4(ox - 2.4 * s, 1.4, zz, .08, 2.8, .08)); const t3 = TX.ped || (TX.ped = cvTex(128, 128, (g2, w, h) => { g2.fillStyle = '#1f4fb4'; g2.fillRect(0, 0, w, h); g2.fillStyle = '#fff'; g2.beginPath(); g2.moveTo(w / 2, 14); g2.lineTo(w - 14, h - 18); g2.lineTo(14, h - 18); g2.closePath(); g2.fill(); g2.fillStyle = '#16181b'; for (let i = 0; i < 4; i++) g2.fillRect(28 + i * 19, h - 34, 11, 8); g2.beginPath(); g2.arc(64, 46, 6, 0, Math.PI * 2); g2.fill(); g2.lineWidth = 5; g2.strokeStyle = '#16181b'; g2.lineCap = 'round'; g2.beginPath(); g2.moveTo(64, 54); g2.lineTo(60, 74); g2.lineTo(52, 88); g2.moveTo(60, 74); g2.lineTo(70, 88); g2.moveTo(52, 64); g2.lineTo(72, 62); g2.stroke(); })); const pl = planeT(t3, .62, .62, P2, ox - 2.4 * s, 2.75, zz + .05 * s, s < 0 ? { ry: Math.PI } : {}); pl.renderOrder = 1; B.add('sgb', G.box, mat(0x2f6db4), m4(ox - 2.4 * s, 2.75, zz, .74, .74, .04)); }
+    // ---- fermata dell'autobus
+    { const bxp = hw + 44, bzp = zW - .2; bx(P2, 4, .1, 1.5, 0x8e959e, bxp, 2.45, bzp - .2); bx(P2, 4, 2.3, .05, 0x9fc3da, bxp, .2, bzp - .85, { ns: 1 }); for (const s of [-1, 1]) bx(P2, .08, 2.35, 1.5, 0x4a4f57, bxp + s * 2, .2, bzp - .2); bx(P2, 3, .08, .4, 0xb98756, bxp, .62, bzp - .55, { ns: 1 });
+      B.add('sgp', G.cyl, mat(0x8e959e), m4(bxp + 2.7, 1.5, bzp + .5, .08, 3, .08)); planeT(textTex([['BUS', 52, 800, 62, null, '#ffffff']], { bg: '#1f4fb4', w: 160, h: 110, round: 10 }), .6, .41, P2, bxp + 2.7, 2.9, bzp + .56); }
+    // ---- traffico sulla strada
+    const cols = [0xd62b1f, 0xf4f5f6, 0x2f3540, 0x5b7fa6, 0xc9c6bf, 0x8a2b3a, 0x3c6e4f];
+    for (let i = 0; i < (lite ? 2 : 5); i++) { const dir = i % 2 ? -1 : 1, car = plainCar(P2, cols[i % cols.length]); car.position.set(-260 + i * 113, .148, rz + (dir > 0 ? -2.5 : 2.5)); car.rotation.y = dir > 0 ? 0 : Math.PI; movers.push({ o: car, t: 'road', sp: dir > 0 ? 7.5 : 6.5, dir }); }
+    // ---- cielo: nuvole che scorrono e uccelli
+    const cm = new T.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: .9 }); OWN.push(cm);
+    for (let i = 0; i < (lite ? 3 : 7); i++) { const g = new T.Group(); g.position.set(-300 + i * 95 + rr() * 40, 58 + rr() * 22, -hd - 150 - rr() * 120); P2.add(g); const n2 = 4 + Math.floor(rr() * 3);
+      for (let k = 0; k < n2; k++) { const c = new T.Mesh(G.sph, cm); const s2 = 9 + rr() * 9; c.scale.set(s2 * 1.4, s2 * .7, s2); c.position.set((k - n2 / 2) * 7 + rr() * 3, rr() * 2.5, rr() * 6 - 3); g.add(c); }
+      movers.push({ o: g, t: 'cloud', sp: 1.6 + rr() * 1.4 }); }
+    { const fl = new T.Group(); P2.add(fl); const bm = mat(0x2b2f35), birds = [];
+      for (let i = 0; i < 7; i++) { const b = new T.Group(), off = i === 0 ? [0, 0] : [-(Math.ceil(i / 2)) * 2.2, (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 1.8]; b.position.set(off[0], (rr() - .5) * .8, off[1]); fl.add(b);
+        const wl = new T.Group(), wr = new T.Group(); b.add(wl, wr); mesh(G.box, bm, 0, 0, .55, wl, { s: [.35, .04, 1.1], ns: 1 }); mesh(G.box, bm, 0, 0, -.55, wr, { s: [.35, .04, 1.1], ns: 1 }); mesh(G.box, bm, 0, 0, 0, b, { s: [.7, .14, .18], ns: 1 }); birds.push({ wl, wr, ph: rr() * 6 }); }
+      movers.push({ t: 'birds', o: fl, birds, z: hd - 40 }); }
+    B.flush();
+  }
+  function outdoorTick(m, t, dt) {
+    if (m.t === 'sway') { m.o.rotation.z = Math.sin(t * .9 + m.ph) * m.a; m.o.rotation.x = Math.sin(t * .7 + m.ph * 1.3) * m.a * .7; }
+    else if (m.t === 'tex') { m.tx.offset.x = (t * m.sx) % 1; m.tx.offset.y = (t * m.sy) % 1; }
+    else if (m.t === 'flag') { const pa = m.geo.attributes.position, a = pa.array, b = m.base; for (let i = 0; i < a.length; i += 3) { const x0 = b[i], y0 = b[i + 1], k = x0 / 2.6; a[i + 2] = (Math.sin(x0 * 2.3 - t * 5.4 + m.ph) * .2 + Math.sin(x0 * 5.3 - t * 7.9 + y0 * 2.1 + m.ph) * .05) * k; a[i + 1] = y0 - k * k * .1 * (1 + Math.sin(t * 1.1 + m.ph) * .35); } pa.needsUpdate = true; if ((++m.n & 3) === 0) m.geo.computeVertexNormals(); }
+    else if (m.t === 'ftn') { const o = o3; for (let i = 0; i < m.n; i++) { let x, y, z, s;
+        if (i < 18) { const u = (t * .62 + i / 18) % 1, a = i * 2.4; x = Math.cos(a) * .08; z = Math.sin(a) * .08; y = 1.35 + 2.5 * 4 * u * (1 - u) + (u > .5 ? -(u - .5) * .4 : 0); s = .16 * (1 - u * .4); }
+        else { const j = i - 18, nn = m.n - 18, u = (t * .5 + (j % 6) / 6) % 1, a = Math.floor(j / 6) / (nn / 6) * Math.PI * 2 + .2; const r = .9 + 2.3 * u; x = Math.cos(a) * r; z = Math.sin(a) * r; y = 1.4 + 1.5 * 4 * u * (1 - u) - .95 * u; s = .12 * (1 - u * .5); }
+        o.position.set(m.cx + x, y, m.cz + z); o.rotation.set(0, 0, 0); o.scale.set(s, s, s); o.updateMatrix(); m.im.setMatrixAt(i, o.matrix); }
+      m.im.instanceMatrix.needsUpdate = true;
+      m.rings.forEach((r, i) => { const u = (t * .45 + i / 3) % 1; const sc = 1.1 + u * 2.7; r.scale.set(sc, sc, 1); r.material.opacity = .45 * (1 - u); }); }
+    else if (m.t === 'cloud') { m.o.position.x += m.sp * dt; if (m.o.position.x > 420) m.o.position.x = -420; }
+    else if (m.t === 'birds') { const cyc = 46, u = ((t + 7) % cyc) / cyc; m.o.visible = u < .62; const p = u / .62; m.o.position.set(-320 + p * 640, 34 + Math.sin(p * 6) * 3, m.z + Math.sin(p * 3.1) * 40); m.o.rotation.y = -Math.cos(p * 3.1) * .25;
+      m.birds.forEach(b => { const f = Math.sin(t * 9 + b.ph) * .55; b.wl.rotation.x = f; b.wr.rotation.x = -f; }); }
+    else if (m.t === 'gate') { const cyc = 30, c = ((t + m.ph) % cyc), car = m.car, ez = x => x * x * (3 - 2 * x);
+      let open = 0; if (c > 5.4 && c < 7) open = ez((c - 5.4) / 1.6); else if (c >= 7 && c < 11) open = 1; else if (c >= 11 && c < 12.6) open = 1 - ez((c - 11) / 1.6);
+      m.arm.rotation.z = -open * 1.45;
+      if (c < 5.5) { car.visible = true; const u = ez(Math.min(1, c / 5.2)); car.position.lerpVectors(m.A, m.B, u); car.rotation.y = -Math.PI / 2; }
+      else if (c < 8) { car.visible = true; car.position.copy(m.B); car.rotation.y = -Math.PI / 2; }
+      else if (c < 19) { car.visible = true; const u = Math.pow((c - 8) / 11, 1.6), p = m.C.getPointAt(Math.min(1, u)), tg = m.C.getTangentAt(Math.min(1, u)); car.position.copy(p); car.rotation.y = Math.atan2(-tg.z, tg.x); }
+      else car.visible = false; }
   }
 
   /* ---------------- magazzino ---------------- */
@@ -877,8 +1016,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const docks = L.items.filter(i => i.t === 'dock'), recent = D.ddt.slice(0, 9);
     docks.slice(0, Math.min(docks.length, 4)).forEach((dk, i) => { const g = WH.children.find(c => c.userData.eid === dk.id); if (!g) return; const t = truck(g, recent[i] || null, 0, 9.35, -Math.PI / 2); t.dock = dk.id; });
     const rz = L.D / 2 + 31;
-    recent.slice(4, 7).forEach((d, i) => { const t = truck(WH, d, -120 + i * 95, rz - 2.5, 0); t.road = 1; movers.push({ o: t.g, t: 'road', sp: 7 + i, dir: 1 }); });
-    D.trf.slice(0, 2).forEach((x, i) => { const t = truck(WH, { trf: x }, 80 - i * 110, rz + 2.5, Math.PI); t.road = 1; movers.push({ o: t.g, t: 'road', sp: 6 + i, dir: -1 }); });
+    recent.slice(4, 7).forEach((d, i) => { const t = truck(WH, d, -120 + i * 95, rz - 2.5, 0); t.road = 1; movers.push({ o: t.g, t: 'road', sp: 7.5, dir: 1 }); });
+    D.trf.slice(0, 2).forEach((x, i) => { const t = truck(WH, { trf: x }, 80 - i * 110, rz + 2.5, Math.PI); t.road = 1; movers.push({ o: t.g, t: 'road', sp: 6.5, dir: -1 }); });
   }
   function buildPeople() {
     const wp = new T.Vector3();
@@ -1107,7 +1246,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const GD = D.gas; if (!GD) return; const F = FL(), g = new T.Group(); WH.add(g);
     const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2, B = new Batch(g);
     const asp = mesh(G.box, new T.MeshLambertMaterial({ map: TX.road }), cx, .08, cz, g, { s: [w, .16, d], ns: 1 }); OWN.push(asp.material);
-    bx(g, 9, .15, L.D / 2 + 31 - 5.7 - F.z1, 0x575c64, F.st.x, 0, (F.z1 + L.D / 2 + 31 - 5.7) / 2, { ns: 1 });
+    bx(g, 9, .15, L.D / 2 + 31 - 5.7 - F.z1 - .05, 0x575c64, F.st.x, 0, (F.z1 + .05 + L.D / 2 + 31 - 5.7) / 2, { ns: 1 });
     for (const xx of [F.x0, F.x1]) bx(g, .3, .22, d, 0xd9d6cf, xx, 0, cz, { ns: 1 });
     // stalli: due file di posti con strisce bianche e numeri
     const rowX = [F.x0 + 4.4, F.x1 - 4.4], sz = 3.9, z0 = F.z0 + 2.4, n = Math.max(1, Math.floor((F.st.z - 8 - z0) / sz)), slots = [];
@@ -1118,14 +1257,14 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     // ---- area di rifornimento (v284): piazzale in cemento con giunti e canaline, pensilina, due isole con erogatori, terminale badge, arresto d'emergenza
     const st = F.st, cw = 15, cd = 13, IX = 2.9, cy0 = 5.4; CANO = { mats: [], u: CANO ? CANO.u : 1, want: CANO ? CANO.want : 1 };
     bx(g, cw + 3.4, .05, cd + 4.4, 0xc9c7c2, st.x, .16, st.z, { ns: 1 });
-    for (let i = -3; i <= 3; i++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x + i * 2.6, .214, st.z, .04, .012, cd + 4.2));
-    for (let j = -3; j <= 3; j++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x, .214, st.z + j * 2.6, cw + 3.2, .012, .04));
-    for (const s of [-1, 1]) { B.add('drn', G.box, mat(0x3a3f46), m4(st.x, .218, st.z + s * (cd / 2 + 1.75), cw + 3, .014, .32)); B.add('drn', G.box, mat(0x3a3f46), m4(st.x + s * (cw / 2 + 1.25), .218, st.z, .32, .014, cd + 3.8)); }
-    for (const [dx, dz] of [[-5.5, -cd / 2 - .9], [5.5, cd / 2 + .9]]) { B.add('mh', G.cyl, mat(0x4a4f57), m4(st.x + dx, .22, st.z + dz, .9, .016, .9)); B.add('mhr', G.cyl, mat(0x6b7078), m4(st.x + dx, .222, st.z + dz, .7, .016, .7)); }
+    for (let i = -3; i <= 3; i++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x + i * 2.6, .214, st.z, .04, .008, cd + 3.0));
+    for (let j = -3; j <= 3; j++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x, .216, st.z + j * 2.6, cw + 2.1, .008, .04));
+    for (const s of [-1, 1]) { B.add('drn', G.box, mat(0x3a3f46), m4(st.x, .228, st.z + s * (cd / 2 + 1.75), cw + 2.2, .012, .32)); B.add('drn', G.box, mat(0x3a3f46), m4(st.x + s * (cw / 2 + 1.25), .228, st.z, .32, .012, cd + 3.2)); }
+    for (const [dx, dz] of [[-5.5, -cd / 2 - .9], [5.5, cd / 2 + .9]]) { B.add('mh', G.cyl, mat(0x4a4f57), m4(st.x + dx, .236, st.z + dz, .9, .012, .9)); B.add('mhr', G.cyl, mat(0x6b7078), m4(st.x + dx, .248, st.z + dz, .7, .012, .7)); }
     // corsia: frecce, linea di arresto, scritta STOP
-    for (const zz of [st.z + cd / 2 + .9, st.z - cd / 2 - .9]) { const ar = planeT(arrowTex(), 1.5, 1.5, g, st.x, .232, zz, {}); ar.rotation.x = -Math.PI / 2; ar.rotation.z = 0; }
-    B.add('stopl', G.box, mat(0xf4f4f2), m4(st.x, .226, st.z - 3.6, 4, .012, .22));
-    { const t2 = textTex([['STOP', 90, 800, 70, null, 'rgba(255,255,255,.92)']], { w: 320, h: 120 }); const p2 = planeT(t2, 2.2, .82, g, st.x, .232, st.z - 4.4, {}); p2.rotation.x = -Math.PI / 2; p2.rotation.z = Math.PI; }
+    for (const zz of [st.z + cd / 2 + .9, st.z - cd / 2 - .9]) { const ar = planeT(arrowTex(), 1.5, 1.5, g, st.x, .242, zz, {}); ar.rotation.x = -Math.PI / 2; ar.rotation.z = 0; }
+    B.add('stopl', G.box, mat(0xf4f4f2), m4(st.x, .232, st.z - 3.6, 4, .012, .22));
+    { const t2 = textTex([['STOP', 90, 800, 70, null, 'rgba(255,255,255,.92)']], { w: 320, h: 120 }); const p2 = planeT(t2, 2.2, .82, g, st.x, .242, st.z - 4.4, {}); p2.rotation.x = -Math.PI / 2; p2.rotation.z = Math.PI; }
     // pensilina: colonne rivestite con piede arancione, copertura, fascia, luci a led, telecamere
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bx(g, .46, cy0 - .44, .46, 0xeef0f2, px, .44, pz); bx(g, .52, .9, .52, 0xf47b20, px, .44, pz); B.add('ccl', G.box, mat(0xd9dce0), m4(px, cy0 - .2, pz, .62, .3, .62)); }
     const cM = c => { const m = new T.MeshLambertMaterial({ color: c, transparent: true }); m.userData.o0 = 1; OWN.push(m); CANO.mats.push(m); return m; }, cDeck = cM(0xfbfbfa), cOr = cM(0xf47b20), cCap = cM(0xffffff);
@@ -1134,7 +1273,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     bx(g, cw + .2, .1, cd + .2, cCap, st.x, cy0 + .8, st.z);
     for (let i = -2; i <= 2; i++) for (const j of [-1, 0, 1]) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6, transparent: true }); m2.userData.o0 = 1; OWN.push(m2); CANO.mats.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.7, .42, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 2.8, cy0 - .012, st.z + j * 3.6); g.add(lp); }
     const sg = textTex([['GASOLIO · AdBlue', 66, 800, 56, null, '#ffffff'], [C.orgName().toUpperCase().slice(0, 30) + ' · DISTRIBUTORE INTERNO', 26, 700, 108, null, 'rgba(255,255,255,.9)']], { bg: '#f47b20', w: 1024, h: 140 });
-    for (const s of [-1, 1]) { const pq = planeT(sg, 7, .96, g, st.x, cy0 + .42, st.z + s * (cd / 2 + .11), s < 0 ? { ry: Math.PI } : {}); pq.material.transparent = true; pq.material.userData.o0 = 1; CANO.mats.push(pq.material); }
+    for (const s of [-1, 1]) { const pq = planeT(sg, 7, .96, g, st.x, cy0 + .42, st.z + s * (cd / 2 + .135), s < 0 ? { ry: Math.PI } : {}); pq.material.transparent = true; pq.material.userData.o0 = 1; CANO.mats.push(pq.material); }
     for (const [sx, sz] of [[-1, -1], [1, 1]]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bx(g, .16, .16, .3, 0x2b2f35, px, cy0 - .62, pz + sz * .33); mesh(G.cyl, mat(0x1d1f22), px, cy0 - .55, pz + sz * .5, g, { s: [.1, .1, .1], rx: Math.PI / 2, ns: 1 }); }
     // cartello di sicurezza su una colonna
     { const t2 = textTex([['AREA DI RIFORNIMENTO', 30, 800, 40, null, '#ffffff'], ['Spegnere il motore', 28, 700, 92, null, '#ffffff'], ['Vietato fumare · usare il badge', 24, 600, 136, null, 'rgba(255,255,255,.88)']], { bg: '#1f4fb4', w: 420, h: 170, round: 12 }); planeT(t2, 1.3, .53, g, st.x - IX, 2.6, st.z + 2.3 + .245, {}); }
@@ -1144,11 +1283,11 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     [-IX, IX].forEach(ix => {
       const px = st.x + ix, pz = st.z, fc = ix < 0 ? 1 : -1; // lato verso la corsia centrale
       bx(g, 1.3, .26, 6.4, 0xd8d5ce, px, .2, pz); bx(g, 1.34, .03, 6.44, 0xbcb8b0, px, .46, pz, { ns: 1 });
-      for (const s of [-1, 1]) { bx(g, 1.34, .28, .3, M.haz, px, .19, pz + s * 3.08); mesh(G.cyl, mat(0xf2c418), px, .85, pz + s * 3.55, g, { s: [.2, 1.3, .2] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.05, pz + s * 3.55, .23, .12, .23)); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .7, pz + s * 3.55, .23, .12, .23)); }
+      for (const s of [-1, 1]) { bx(g, 1.4, .3, .3, M.haz, px, .19, pz + s * 3.08); mesh(G.cyl, mat(0xf2c418), px, .85, pz + s * 3.55, g, { s: [.2, 1.3, .2] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.05, pz + s * 3.55, .23, .12, .23)); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .7, pz + s * 3.55, .23, .12, .23)); }
       // erogatore: zoccolo, corpo, pannelli, testata con display su due lati, pistole gasolio e AdBlue, tubi
-      bx(g, 1.0, .16, .76, 0x8e959e, px, .48, pz); bx(g, .86, 1.5, .62, 0xf4f5f6, px, .64, pz); for (const s of [-1, 1]) bx(g, .02, 1.1, .5, 0xf47b20, px + s * .44, .84, pz, { ns: 1 });
+      bx(g, 1.0, .16, .76, 0x8e959e, px, .48, pz); bx(g, .86, 1.5, .62, 0xf4f5f6, px, .64, pz); for (const s of [-1, 1]) bx(g, .025, 1.1, .5, 0xf47b20, px + s * .445, .84, pz, { ns: 1 });
       bx(g, .92, .58, .68, 0x2b2f35, px, 2.14, pz); bx(g, .96, .08, .72, 0xf47b20, px, 2.72, pz);
-      for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.56, .37, 1); sc.position.set(px + s * .465, 2.43, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); }
+      for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.56, .37, 1); sc.position.set(px + s * .475, 2.43, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); }
       for (const s of [-1, 1]) for (const [dz, col, nm] of [[-.18, 0x1d1f22, 'd'], [.18, 0x2f6db4, 'a']]) {
         bx(g, .14, .3, .16, 0x3a3f46, px + s * .5, 1.15, pz + dz);
         const busy = s === fc && nm === 'd' && ix < 0; if (busy) continue; // pistola in uso
@@ -1156,25 +1295,25 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         const hs = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(px + s * .44, 2.0, pz + dz), new T.Vector3(px + s * .62, 1.35, pz + dz * 1.4), new T.Vector3(px + s * .72, .7, pz + dz), new T.Vector3(px + s * .62, 1.2, pz + dz)]), 20, .025, 6); OWN.push(hs); mesh(hs, col === 0x2f6db4 ? mat(0x2a4f86) : hoseM, 0, 0, 0, g, { ns: 1 });
       }
       // terminale badge e arresto d'emergenza alle estremità dell'isola
-      const tz = pz + 2.55; bx(g, .3, 1.0, .24, 0x2b2f35, px, .47, tz); bx(g, .44, .52, .3, 0x1d1f22, px, 1.47, tz); const ts = planeT(termT, .36, .23, g, px + fc * .155, 1.8, tz, { ry: fc * Math.PI / 2 }); ts.renderOrder = 1;
-      bx(g, .03, .14, .2, 0x3a3f46, px + fc * .16, 1.55, tz, { ns: 1 });
+      const tz = pz + 2.55; bx(g, .3, 1.0, .24, 0x2b2f35, px, .47, tz); bx(g, .44, .52, .3, 0x1d1f22, px, 1.47, tz); const ts = planeT(termT, .36, .23, g, px + fc * .232, 1.8, tz, { ry: fc * Math.PI / 2 }); ts.renderOrder = 1;
+      bx(g, .03, .14, .2, 0x3a3f46, px + fc * .235, 1.55, tz, { ns: 1 });
       const ez = pz - 2.6; bx(g, .1, 1.0, .1, 0xc5cad1, px, .47, ez); bx(g, .24, .24, .14, 0xf2c418, px, 1.47, ez); mesh(G.sph, mat(0xd62b1f), px + fc * .1, 1.59, ez, g, { s: [.14, .14, .14], ns: 1 });
       mesh(G.cyl, mat(0x2f6db4), px, .82, pz - 1.6, g, { s: [.3, .7, .3] }); mesh(G.cyl, mat(0xeef0f2), px, 1.25, pz + 1.55, g, { s: [.18, .26, .18] });
     });
     // totem del prezzo a led
     const tot = textTex([['GASOLIO', 44, 800, 46, null, '#ffffff'], [GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', 90, 800, 142, null, '#ffb02e'], ['€ / litro', 30, 600, 204, null, 'rgba(255,255,255,.85)'], [`${N(Math.round(GD.lM))} L nel mese`, 26, 600, 262, null, 'rgba(255,255,255,.8)']], { bg: '#111316', w: 320, h: 300, round: 18 });
     const ttx = st.x + cw / 2 + 2.6, ttz = st.z + cd / 2 + 1.4;
-    bx(g, 1.8, .5, .7, 0x8e959e, ttx, .2, ttz); bx(g, 1.6, 4.4, .42, 0xf47b20, ttx, .7, ttz); bx(g, 1.64, .5, .46, 0xffffff, ttx, 4.6, ttz); planeT(tot, 1.4, 1.31, g, ttx, 3.4, ttz + .215);
+    bx(g, 1.8, .5, .7, 0x8e959e, ttx, .2, ttz); bx(g, 1.6, 4.4, .42, 0xf47b20, ttx, .7, ttz); bx(g, 1.66, .52, .48, 0xffffff, ttx, 4.64, ttz); planeT(tot, 1.4, 1.31, g, ttx, 3.4, ttz + .228);
     // deposito: vasca di contenimento, cisterna a doppia parete con piastre ADR, sfiato, armadio di carico, pompa, parapetto, antincendio, kit antisversamento
     const tx = F.x0 + 5, tz = st.z + 1.5;
-    bx(g, 4.4, .62, 8.6, 0xc9c6bf, tx, .16, tz); bx(g, 3.9, .04, 8.1, 0x8f8c85, tx, .74, tz, { ns: 1 }); for (const s of [-1, 1]) { bx(g, .25, .16, 8.6, 0xbab7b0, tx + s * 2.08, .78, tz); bx(g, 4.4, .16, .25, 0xbab7b0, tx, .78, tz + s * 4.18); }
+    bx(g, 4.4, .62, 8.6, 0xc9c6bf, tx, .16, tz); bx(g, 3.9, .04, 8.1, 0x8f8c85, tx, .79, tz, { ns: 1 }); for (const s of [-1, 1]) { bx(g, .25, .16, 8.6, 0xbab7b0, tx + s * 2.08, .78, tz); bx(g, 4.4, .16, .25, 0xbab7b0, tx, .78, tz + s * 4.18); }
     mesh(G.cyl, mat(0xeef0f2), tx, 2.35, tz, g, { s: [2.5, 6, 2.5], rx: Math.PI / 2 }); mesh(G.sph, mat(0xeef0f2), tx, 2.35, tz + 3, g, { s: [2.5, 2.5, .7] }); mesh(G.sph, mat(0xeef0f2), tx, 2.35, tz - 3, g, { s: [2.5, 2.5, .7] });
-    for (const zz of [-1.6, 1.6]) mesh(G.cyl, mat(0xf47b20), tx, 2.35, tz + zz, g, { s: [2.53, .35, 2.53], rx: Math.PI / 2 });
+    for (const zz of [-1.6, 1.6]) mesh(G.cyl, mat(0xf47b20), tx, 2.35, tz + zz, g, { s: [2.56, .35, 2.56], rx: Math.PI / 2 });
     for (const s of [-1, 1]) { bx(g, 2.3, 1.0, .35, 0x7d848d, tx, .76, tz + s * 2); }
     const adr = textTex([['30', 70, 800, 62, null, '#111'], ['1202', 70, 800, 142, null, '#111']], { bg: '#f28a1d', w: 220, h: 180, round: 6 });
-    for (const s of [-1, 1]) { planeT(adr, .5, .41, g, tx + s * 1.27, 2.35, tz + .3, { ry: s * Math.PI / 2 }); }
+    for (const s of [-1, 1]) { planeT(adr, .5, .41, g, tx + s * 1.3, 2.35, tz + .3, { ry: s * Math.PI / 2 }); }
     const tl = textTex([['GASOLIO', 60, 800, 46, null, '#1d1f22'], ['doppia parete · infiammabile', 22, 600, 96, null, '#55585e']], { bg: '#ffffff', w: 420, h: 120, round: 10 });
-    for (const s of [-1, 1]) planeT(tl, 1.9, .54, g, tx + s * 1.27, 2.35, tz - 1.25, { ry: s * Math.PI / 2 });
+    for (const s of [-1, 1]) planeT(tl, 1.9, .54, g, tx + s * 1.3, 2.35, tz - 1.25, { ry: s * Math.PI / 2 });
     mesh(G.cyl, mat(0x9aa1a9), tx + .6, 4.4, tz - 2.2, g, { s: [.1, 1.8, .1] }); mesh(G.cyl, mat(0x2b2f35), tx + .6, 5.35, tz - 2.2, g, { s: [.22, .12, .22] });
     bx(g, .5, .32, .5, 0x2b2f35, tx - .3, 3.6, tz + 1.2); mesh(G.cyl, mat(0x9aa1a9), tx - .3, 4.0, tz + 1.2, g, { s: [.12, .5, .12] });
     bx(g, 1.0, 1.3, .6, 0xd8dbe0, tx + 1.4, .78, tz + 4.7); bx(g, .9, .02, .02, 0x2b2f35, tx + 1.4, 1.55, tz + 5.01, { ns: 1 });
@@ -1182,13 +1321,13 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     for (let i = 0; i < 10; i++) { const zz = tz - 4.2 + i * .93; for (const s of [-1, 1]) B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.36, zz, .05, 1.1, .05)); }
     for (const s of [-1, 1]) { B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.9, tz, .06, .06, 8.4)); B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.4, tz, .04, .04, 8.4)); }
     for (const zz of [-1, 1]) { bx(g, .4, .7, .3, 0xd62b1f, tx - 2.7, .2, tz + zz * 2.6); mesh(G.cyl, mat(0xd62b1f), tx - 2.7, 1.2, tz + zz * 2.6, g, { s: [.3, .55, .3] }); }
-    bx(g, 1.0, .9, .7, 0xf2c418, tx + 2.9, .2, tz - 3.4); planeT(textTex([['KIT', 40, 800, 44, null, '#1d1f22'], ['antisversamento', 22, 700, 86, null, '#1d1f22']], { w: 256, h: 110 }), .9, .39, g, tx + 2.9, .78, tz - 3.4 + .355);
+    bx(g, 1.0, .9, .7, 0xf2c418, tx + 2.9, .2, tz - 3.4); planeT(textTex([['KIT', 40, 800, 44, null, '#1d1f22'], ['antisversamento', 22, 700, 86, null, '#1d1f22']], { w: 256, h: 110 }), .9, .39, g, tx + 2.9, .78, tz - 3.4 + .37);
     planeT(textTex([['DEPOSITO GASOLIO', 34, 800, 44, null, '#fff'], ['Vietato fumare e usare fiamme libere', 22, 600, 92, null, 'rgba(255,255,255,.9)']], { bg: '#d62b1f', w: 512, h: 120, round: 10 }), 2.4, .56, g, tx, 1.55, tz + 4.33);
     // AdBlue: cisternetta da 1000 L su pallet con gabbia
     { const ax = tx, az = tz - 6.4; bx(g, 1.2, .15, 1.0, 0xc8a27a, ax, .2, az); bx(g, 1.08, .95, .9, 0xf4f6f8, ax, .36, az); bx(g, .3, .12, .3, 0x2f6db4, ax, 1.31, az);
       for (let i = 0; i < 5; i++) { B.add('ibc', G.box, mat(0x9aa1a9), m4(ax - .55 + i * .275, .85, az + .46, .025, 1.0, .025)); B.add('ibc', G.box, mat(0x9aa1a9), m4(ax - .55 + i * .275, .85, az - .46, .025, 1.0, .025)); }
       for (const y of [.6, 1.0, 1.32]) { B.add('ibc', G.box, mat(0x9aa1a9), m4(ax, y, az + .46, 1.12, .025, .025)); B.add('ibc', G.box, mat(0x9aa1a9), m4(ax, y, az - .46, 1.12, .025, .025)); }
-      planeT(textTex([['AdBlue', 52, 800, 56, null, '#ffffff']], { bg: '#2f6db4', w: 256, h: 96, round: 8 }), .6, .23, g, ax, .85, az + .48); }
+      planeT(textTex([['AdBlue', 52, 800, 56, null, '#ffffff']], { bg: '#2f6db4', w: 256, h: 96, round: 8 }), .6, .23, g, ax, .85, az + .5); }
     // tubazione interrata segnalata dalla cisterna alle isole
     const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .5, tz - 2), new T.Vector3(tx + 4, .24, tz - 3), new T.Vector3(st.x - IX, .24, st.z + 1)]), 24, .07, 6); OWN.push(tube); mesh(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
     B.flush();
@@ -2049,6 +2188,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       else if (m.t === 'spin') m.o.rotation.y = Math.sin(t * m.sp) * 1.3;
       else if (m.t === 'float') m.o.position.y = m.y + Math.sin(t * 1.2) * .25;
       else if (m.t === 'pump') { if (t - m.last > .12) { m.last = t; const u = (t % 11) / 8; pumpDraw(Math.min(1, u) * m.l, m.price); } }
+      else if (m.t === 'sway' || m.t === 'tex' || m.t === 'flag' || m.t === 'ftn' || m.t === 'cloud' || m.t === 'birds' || m.t === 'gate') outdoorTick(m, t, dt);
       else if (m.t === 'road') { m.o.position.x += m.dir * m.sp * dt; if (m.o.position.x > 330) m.o.position.x = -330; if (m.o.position.x < -330) m.o.position.x = 330; }
       else if (m.t === 'belt') { for (let i = 0; i < m.n; i++) { const u = (t * m.sp + i / m.n) % 1; o3.position.set(-m.len / 2 + .5 + u * (m.len - 1), 1.22 + .2, 0); o3.rotation.set(0, (i % 3) * .2, 0); o3.scale.set(.55, .4, .5); o3.updateMatrix(); m.im.setMatrixAt(i, o3.matrix); } m.im.instanceMatrix.needsUpdate = true; }
       if (m.t !== 'fork' && m.o && m.o.userData && m.o.userData.rig) rigTick(m.o, t, dt);
