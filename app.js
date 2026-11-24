@@ -8711,7 +8711,28 @@
     scanOpen({ title: 'Cerca in magazzino', hint: 'Inquadra il codice a barre dell\'articolo', onCode: c => { code = c; found = artByCode(c); return found ? { ok: true, msg: found.descrizione } : { ok: true, msg: 'Articolo nuovo: ' + c }; },
       onClose: n => { if (!n) return; setTimeout(() => { if (found) artForm(found); else if (confirm(`Nessun articolo con il codice ${code}. Crearne uno nuovo?`)) artForm({ barcode: code }); }, 280); } });
   }
-  const giacMap = mag => { const M = new Map(); GX.mov().forEach(m => { if (mag && magOf(m) !== mag) return; M.set(m.articolo, r2((M.get(m.articolo) || 0) + num(m.quantita))); }); return M; };
+  const giacMap = mag => { const M = new Map(); GX.mov().forEach(m => { if (mag && magOf(m) !== mag) return; M.set(m.articolo, r2((M.get(m.articolo) || 0) + num(m.quantita))); }); kitFill(M); return M; };
+  /* ---------- v292: articoli composti (kit / distinta base) ----------
+     Config «kit:<id articolo>» = { t: 'v' (componibile: non ha giacenza propria, quando lo vendi o lo scarichi escono i componenti)
+     | 'a' (assemblato: ha giacenza propria, si assembla e si smonta con i movimenti), c: [{ a: id componente, q: quantità per 1 kit }], cm: 1 = costo dai componenti } */
+  const KIT_MAX = 5;
+  const kitOf = id => { const k = id && cfg('kit:' + id); if (!k || !Array.isArray(k.c)) return null; const c = k.c.map(x => ({ a: String(x.a || ''), q: num(x.q) })).filter(x => x.a && x.q > 0 && x.a !== id && artOf(x.a)); return c.length ? { t: k.t === 'a' ? 'a' : 'v', c, cm: k.cm ? 1 : 0 } : null; };
+  const kitV = id => { const k = kitOf(id); return !!(k && k.t === 'v'); };
+  const KITS = () => Object.keys(db.config || {}).filter(k => k.indexOf('kit:') === 0).map(k => k.slice(4)).filter(id => artOf(id) && kitOf(id));
+  const kitUsedIn = id => KITS().map(k => ({ k, x: kitOf(k).c.find(c => c.a === id) })).filter(o => o.x).map(o => ({ a: artOf(o.k), q: o.x.q, t: kitOf(o.k).t }));
+  // quanti kit componibili si possono fare con le giacenze di M (anche kit dentro kit, fino a 5 livelli)
+  function kitAvail(id, M, d = 0) { const k = kitOf(id); if (!k || k.t !== 'v' || d > KIT_MAX) return Math.max(0, M.get(id) || 0); let n = Infinity, lim = null; k.c.forEach(c => { const g = kitV(c.a) ? kitAvail(c.a, M, d + 1) : Math.max(0, M.get(c.a) || 0), v = Math.floor(g / c.q + 1e-9); if (v < n) { n = v; lim = c.a; } }); kitAvail.lim = lim; return n === Infinity ? 0 : n; }
+  function kitFill(M) { const base = new Map(M); KITS().forEach(id => { if (kitV(id)) M.set(id, kitAvail(id, base)); }); }
+  function kitLimit(id, M) { const k = kitOf(id); if (!k || k.t !== 'v') return null; let n = Infinity, lim = null; k.c.forEach(c => { const g = Math.max(0, M.get(c.a) || 0), v = Math.floor(g / c.q + 1e-9); if (v < n) { n = v; lim = c; } }); return lim ? { a: artOf(lim.a), q: lim.q, g: Math.max(0, M.get(lim.a) || 0) } : null; }
+  // costo di 1 kit = somma dei componenti (i componenti a loro volta composti usano il loro costo)
+  function kitCost(id, d = 0) { const k = kitOf(id); if (!k || d > KIT_MAX) return num((artOf(id) || {}).costo); return r2(k.c.reduce((s, c) => s + c.q * (kitOf(c.a) && kitOf(c.a).cm ? kitCost(c.a, d + 1) : num((artOf(c.a) || {}).costo)), 0)); }
+  // righe di magazzino che escono davvero: un kit componibile diventa i suoi componenti (quantità moltiplicate)
+  function kitLines(id, q, d = 0) { const k = kitOf(id); if (!k || k.t !== 'v' || d > KIT_MAX) return [{ art: id, q }]; return k.c.flatMap(c => kitLines(c.a, r2(q * c.q), d + 1)); }
+  // un articolo contiene (anche dentro altri kit) l'articolo «x»?
+  function kitHas(id, x, d = 0) { if (id === x) return true; const k = kitOf(id); return !!(k && d <= KIT_MAX && k.c.some(c => kitHas(c.a, x, d + 1))); }
+  // movimenti per vendere/scaricare/caricare «q» di un articolo: base = campi comuni del movimento
+  const kitMovs = (id, q, base) => kitLines(id, Math.abs(q)).map(x => ({ action: 'upsert', sheet: 'MagMov', row: { ...base, id: uid(), articolo: x.art, quantita: q < 0 ? -x.q : x.q, costo: num((artOf(x.art) || {}).costo), note: [base.note, x.art !== id ? 'kit ' + ((artOf(id) || {}).descrizione || '') : ''].filter(Boolean).join(' · '), creato: new Date().toISOString() } }));
+  const kitTag = a => { const k = kitOf(a.id); return k ? `<span class="chip kit-chip" title="${k.t === 'v' ? 'Kit componibile: quando lo vendi escono i componenti' : 'Kit assemblato: ha una giacenza sua'}">${k.t === 'v' ? 'Kit' : 'Kit assemblato'} · ${k.c.length}</span>` : ''; };
   /* ---------- v139: più magazzini e prodotti nei documenti dei fornitori ---------- */
   // elenco in Config «magazzini»; i movimenti senza magazzino appartengono al primo
   const MAGS = () => { const c = cfg('magazzini'); return Array.isArray(c) ? c.map(x => String(x || '').trim()).filter(Boolean) : []; };
@@ -8997,6 +9018,7 @@
   }
 
   /* ---------- MAGAZZINO ---------- */
+  let mgKit = false; // v292: filtro «Composti»
   let mgTab = 'art', mgQ = '', mgLow = false, mgAvail = false, mgOut = false, mgMag = '', mgSup = '', mgItem = '', mgView = (() => { try { return localStorage.getItem('cdc_mgv') || ''; } catch { return ''; } })(); // mgView: '' = automatica (schede se scelgo un fornitore) · 'g' schede · 'l' elenco. mgSup: '' = tutto · '__srv' = servizi · '__none' = senza fornitore · altrimenti il fornitore
   // v136: selezione multipla nel magazzino (elimina o modifica più articoli insieme)
   const mgSel = new Set(); let mgMode = false, mgIds = [];
@@ -9110,7 +9132,7 @@
     const card = (a, i) => { const g = G.get(a.id) || 0, im = mgPhoto(a);
       return `<div class="card pv-card mg-card${mgMode && mgSel.has(a.id) ? ' mg-on' : ''}" data-art="${esc(a.id)}" role="button" tabindex="0" style="--d:${Math.min(i, 16) * 30}ms">
         <span class="pv-img${im ? ' has' : ''}">${im ? pvImgTag(im, 't') : ''}<b class="ph">${PV_PH}</b></span>
-        <span class="pv-cm">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria].filter(Boolean).join(' · '))}</small>
+        <span class="pv-cm">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b>${kitTag(a)}<small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria].filter(Boolean).join(' · '))}</small>
           <span class="mg-cq"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span>${num(a.scorta) ? `<small>scorta min. ${fmtNum(num(a.scorta), 0)}</small>` : ''}</span>
           <span class="pv-pr">${num(a.prezzo) ? `<strong>${eur(num(a.prezzo) * mgIva(a))}</strong>` : ''}<small>${num(a.costo) ? 'costo ' + eur(num(a.costo) * mgIva(a)) : 'costo da inserire'}</small></span>
           <button type="button" class="btn sm ghost mg-pm" data-gx="mov-art" data-id="${esc(a.id)}" title="Carico / scarico">±</button><button type="button" class="btn sm ghost mg-pm mg-locb mg-locc" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button></span></div>`; };
@@ -9134,7 +9156,7 @@
     if (mgMag && !MAGS().includes(mgMag)) mgMag = '';
     const A = GX.art().slice().sort((a, b) => String(a.descrizione).localeCompare(String(b.descrizione), 'it')), G = giacMap(mgMag), q = nh(mgQ);
     const low = a => num(a.scorta) > 0 && (G.get(a.id) || 0) <= num(a.scorta);
-    const mgIva = a => ivaOn ? 1 + ivaRate(a) : 1, val = A.reduce((s, a) => s + Math.max(0, G.get(a.id) || 0) * num(a.costo) * mgIva(a), 0);
+    const mgIva = a => ivaOn ? 1 + ivaRate(a) : 1, val = A.reduce((s, a) => s + (kitV(a.id) ? 0 : Math.max(0, G.get(a.id) || 0) * num(a.costo) * mgIva(a)), 0); // v292: i kit componibili non si contano (il valore è nei componenti)
     const m0 = today().slice(0, 7), MM = GX.mov().filter(m => String(m.data).slice(0, 7) === m0), nLow = A.filter(low).length;
     const tabs = `<div class="gx-seg" role="tablist"><button type="button" data-mgtab="art" class="${mgTab === 'art' ? 'on' : ''}">Articoli</button><button type="button" data-mgtab="mov" class="${mgTab === 'mov' ? 'on' : ''}">Movimenti</button></div>`;
     let h = gxWarn() + `<div class="gx-bar">${tabs}<label class="gx-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mg-q" placeholder="Cerca codice, codice a barre o descrizione…" value="${esc(mgQ)}"><button type="button" class="scan-ib" data-gx="mag-scan" title="Scansiona un codice a barre" aria-label="Scansiona un codice a barre">${SCAN_IC}</button></label>
@@ -9151,16 +9173,16 @@
       if (mgSup === '__srv' && !nSrv) mgSup = '';
       const sq = x => !q || nh([x.cod, x.d, x.note, 'servizio'].join(' ')).includes(q);
       const SF = mgSup === '' || mgSup === '__srv' ? SV.filter(sq) : [];
-      const F = mgSup === '__srv' ? [] : A.filter(a => (!q || nh([a.codice, a.codForn, a.descrizione, a.categoria, a.fornitore, a.barcode].join(' ')).includes(q)) && (!mgLow || low(a)) && (!mgAvail || (G.get(a.id) || 0) > 0) && (!mgOut || (G.get(a.id) || 0) <= 0) && (!mgSup || mgSupOf(a) === mgSup));
+      const F = mgSup === '__srv' ? [] : A.filter(a => (!q || nh([a.codice, a.codForn, a.descrizione, a.categoria, a.fornitore, a.barcode].join(' ')).includes(q)) && (!mgLow || low(a)) && (!mgAvail || (G.get(a.id) || 0) > 0) && (!mgOut || (G.get(a.id) || 0) <= 0) && (!mgSup || mgSupOf(a) === mgSup) && (!mgKit || !!kitOf(a.id)));
       mgIds = F.map(a => a.id);
       const mgGrid = mgSup !== '__srv' && (mgView ? mgView === 'g' : !!mgSup);
       const srvRow = x => { const k = ivaOn ? 1 + num(x.iva) / 100 : 1; return `<tr class="mg-srvr" data-gx="srv-edit" data-id="${esc(x.id)}"><td data-l="Articolo"><b>${esc(x.d)}</b> <span class="chip soon">Servizio</span><small>${esc([x.cod, x.um, x.note].filter(Boolean).join(' · '))}</small></td><td class="r" data-l="Giacenza">—</td><td class="r" data-l="Scorta min.">—</td><td class="r" data-l="Costo">${num(x.costo) ? eur(num(x.costo) * k) : '—'}</td><td class="r" data-l="Prezzo">${x.p === '' || x.p == null ? '—' : eur(num(x.p) * k)}</td><td class="r" data-l="Valore">—</td><td class="r gx-ra"></td></tr>`; };
       if (mgMode) { const nS = mgN(); h += `<div class="gx-note mg-bar"><span>Selezionati: <b id="mg-n">${nS}</b></span><span class="mg-acts"><button type="button" class="btn sm" data-mgs="all">Seleziona tutti (${F.length})</button><button type="button" class="btn sm" data-mgs="none">Nessuno</button><button type="button" class="btn sm" data-mgs="edit"${nS ? '' : ' disabled'}>Modifica</button><button type="button" class="btn sm danger-ghost" data-mgs="del"${nS ? '' : ' disabled'}>Elimina</button></span></div>`; }
       h += `<div class="mg-sups" role="group" aria-label="Fornitore"><button type="button" class="mg-sp mg-all${mgSup === '' ? ' on' : ''}" data-mgsup="" title="Tutti i prodotti e i servizi"><b>Tutti</b><em>${A.length + nSrv}</em></button>${SL.map(x => `<button type="button" class="mg-sp${mgSup === x.k ? ' on' : ''}" data-mgsup="${esc(x.k)}" title="${esc(x.nm)}">${x.logo ? `<img src="logo-${esc(x.logo)}.svg" alt="${esc(x.nm)}" loading="lazy">` : `<b>${esc(x.nm)}</b>`}<em>${x.n}</em></button>`).join('')}${nSrv ? `<button type="button" class="mg-sp mg-srv${mgSup === '__srv' ? ' on' : ''}" data-mgsup="__srv" title="Servizi e lavorazioni"><b>Servizi</b><em>${nSrv}</em></button>` : ''}</div>
-      <div class="gx-chips"><button type="button" class="chip-f${mgLow || mgAvail || mgOut ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgAvail ? ' on' : ''}" data-mgav="1">Disponibili <em>${A.filter(a => (G.get(a.id) || 0) > 0).length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button><button type="button" class="chip-f${mgOut ? ' on' : ''}" data-mgout="1">Esauriti <em>${A.filter(a => (G.get(a.id) || 0) <= 0).length}</em></button></div>
+      <div class="gx-chips"><button type="button" class="chip-f${mgLow || mgAvail || mgOut ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgAvail ? ' on' : ''}" data-mgav="1">Disponibili <em>${A.filter(a => (G.get(a.id) || 0) > 0).length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button><button type="button" class="chip-f${mgOut ? ' on' : ''}" data-mgout="1">Esauriti <em>${A.filter(a => (G.get(a.id) || 0) <= 0).length}</em></button>${KITS().length || mgKit ? `<button type="button" class="chip-f${mgKit ? ' on' : ''}" data-mgkit="1">Composti <em>${KITS().length}</em></button>` : ''}</div>
       <div class="mg-vw"><div class="tr-seg pv-gvw" role="group" aria-label="Vista"><button type="button" data-mgview="g" class="${mgGrid ? 'on' : ''}" title="Schede con foto"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" data-mgview="l" class="${mgGrid ? '' : 'on'}" title="Elenco"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div></div>
       ${mgGrid ? mgGridHtml(F, SF, G, low, mgIva) : `<div class="card gx-list"><table class="gx-tbl"><thead><tr><th>Articolo</th><th class="r">Giacenza</th><th class="r">Scorta min.</th><th class="r">Costo</th><th class="r">Prezzo</th><th class="r">Valore</th><th></th></tr></thead><tbody>
-      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<div class="mg-ar">${mgThumb(a)}<div class="mg-at"><b>${esc(a.descrizione)}</b><small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost mg-locb" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
+      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<div class="mg-ar">${mgThumb(a)}<div class="mg-at"><b>${esc(a.descrizione)}</b>${kitTag(a)}<small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) && !kitV(a.id) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost mg-locb" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
       </tbody></table>${mgSup === '__srv' ? `<div class="gx-act mg-sa"><button type="button" class="btn sm" data-gx="srv-new">+ Servizio</button></div>` : ''}${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}</div>`}`;
     } else {
       const M = GX.mov().map(m => ({ m, a: artOf(m.articolo) })).filter(x => !q || nh([x.a && x.a.codice, x.a && x.a.descrizione, x.m.causale].join(' ')).includes(q)).sort((x, y) => String(y.m.data).localeCompare(String(x.m.data)) || String(y.m.creato).localeCompare(String(x.m.creato)));
@@ -9197,7 +9219,7 @@
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-artloc]'); if (!b) return; e.preventDefault(); e.stopPropagation(); artLoc(b.dataset.artloc); }, true);
   function mag3dCtx() {
     return {
-      art: () => GX.art(), mov: () => GX.mov(), ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
+      art: () => GX.art().filter(a => !kitV(a.id)), mov: () => GX.mov(), // v292: i kit componibili non stanno sugli scaffali ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
       mag: () => mgMag, setMag: m => { mgMag = m; renderMag(); }, num, esc, eur0, fmtNum, dIt, today, orgName: () => ORG.n || 'Magazzino', secPerm,
       ivaOn: () => ivaOn, ivaRate, ivaLbl, xiTransito, xiNum, xiPz, onClose: () => {},
       cfg, write, isOwner: () => isOwnerU(), // v272: disposizione e ubicazioni in Config «mg3d:<magazzino>»
@@ -9224,7 +9246,7 @@
   }
   function artForm(a) {
     const n = !a || !a.id; a = a && a.id ? { ...a } : { id: uid(), um: 'PZ', iva: 22, creato: today(), codice: artNext(), ...(a || {}) };
-    const g = n ? 0 : (giacMap().get(a.id) || 0);
+    const g = n ? 0 : (giacMap().get(a.id) || 0), KS = kitState(n ? '' : a.id);
     const f = (k, l, t = 'text', ph = '') => `<label class="f"><span>${l}</span><input name="${k}" type="${t}"${t === 'number' ? ' step="any" inputmode="decimal"' : ''} value="${esc(a[k] ?? '')}" placeholder="${esc(ph)}"${k === 'descrizione' ? ' data-focus required' : ''}></label>`;
     const CAT = categorie();
     openSheet(n ? 'Nuovo articolo' : a.descrizione, `${f('descrizione', 'Descrizione', 'Es. Cemento 32,5 R sacco 25 kg')}
@@ -9234,22 +9256,109 @@
       <div class="f-row f3">${f('costo', 'Costo d\'acquisto €', 'number', 'IVA esclusa')}${f('prezzo', 'Prezzo di vendita €', 'number', 'IVA esclusa')}<label class="f"><span>IVA</span><select name="iva">${IVE.map(v => `<option value="${v}"${num(a.iva) === v ? ' selected' : ''}>${v}%</option>`).join('')}</select></label></div>
       <div class="f-row">${f('scorta', 'Scorta minima', 'number', 'avviso sotto questa quantità')}${n ? f('giac0', 'Giacenza iniziale', 'number', '0') : `<div class="f"><span>Giacenza attuale</span><div class="gx-giac"><b>${fmtNum(g, g % 1 ? 2 : 0)} ${esc(a.um || '')}</b><button type="button" class="btn sm" data-gx="mov-art" data-id="${esc(a.id)}">Carico / scarico</button></div></div>`}</div>
       ${n ? '' : `<div class="f"><span>Ubicazione in magazzino</span><div class="gx-giac"><b data-artlocc="${esc(a.id)}">${window.CDC_MG3D && window.CDC_MG3D.locOf ? esc((window.CDC_MG3D.locOf(mag3dCtx(), a.id) || { code: 'da scegliere' }).code) : 'sulla mappa'}</b><button type="button" class="btn sm" data-artloc="${esc(a.id)}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Scegli sulla mappa</button></div></div>`}
+      <div class="kt" id="kt"></div>
       <label class="f"><span>Note</span><input name="note" value="${esc(a.note || '')}"></label>${n ? '' : artMovHtml(a)}`, fd => {
       const o = { ...a };
+      // v292: composizione del kit
+      const kx = kitSave(a, KS, fd); if (kx === false) return;
       ['descrizione', 'codice', 'codForn', 'um', 'barcode', 'categoria', 'fornitore', 'note'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });
       if (!o.codice) o.codice = artNext();
       if (o.barcode && GX.art().some(x => x.id !== o.id && codeKey(x.barcode) === codeKey(o.barcode)) && !confirm('Questo codice a barre è già su un altro articolo. Salvare lo stesso?')) return;
       ['costo', 'prezzo', 'iva', 'scorta'].forEach(k => { const v = String(fd.get(k) ?? '').trim(); o[k] = v === '' ? '' : num(v); });
       if (o.descrizione.length < 2) { toast('Scrivi la descrizione'); return; }
       if (o.codice && GX.art().some(x => x.id !== o.id && String(x.codice).trim().toUpperCase() === o.codice.toUpperCase())) { toast('Esiste già un articolo con questo codice interno'); return; }
-      const ops = [{ action: 'upsert', sheet: 'Articoli', row: o }], g0 = n ? num(fd.get('giac0')) : 0;
+      if (kx && kx.cost != null) o.costo = kx.cost;
+      const ops = [{ action: 'upsert', sheet: 'Articoli', row: o }, ...(kx ? kx.ops : [])], g0 = n && !(kx && kx.v) ? num(fd.get('giac0')) : 0;
       if (g0) ops.push({ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: today(), articolo: o.id, tipo: 'carico', quantita: g0, costo: num(o.costo), causale: 'Giacenza iniziale', doc: '', note: '', creato: new Date().toISOString() } });
       write(ops); toast(n ? 'Articolo aggiunto' : 'Articolo aggiornato'); return true;
     }, n ? null : () => {
-      if (!confirm(`Eliminare «${a.descrizione}» e i suoi movimenti? I DDT e le fatture già fatti restano.`)) return;
-      write([{ action: 'delete', sheet: 'Articoli', id: a.id }, ...GX.mov().filter(m => m.articolo === a.id).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))]); toast('Articolo eliminato'); return true;
+      const UI = kitUsedIn(a.id);
+      if (!confirm(`Eliminare «${a.descrizione}» e i suoi movimenti? I DDT e le fatture già fatti restano.${UI.length ? `\n\nÈ un componente di ${UI.length} kit (${UI.slice(0, 3).map(x => x.a.descrizione).join(', ')}${UI.length > 3 ? '…' : ''}): verrà tolto dalla loro composizione.` : ''}`)) return;
+      const kOps = KITS().filter(k => kitOf(k).c.some(c => c.a === a.id)).map(k => { const K = cfg('kit:' + k); return { action: 'upsert', sheet: 'Config', row: { chiave: 'kit:' + k, valore: JSON.stringify({ ...K, c: K.c.filter(c => c.a !== a.id) }) } }; });
+      if (cfg('kit:' + a.id)) kOps.push({ action: 'delete', sheet: 'Config', id: 'kit:' + a.id });
+      write([{ action: 'delete', sheet: 'Articoli', id: a.id }, ...GX.mov().filter(m => m.articolo === a.id).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id })), ...kOps]); toast('Articolo eliminato'); return true;
     }, n ? 'Aggiungi articolo' : 'Salva');
     $('#sheet-form').classList.add('wide');
+    kitUI(a, KS, n);
+  }
+  /* v292: sezione «Composizione» nella scheda articolo */
+  function kitState(id) { const k = id && cfg('kit:' + id); return { on: !!(k && Array.isArray(k.c) && k.c.length), t: k && k.t === 'a' ? 'a' : 'v', cm: k ? !!k.cm : true, c: k && Array.isArray(k.c) ? k.c.map(x => ({ a: String(x.a || ''), q: num(x.q) || 1 })).filter(x => artOf(x.a)) : [] }; }
+  function kitUI(a, KS, nuovo) {
+    const box = $('#kt'); if (!box) return;
+    const A = GX.art().filter(x => x.id !== a.id).sort((x, y) => String(x.descrizione).localeCompare(String(y.descrizione), 'it')), lab = x => (x.codice ? x.codice + ' — ' : '') + x.descrizione;
+    const used = nuovo ? [] : kitUsedIn(a.id), saved = JSON.stringify(kitState(a.id));
+    const draw = () => {
+      const G = giacMap(), cost = r2(KS.c.reduce((s, c) => { const x = artOf(c.a); return s + (x ? c.q * (kitOf(c.a) && kitOf(c.a).cm ? kitCost(c.a) : num(x.costo)) : 0); }, 0));
+      let av = Infinity, lim = null; KS.c.forEach(c => { if (!artOf(c.a)) return; const v = Math.floor(Math.max(0, G.get(c.a) || 0) / c.q + 1e-9); if (v < av) { av = v; lim = c; } }); if (av === Infinity) av = 0;
+      const pr = num(($('#sheet-form [name=prezzo]') || {}).value), mg = pr && cost ? (pr - cost) / pr * 100 : null;
+      box.innerHTML = `<div class="kt-h"><label class="kt-sw"><input type="checkbox" data-kt="on"${KS.on ? ' checked' : ''}><i></i><span><b>Articolo composto</b><small>kit o distinta base: è fatto da altri articoli del magazzino</small></span></label></div>
+        ${KS.on ? `<div class="kt-b">
+          <div class="kt-seg" role="radiogroup" aria-label="Tipo di kit"><button type="button" data-kt="t:v" class="${KS.t === 'v' ? 'on' : ''}" role="radio" aria-checked="${KS.t === 'v'}"><b>Componibile</b><small>non ha giacenza sua: quando lo vendi o lo scarichi escono i componenti</small></button><button type="button" data-kt="t:a" class="${KS.t === 'a' ? 'on' : ''}" role="radio" aria-checked="${KS.t === 'a'}"><b>Assemblato</b><small>lo prepari prima: «Assembla» scarica i componenti e carica il kit</small></button></div>
+          <div class="kt-tb"><div class="kt-hd"><span>Componente</span><span>Q.tà per 1 kit</span><span>In magazzino</span><span>Costo</span><span></span></div>
+          ${KS.c.map((c, i) => { const x = artOf(c.a), g = x ? (G.get(c.a) || 0) : 0, low = x && g < c.q; return `<div class="kt-r" data-i="${i}"><span class="kt-a">${x ? `<b>${esc(x.descrizione)}</b><small>${esc([x.codice, x.um, kitOf(c.a) ? 'kit' : ''].filter(Boolean).join(' · '))}</small>` : '<b class="muted">Articolo eliminato</b>'}</span><input data-kq type="number" step="any" min="0" inputmode="decimal" value="${esc(c.q)}" aria-label="Quantità per un kit"><span class="kt-g${low ? ' low' : ''}">${x ? fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(x.um || '') : '—'}</span><span class="kt-c">${x && num(x.costo) ? eur(c.q * (kitOf(c.a) && kitOf(c.a).cm ? kitCost(c.a) : num(x.costo))) : '<em>senza costo</em>'}</span><button type="button" class="dx-x" data-kt="del" aria-label="Togli componente">✕</button></div>`; }).join('') || '<div class="kt-empty">Aggiungi i componenti: cerca per nome o codice.</div>'}
+          <div class="kt-add"><input list="kt-arts" id="kt-in" placeholder="+ Aggiungi componente: cerca nome o codice" autocomplete="off"><button type="button" class="btn sm" data-kt="scan">${SCAN_IC}Scansiona</button></div>
+          <datalist id="kt-arts">${A.slice(0, 4000).map(x => `<option value="${esc(lab(x))}">`).join('')}</datalist></div>
+          <div class="kt-sum"><div><span>Costo componenti</span><b>${eur(cost)}</b><small>per 1 ${esc(a.um || 'pz')}</small></div>
+            <div><span>${KS.t === 'v' ? 'Componibili ora' : 'Si possono assemblare'}</span><b class="${av ? '' : 'kt-z'}">${fmtNum(av, 0)}</b><small>${lim ? 'limita: ' + esc(artOf(lim.a).descrizione) : '—'}</small></div>
+            <div><span>Margine sul prezzo</span><b class="${mg == null ? '' : mg >= 0 ? 'kt-ok' : 'kt-ko'}">${mg == null ? '—' : fmtNum(mg, 0) + '%'}</b><small>${pr ? 'prezzo ' + eur(pr) : 'scrivi il prezzo di vendita'}</small></div></div>
+          <label class="gx-chk"><input type="checkbox" data-kt="cm"${KS.cm ? ' checked' : ''}> Il costo d'acquisto dell'articolo è la somma dei componenti (si aggiorna da solo)</label>
+          ${!nuovo && KS.t === 'a' && kitOf(a.id) ? `<div class="kt-asm"><span><b>Giacenza del kit: ${fmtNum(G.get(a.id) || 0, 0)} ${esc(a.um || '')}</b><small>Assembla = scarica i componenti e carica i kit pronti · Smonta = il contrario</small></span><button type="button" class="btn sm primary" data-kt="asm">Assembla…</button><button type="button" class="btn sm" data-kt="dis">Smonta…</button></div>` : ''}
+        </div>` : ''}
+        ${used.length ? `<div class="kt-used"><span>Componente di</span>${used.map(u => `<button type="button" class="kt-ub" data-ktopen="${esc(u.a.id)}"><b>${esc(u.a.descrizione)}</b><small>${fmtNum(u.q, u.q % 1 ? 2 : 0)} ${esc(a.um || 'pz')} per kit · ${u.t === 'v' ? 'componibile' : 'assemblato'}</small></button>`).join('')}</div>` : ''}`;
+    };
+    const addA = x => { if (!x) return; if (x.id === a.id) return toast('Un articolo non può contenere sé stesso'); if (kitHas(x.id, a.id)) return toast(`«${x.descrizione}» contiene già questo articolo: si creerebbe un giro`); const ex = KS.c.find(c => c.a === x.id); if (ex) ex.q = r2(ex.q + 1); else KS.c.push({ a: x.id, q: 1 }); draw(); const q = $$('#kt [data-kq]'); const k = KS.c.findIndex(c => c.a === x.id); if (q[k]) q[k].select(); };
+    box.addEventListener('change', e => {
+      if (e.target.id === 'kt-in') { const v = e.target.value.trim(), x = A.find(y => lab(y) === v) || (/^\S+$/.test(v) ? artByCode(v) : null); if (x) addA(x); else if (v) toast('Scegli un articolo dall\'elenco'); return; }
+      if (e.target.matches('[data-kt="on"]')) { KS.on = e.target.checked; draw(); return; }
+      if (e.target.matches('[data-kt="cm"]')) { KS.cm = e.target.checked; return; }
+      if (e.target.matches('[data-kq]')) { const i = +e.target.closest('.kt-r').dataset.i; KS.c[i].q = Math.max(0, num(e.target.value)); draw(); }
+    });
+    box.addEventListener('click', e => {
+      const b = e.target.closest('[data-kt]'), o = e.target.closest('[data-ktopen]');
+      if (o) { const x = artOf(o.dataset.ktopen); if (x) { closeSheet(); setTimeout(() => artForm(x), 260); } return; }
+      if (!b || b.tagName === 'INPUT') return; const k = b.dataset.kt;
+      if (k === 't:v' || k === 't:a') { KS.t = k.slice(2); draw(); }
+      if (k === 'del') { KS.c.splice(+b.closest('.kt-r').dataset.i, 1); draw(); }
+      if (k === 'scan') scanOpen({ title: 'Aggiungi componente', multi: true, onCode: c => { const x = artByCode(c); if (!x) return { ok: false, msg: `Codice ${c} non trovato` }; addA(x); return { ok: true, msg: x.descrizione }; } });
+      if (k === 'asm' || k === 'dis') { if (JSON.stringify(KS) !== saved) return toast('Salva prima la composizione, poi assembla'); kitAssemble(a, k === 'asm'); }
+    });
+    const pz = $('#sheet-form [name=prezzo]'); if (pz) pz.addEventListener('input', () => { if (KS.on) draw(); });
+    draw();
+  }
+  // controlli e operazioni al salvataggio della scheda: { ops, cost, v } · false = non salvare
+  function kitSave(a, KS, fd) {
+    const had = !!cfg('kit:' + a.id);
+    // la composizione è in Config: il server la salva solo per il titolare (i dipendenti possono vendere, assemblare e smontare)
+    if (!isOwnerU()) { if (KS.on !== had || (had && JSON.stringify(kitState(a.id)) !== JSON.stringify(KS))) toast('La composizione del kit la cambia solo il titolare: il resto è salvato'); return null; }
+    if (!KS.on) return had ? { ops: [{ action: 'delete', sheet: 'Config', id: 'kit:' + a.id }] } : null;
+    const c = []; KS.c.forEach(x => { if (!artOf(x.a) || !(x.q > 0)) return; const e = c.find(y => y.a === x.a); if (e) e.q = r2(e.q + x.q); else c.push({ a: x.a, q: r2(x.q) }); });
+    if (!c.length) { toast('Aggiungi almeno un componente con la quantità, oppure togli «Articolo composto»'); return false; }
+    if (c.some(x => kitHas(x.a, a.id))) { toast('Un componente contiene già questo articolo: si creerebbe un giro'); return false; }
+    const g = giacMapRaw().get(a.id) || 0;
+    if (KS.t === 'v' && g && !(kitOf(a.id) && kitOf(a.id).t === 'v') && !confirm(`L'articolo ha ancora ${fmtNum(g, g % 1 ? 2 : 0)} in giacenza propria. Come kit componibile la disponibilità diventa quella dei componenti e la giacenza propria non conta più. Continuare?`)) return false;
+    const row = { t: KS.t, c, cm: KS.cm ? 1 : 0, agg: new Date().toISOString() };
+    const cost = KS.cm ? r2(c.reduce((s, x) => s + x.q * (kitOf(x.a) && kitOf(x.a).cm ? kitCost(x.a) : num(artOf(x.a).costo)), 0)) : null;
+    return { ops: [{ action: 'upsert', sheet: 'Config', row: { chiave: 'kit:' + a.id, valore: JSON.stringify(row) } }], cost, v: KS.t === 'v' };
+  }
+  // giacenze senza il calcolo dei kit (solo movimenti)
+  const giacMapRaw = mag => { const M = new Map(); GX.mov().forEach(m => { if (mag && magOf(m) !== mag) return; M.set(m.articolo, r2((M.get(m.articolo) || 0) + num(m.quantita))); }); return M; };
+  // assembla (o smonta) N kit: scarica i componenti e carica il kit, con lo stesso numero di documento
+  async function kitAssemble(a, asm) {
+    const k = kitOf(a.id); if (!k) return;
+    const multi = magMulti(), G0 = giacMap();
+    const r = await modal(asm ? `Assembla «${a.descrizione}»` : `Smonta «${a.descrizione}»`, `${multi ? magSel(magLast(), 'mag', 'Magazzino') : magSel('')}
+      <div class="f-row"><label class="f"><span>Quanti kit</span><input name="q" type="number" min="1" step="1" inputmode="numeric" value="1" data-focus required></label><label class="f"><span>Data</span><input name="data" type="date" value="${today()}"></label></div>
+      <div class="kt-prev">${k.c.map(c => { const x = artOf(c.a); return `<div><span>${esc(x.descrizione)}</span><b>${asm ? '−' : '+'}${fmtNum(c.q, c.q % 1 ? 2 : 0)} ${esc(x.um || '')} <small>per kit · ora ${fmtNum(G0.get(c.a) || 0, 0)}</small></b></div>`; }).join('')}<div class="kt-pk"><span>${esc(a.descrizione)}</span><b>${asm ? '+' : '−'}1 ${esc(a.um || '')} <small>per kit · ora ${fmtNum(G0.get(a.id) || 0, 0)}</small></b></div></div>`, asm ? 'Assembla' : 'Smonta');
+    if (!r) return;
+    const n = Math.max(0, Math.round(num(r.fd.get('q')))); if (!n) return toast('Scrivi quanti kit');
+    const mag = magNeed(r.fd); if (mag === null) return;
+    const G = giacMap(mag || undefined), dt = String(r.fd.get('data') || today()), did = 'asm' + uid().slice(0, 10), cs = asm ? `Assemblaggio ${a.codice || a.descrizione}` : `Smontaggio ${a.codice || a.descrizione}`;
+    if (asm) { const short = k.c.filter(c => (G.get(c.a) || 0) < c.q * n); if (short.length && !confirm(`Componenti insufficienti: ${short.map(c => artOf(c.a).descrizione).join(', ')}.\nAssemblare lo stesso?`)) return; }
+    else if ((G.get(a.id) || 0) < n && !confirm(`In giacenza ci sono ${fmtNum(G.get(a.id) || 0, 0)} kit. Smontarne ${n} lo stesso?`)) return;
+    const now = new Date().toISOString(), cost = kitCost(a.id);
+    const ops = k.c.map(c => ({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dt, articolo: c.a, tipo: asm ? 'scarico' : 'carico', quantita: asm ? -r2(c.q * n) : r2(c.q * n), costo: num(artOf(c.a).costo), causale: cs, doc: did, note: `${n} kit`, creato: now } }));
+    ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dt, articolo: a.id, tipo: asm ? 'carico' : 'scarico', quantita: asm ? n : -n, costo: cost || num(a.costo), causale: cs, doc: did, note: `${k.c.length} componenti`, creato: now } });
+    write(ops); toast(asm ? `Assemblati ${n} kit` : `Smontati ${n} kit`); closeSheet();
   }
   function movForm(artId) {
     const A = GX.art().slice().sort((a, b) => String(a.descrizione).localeCompare(String(b.descrizione), 'it')), G = giacMap();
@@ -9266,6 +9375,16 @@
       const id = String(fd.get('articolo')), a = artOf(id), q = num(fd.get('q'));
       if (!a) return; if (!String(fd.get('q') || '').trim()) { toast('Scrivi la quantità'); return; }
       const mag = magNeed(fd); if (mag === null) return;
+      // v292: kit componibile = muovo i componenti
+      if (kitV(id)) {
+        if (tipo === 'rettifica') { toast('Un kit componibile non ha giacenza sua: fai l\'inventario dei componenti'); return; }
+        const qq = Math.abs(q); if (!qq) { toast('Scrivi la quantità'); return; }
+        const dt = String(fd.get('data') || today()), cs = String(fd.get('causale') || ''), nt = String(fd.get('note') || '').trim();
+        if (tipo === 'trasf') { const mag2 = String(fd.get('mag2') || ''); if (!mag2 || mag2 === mag) { toast('Scegli un magazzino di arrivo diverso'); return; } const tid = uid();
+          write([...kitMovs(id, -qq, { mag, data: dt, tipo: 'scarico', causale: 'Trasferimento', doc: tid, note: 'verso ' + mag2 }), ...kitMovs(id, qq, { mag: mag2, data: dt, tipo: 'carico', causale: 'Trasferimento', doc: tid, note: 'da ' + mag })]); toast(`Spostati i componenti di ${fmtNum(qq, 0)} kit in ${mag2}`); return true; }
+        const ops = kitMovs(id, tipo === 'carico' ? qq : -qq, { mag, data: dt, tipo, causale: cs, doc: '', note: nt });
+        write(ops); toast(`${tipo === 'carico' ? 'Caricati' : 'Scaricati'} i componenti di ${fmtNum(qq, qq % 1 ? 2 : 0)} kit (${ops.length} righe)`); return true;
+      }
       if (tipo === 'trasf') {
         const mag2 = String(fd.get('mag2') || ''); if (!mag2 || mag2 === mag) { toast('Scegli un magazzino di arrivo diverso'); return; }
         const qq = Math.abs(q), dt = String(fd.get('data') || today()), now = new Date().toISOString(), tid = uid(); if (!qq) { toast('Scrivi la quantità'); return; }
@@ -9291,7 +9410,11 @@
       $('[data-mvq]').textContent = tipo === 'carico' ? 'Quantità caricata' : tipo === 'scarico' ? 'Quantità scaricata' : tipo === 'trasf' ? 'Quantità da spostare' : 'Giacenza contata';
       const mvt = $('[data-mvt]'); if (mvt) { mvt.hidden = tipo !== 'trasf'; $('[data-mvm] .f > span').textContent = tipo === 'trasf' ? 'Dal magazzino' : 'Magazzino'; }
       $('[data-mvc]').hidden = tipo !== 'carico'; $('[data-mvddt]').hidden = tipo !== 'carico'; $('[data-mvh]').textContent = tipo === 'carico' ? 'La quantità si aggiunge alla giacenza.' : tipo === 'scarico' ? 'La quantità si toglie dalla giacenza.' : 'Scrivi quanti pezzi hai contato: la differenza viene registrata come inventario.';
-      $('#sheet-body [name=causale]').innerHTML = CAUS[tipo].map(c => `<option>${c}</option>`).join(''); };
+      $('#sheet-body [name=causale]').innerHTML = CAUS[tipo].map(c => `<option>${c}</option>`).join(''); kitHint(); };
+    // v292: avviso quando l'articolo scelto è un kit
+    const kitHint = () => { let h = $('#mv-kit'); if (!h) { $('[data-mvh]').insertAdjacentHTML('afterend', '<div class="gx-note kit-note" id="mv-kit" hidden></div>'); h = $('#mv-kit'); } const k = kitOf(sel.value);
+      h.hidden = !k; if (k) h.innerHTML = `<span><b>${k.t === 'v' ? 'Kit componibile' : 'Kit assemblato'}</b> · ${k.t === 'v' ? `si muovono i ${k.c.length} componenti (${esc(k.c.map(c => fmtNum(c.q, c.q % 1 ? 2 : 0) + '× ' + artOf(c.a).descrizione).join(', '))})` : 'ha una giacenza sua: per farlo con i componenti usa «Assembla» nella scheda dell\'articolo'}.</span>`; };
+    sel.addEventListener('change', kitHint); kitHint();
   }
   async function magImport() {
     try {
@@ -9323,7 +9446,7 @@
   async function magExport() {
     try {
       await loadXlsx(); const G = giacMap();
-      const rows = GX.art().map(a => { const g = G.get(a.id) || 0; return { Codice: a.codice || '', 'Codice fornitore': a.codForn || '', 'Codice a barre': a.barcode || '', Descrizione: a.descrizione, UM: a.um || '', Categoria: a.categoria || '', Fornitore: a.fornitore || '', Giacenza: g, 'Scorta minima': num(a.scorta) || '', Costo: num(a.costo) || '', Prezzo: num(a.prezzo) || '', IVA: num(a.iva), Valore: r2(Math.max(0, g) * num(a.costo)) }; });
+      const rows = GX.art().map(a => { const g = G.get(a.id) || 0; return { Codice: a.codice || '', 'Codice fornitore': a.codForn || '', 'Codice a barre': a.barcode || '', Descrizione: a.descrizione, UM: a.um || '', Categoria: a.categoria || '', Fornitore: a.fornitore || '', Giacenza: g, 'Scorta minima': num(a.scorta) || '', Costo: num(a.costo) || '', Prezzo: num(a.prezzo) || '', IVA: num(a.iva), Valore: kitV(a.id) ? '' : r2(Math.max(0, g) * num(a.costo)), Composizione: kitOf(a.id) ? (kitOf(a.id).t === 'v' ? 'Kit componibile: ' : 'Kit assemblato: ') + kitOf(a.id).c.map(c => fmtNum(c.q, c.q % 1 ? 2 : 0) + ' × ' + (artOf(c.a).codice || artOf(c.a).descrizione)).join(' + ') : '' }; });
       const wb = XLSX.utils.book_new(), ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Codice: '', Descrizione: '', UM: '', Categoria: '', Fornitore: '', Giacenza: '', 'Scorta minima': '', Costo: '', Prezzo: '', IVA: '', Valore: '' }]);
       ws['!cols'] = [12, 16, 16, 40, 6, 18, 18, 10, 12, 10, 10, 6, 12].map(w => ({ wch: w })); XLSX.utils.book_append_sheet(wb, ws, 'Magazzino');
       XLSX.writeFile(wb, `magazzino-${today()}.xlsx`); toast('Excel scaricato');
@@ -9417,7 +9540,8 @@
         const ops = [{ action: 'upsert', sheet: isD ? 'DDT' : 'Vendite', row: o }, ...GX.mov().filter(m => m.doc === o.id).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id }))];
         const pp = prevId && pvGet(prevId);
         if (pp) { pp.docs = [...(pp.docs || []).filter(x => x.id !== o.id), { k: isD ? 'ddt' : 'fv', id: o.id }]; if (pp.stato === 'bozza' || pp.stato === 'inviato') pp.stato = 'accettato'; if (!isD && pp.fatt === 'no') delete pp.fatt; pp.agg = new Date().toISOString(); ops.push({ action: 'upsert', sheet: 'Config', row: { chiave: 'pv:' + pp.id, valore: JSON.stringify(pp) } }); }
-        if (modOn('magazzino') && (isD ? o.causale !== 'Conto visione' : true)) rows.filter(l => l.art && artOf(l.art) && num(l.q)).forEach(l => ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: o.data, articolo: l.art, tipo: o.causale === 'Reso' ? 'carico' : 'scarico', quantita: o.causale === 'Reso' ? Math.abs(num(l.q)) : -Math.abs(num(l.q)), costo: num(artOf(l.art).costo), causale: `${isD ? 'DDT' : 'Fattura'} ${o.numero}/${o.anno}`, doc: o.id, note: '', creato: new Date().toISOString() } }));
+        // v292: un kit componibile scarica (o, se reso, ricarica) i suoi componenti
+        if (modOn('magazzino') && (isD ? o.causale !== 'Conto visione' : true)) rows.filter(l => l.art && artOf(l.art) && num(l.q)).forEach(l => ops.push(...kitMovs(l.art, o.causale === 'Reso' ? Math.abs(num(l.q)) : -Math.abs(num(l.q)), { mag, data: o.data, tipo: o.causale === 'Reso' ? 'carico' : 'scarico', causale: `${isD ? 'DDT' : 'Fattura'} ${o.numero}/${o.anno}`, doc: o.id, note: '' })));
         write(ops); toast(`${isD ? 'DDT' : 'Fattura'} n. ${o.numero}/${o.anno} salvat${isD ? 'o' : 'a'}`); return true;
       }, n ? null : () => {
         if (lock) { toast('Il DDT è in una fattura: elimina prima la fattura'); return; }
@@ -9738,9 +9862,10 @@
     }
     const ipb = t.closest('[data-incp]'); if (ipb && !ipb.disabled) { const ms = [...new Set([...INC().map(r => String(r.data).slice(0, 7)), today().slice(0, 7)].filter(k => /^\d{4}-\d\d$/.test(k)))].sort(), opts = ['', ...ms.reverse()], i = opts.indexOf(incP) - Number(ipb.dataset.incp); incP = opts[Math.max(0, Math.min(opts.length - 1, i))] || ''; renderInc(); return; }
     const tb = t.closest('[data-mgtab]'); if (tb) { mgTab = tb.dataset.mgtab; renderMag(); return; }
-    const lw = t.closest('[data-mglow]'); if (lw) { mgLow = lw.dataset.mglow === '1'; mgAvail = false; mgOut = false; renderMag(); return; }
+    const lw = t.closest('[data-mglow]'); if (lw) { mgLow = lw.dataset.mglow === '1'; mgAvail = false; mgOut = false; if (lw.dataset.mglow === '0') mgKit = false; renderMag(); return; }
     const ou = t.closest('[data-mgout]'); if (ou) { mgOut = !mgOut; if (mgOut) { mgLow = false; mgAvail = false; } renderMag(); return; }
     const av = t.closest('[data-mgav]'); if (av) { mgAvail = !mgAvail; if (mgAvail) { mgLow = false; mgOut = false; } renderMag(); return; }
+    const mkit = t.closest('[data-mgkit]'); if (mkit) { mgKit = !mgKit; renderMag(); return; }
     const mgi = t.closest('[data-mgitem]'); if (mgi && !t.closest('[data-gx]')) { mgItem = mgi.dataset.mgitem; renderMag(); window.scrollTo(0, 0); return; }
     if (t.closest('#mg-iback')) { mgItem = ''; renderMag(); return; }
     const mvw = t.closest('[data-mgview]'); if (mvw) { mgView = mvw.dataset.mgview; try { localStorage.setItem('cdc_mgv', mgView); } catch {} renderMag(); return; }
@@ -9967,7 +10092,8 @@
       <datalist id="xi-arts">${A.slice(0, 4000).map(a => `<option value="${esc(lab(a))}">`).join('')}</datalist>
       <label class="f"><span>Note</span><textarea name="note" rows="2">${esc(d0 && d0.note || '')}</textarea></label></div>`,
       fd => {
-        const rows = R.filter(l => l.art && num(l.q) > 0).map(l => ({ art: l.art, c: l.c, d: l.d, um: l.um, q: num(l.q), costo: num(artOf(l.art) ? artOf(l.art).costo : l.costo) }));
+        // v292: un kit componibile diventa le righe dei suoi componenti
+        const rows = R.filter(l => l.art && num(l.q) > 0).flatMap(l => kitLines(l.art, num(l.q)).map(x => { const a = artOf(x.art) || {}; return x.art === l.art ? { art: l.art, c: l.c, d: l.d, um: l.um, q: num(l.q), costo: num(a.costo !== undefined ? a.costo : l.costo) } : { art: x.art, c: a.codice || '', d: a.descrizione + ' (kit ' + l.d + ')', um: a.um || 'PZ', q: x.q, costo: num(a.costo) }; }));
         if (R.some(l => !l.art && String(l.d || '').trim())) return toast('Scegli gli articoli dall\'elenco del magazzino: «' + R.find(l => !l.art && String(l.d || '').trim()).d + '» non è un articolo');
         if (!rows.length) return toast('Aggiungi almeno un articolo con la quantità');
         const mag = magNeed(fd); if (mag === null) return;
