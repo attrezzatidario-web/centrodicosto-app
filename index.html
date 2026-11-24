@@ -9,7 +9,7 @@
   <title>Centro di Costo</title>
   <meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
-  <script>try{var t=localStorage.getItem('cdc_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+  <script>try{var t=localStorage.getItem('cdc_theme'),k=localStorage.getItem('cdc_skin');if(k==='blu'){document.documentElement.setAttribute('data-skin','blu');t='light'}if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=152">
-  <link rel="stylesheet" href="cdc.css?v=290">
+  <link rel="stylesheet" href="cdc.css?v=291">
 </head>
 <body>
   <div id="splash" class="spx" aria-hidden="true">
@@ -444,6 +444,12 @@
                     <button type="button" data-theme-set="dark" role="radio"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span>Scuro</span></button>
                     <i></i>
                   </div></div>
+                <div class="st-row"><div class="st-l"><b>Grafica</b><small>Classica è quella di sempre. Blu: sfondo blu, menu a vetro e schede chiare (usa sempre il tema chiaro).</small></div>
+                  <div class="th-seg st-theme sk-seg" id="s-skin" role="radiogroup" aria-label="Grafica">
+                    <button type="button" data-skin-set="classic" role="radio"><span class="sk-sw sk-c"><b></b><b></b></span><span>Classica</span></button>
+                    <button type="button" data-skin-set="blu" role="radio"><span class="sk-sw sk-b"><b></b><b></b></span><span>Blu</span></button>
+                    <i></i>
+                  </div></div>
               </div>
             </section>
 
@@ -540,7 +546,7 @@
   <script src="auth-fx.js?v=1"></script>
   <script src="meta-pixel.js?v=1"></script>
   <script src="foto-crop.js?v=1"></script>
-  <script src="app.js?v=290"></script>
+  <script src="app.js?v=291"></script>
   <script src="motion.js?v=259"></script>
 </body>
 </html>

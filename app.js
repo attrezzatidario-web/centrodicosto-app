@@ -716,12 +716,25 @@
   }
   /* ---------- Tema: automatico / chiaro / scuro ---------- */
   const getTheme = () => { try { return localStorage.getItem('cdc_theme') || 'auto'; } catch { return 'auto'; } };
+  // v291: grafica «Classica» o «Blu» (solo aspetto); la Blu usa sempre il tema chiaro
+  const getSkin = () => { try { return localStorage.getItem('cdc_skin') === 'blu' ? 'blu' : 'classic'; } catch { return 'classic'; } };
+  function skinUI() {
+    const seg = $('#s-skin'); if (!seg) return; const k = getSkin(), btns = $$('[data-skin-set]', seg), i = btns.findIndex(b => b.dataset.skinSet === k);
+    btns.forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-checked', j === i); }); seg.style.setProperty('--i', Math.max(0, i));
+    const ts = $('#s-theme'); if (ts) { ts.style.opacity = k === 'blu' ? '.45' : ''; ts.style.pointerEvents = k === 'blu' ? 'none' : ''; }
+  }
+  function applySkin(k, anim) {
+    try { localStorage.setItem('cdc_skin', k); } catch {}
+    const go = () => { if (k === 'blu') document.documentElement.setAttribute('data-skin', 'blu'); else document.documentElement.removeAttribute('data-skin'); applyTheme(getTheme()); skinUI(); };
+    if (anim && !reduced() && document.startViewTransition) document.startViewTransition(go); else go();
+  }
   function applyTheme(t, anim) {
     const root = document.documentElement;
     const go = () => {
+      if (getSkin() === 'blu') { t = 'light'; root.setAttribute('data-skin', 'blu'); } else root.removeAttribute('data-skin');
       if (t === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
       const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-      $$('meta[name="theme-color"]').forEach(m => { m.setAttribute('content', dark ? '#0f1115' : '#f4f5f7'); m.removeAttribute('media'); });
+      $$('meta[name="theme-color"]').forEach(m => { m.setAttribute('content', getSkin() === 'blu' ? '#1b2a7c' : dark ? '#0f1115' : '#f4f5f7'); m.removeAttribute('media'); });
       themeUI();
     };
     if (anim && !reduced() && document.startViewTransition) document.startViewTransition(go); else go();
@@ -731,6 +744,7 @@
     const btns = $$('[data-theme-set]', seg), i = btns.findIndex(b => b.dataset.themeSet === t);
     btns.forEach((b, j) => { b.classList.toggle('on', j === i); b.setAttribute('aria-checked', j === i); });
     seg.style.setProperty('--i', Math.max(0, i));
+    skinUI();
   }
   function ivaUI() {
     $$('.iva-tg').forEach(b => { b.classList.toggle('on', ivaOn); b.setAttribute('aria-pressed', ivaOn); });
@@ -10367,6 +10381,7 @@
       if (t.closest('#sb-del')) { delSelected(); return; }
       if (t.closest('#m-xls')) { exportXlsx(filtered(), f.per === 'zero' ? 'senza-prezzo' : 'movimenti-filtrati'); return; }
       if (t.closest('#m-imp') || t.closest('#zb-imp')) { importExcel(false); return; }
+      const sk = t.closest('[data-skin-set]'); if (sk) { const v = sk.dataset.skinSet === 'blu' ? 'blu' : 'classic'; applySkin(v, true); toast(v === 'blu' ? 'Grafica blu' : 'Grafica classica'); return; }
       const th = t.closest('[data-theme-set]'); if (th) { const v = th.dataset.themeSet; try { localStorage.setItem('cdc_theme', v); } catch {} applyTheme(v, true); toast(v === 'auto' ? 'Tema automatico' : v === 'dark' ? 'Tema scuro' : 'Tema chiaro'); return; }
       if (t.closest('.iva-tg')) { ivaOn = !ivaOn; ivaPop(t.closest('.iva-tg')); try { localStorage.setItem('cdc_iva', ivaOn ? '1' : '0'); } catch {} if (view === 'attrezzatura') ccAnim = true; if (view === 'home') ovAnim = true; render(); toast(ivaOn ? 'Importi con IVA inclusa' : 'Importi senza IVA'); return; }
       if (t.closest('#ov-custom')) { dashEdit(); return; }

@@ -4449,3 +4449,47 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .mg-locb svg { width: 16px; height: 16px; fill: none; stroke: #f47b20; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .mg-card .mg-pm.mg-locc { right: 42px; margin-right: 0; }
 .pv-vrow .mg-locb { margin-left: auto; }
+
+/* v291 · grafica «Blu» (Impostazioni › Aspetto › Grafica): solo colori, sfondi, vetro e ombre. Attiva con :root[data-skin="blu"] (forza il tema chiaro) */
+.sk-seg { grid-template-columns: repeat(2, 1fr); }
+.sk-seg i { width: calc((100% - 12px) / 2); }
+.sk-sw { display: grid; grid-template-columns: 9px 1fr; gap: 3px; width: 46px; height: 26px; padding: 3px; border-radius: 7px; box-sizing: border-box; border: 1px solid var(--line); }
+.sk-sw b { border-radius: 3px; } .sk-c { background: #f6f6f4; } .sk-c b:first-child { background: #e4e4e0; } .sk-c b:last-child { background: #fff; }
+.sk-b { background: linear-gradient(160deg, #2a44c0, #1b2466); border-color: #2338a0; } .sk-b b:first-child { background: rgba(255,255,255,.22); } .sk-b b:last-child { background: #eef2ff; }
+:root[data-skin="blu"] {
+  --accent: #3d6bff; --accent-ink: #fff; --accent-soft: #e8eeff; --bar: #3d6bff; --bar-dim: #b8c8ff;
+  --bg: #eef2ff; --surface: #ffffff; --ink: #121735; --ink-2: #4a5176; --muted: #8b91ad; --line: #e2e7f6;
+  --radius: 18px; --shadow: 0 1px 2px rgba(20,30,90,.05), 0 14px 34px -18px rgba(30,50,150,.28);
+  color-scheme: light;
+}
+:root[data-skin="blu"], :root[data-skin="blu"] body { background:
+  radial-gradient(900px 600px at 8% -8%, rgba(98,140,255,.85), transparent 60%),
+  radial-gradient(800px 600px at 100% 0%, rgba(58,82,210,.9), transparent 58%),
+  radial-gradient(700px 500px at 60% 110%, rgba(90,70,220,.55), transparent 60%),
+  linear-gradient(160deg, #1b2a7c 0%, #2338a0 45%, #182061 100%) fixed !important; }
+:root[data-skin="blu"] #v-home { --pl-r: #3d6bff; --pl-c: #b8c8ff; --pl-u: #121735; }
+@media (min-width: 900px) {
+  :root[data-skin="blu"] .nav { background: rgba(12, 20, 70, .34) !important; border: 1px solid rgba(255,255,255,.1) !important; border-radius: 24px !important; top: 14px !important; bottom: 14px !important; left: 14px !important; height: auto !important; width: 222px !important; -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4); box-shadow: 0 30px 60px -30px rgba(0,0,30,.6), inset 0 1px 0 rgba(255,255,255,.08); }
+  :root[data-skin="blu"] .nav .brand strong { color: #fff; } :root[data-skin="blu"] .nav .brand span { color: rgba(255,255,255,.55) !important; }
+  :root[data-skin="blu"] .nav a { color: rgba(235,240,255,.74) !important; border-radius: 12px !important; }
+  :root[data-skin="blu"] .nav a:hover { background: rgba(255,255,255,.08) !important; color: #fff !important; }
+  :root[data-skin="blu"] .nav a.active { background: linear-gradient(180deg, #5a85ff, #3a62f2) !important; color: #fff !important; box-shadow: 0 10px 24px -10px rgba(70,110,255,.95), inset 0 1px 0 rgba(255,255,255,.28); }
+  :root[data-skin="blu"] .nav a.active::before { display: none !important; }
+  :root[data-skin="blu"] .nav .nav-foot, :root[data-skin="blu"] .nav .nav-foot *, :root[data-skin="blu"] .nav .nv-top, :root[data-skin="blu"] .nav .nv-top * { color: rgba(235,240,255,.62) !important; }
+  :root[data-skin="blu"] main { margin: 14px 14px 14px 250px !important; padding: 26px 34px 48px !important; min-height: calc(100dvh - 28px); border-radius: 28px; background: linear-gradient(180deg, rgba(240,244,255,.97), rgba(229,235,252,.97)); box-shadow: 0 40px 80px -40px rgba(0,0,40,.55), inset 0 1px 0 rgba(255,255,255,.9); }
+}
+:root[data-skin="blu"] .top .muted, :root[data-skin="blu"] .top small { color: #5d6aa0 !important; }
+:root[data-skin="blu"] .card, :root[data-skin="blu"] .gl-month, :root[data-skin="blu"] .dsh-btn, :root[data-skin="blu"] .mg-card, :root[data-skin="blu"] .pv-card { border: 1px solid rgba(214,222,246,.9) !important; box-shadow: var(--shadow) !important; }
+:root[data-skin="blu"] .card { border-radius: 22px !important; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s; }
+@media (hover: hover) { :root[data-skin="blu"] .card:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(20,30,90,.05), 0 22px 40px -20px rgba(30,50,150,.35) !important; } }
+:root[data-skin="blu"] .pl-kr, :root[data-skin="blu"] .pl-kc { background: #f5f7ff !important; border: 1px solid rgba(214,222,246,.9) !important; border-radius: 16px !important; }
+:root[data-skin="blu"] .pl-ku { background: linear-gradient(160deg, #4d78ff, #3156e8) !important; border: none !important; border-radius: 16px !important; box-shadow: 0 16px 30px -14px rgba(60,100,255,.8) !important; }
+:root[data-skin="blu"] .pl-ku span, :root[data-skin="blu"] .pl-ku small { color: rgba(255,255,255,.78) !important; } :root[data-skin="blu"] .pl-ku b { color: #fff !important; }
+:root[data-skin="blu"] .gl-month, :root[data-skin="blu"] .dsh-btn { border-radius: 14px !important; background: #fff !important; }
+:root[data-skin="blu"] .demo-bar { background: linear-gradient(90deg, #fff6dd, #fff1d1) !important; border: 1px solid #f2e2b3 !important; border-radius: 16px !important; }
+:root[data-skin="blu"] table th { color: #7d84a6 !important; } :root[data-skin="blu"] table tr:hover td { background: #f6f8ff; }
+@media (max-width: 899px) {
+  :root[data-skin="blu"] main { background: linear-gradient(180deg, rgba(240,244,255,.98), rgba(229,235,252,.98)); border-radius: 0 0 26px 26px; }
+  :root[data-skin="blu"] .nav { background: rgba(12, 20, 70, .72) !important; -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.12) !important; }
+  :root[data-skin="blu"] .nav a { color: rgba(235,240,255,.7) !important; } :root[data-skin="blu"] .nav a.active { color: #2f5bef !important; }
+}
