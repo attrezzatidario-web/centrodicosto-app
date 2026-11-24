@@ -1,4 +1,4 @@
-/* Magazzino 3D (v290) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v296) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen(), pickLoc(ctx, idArticolo, {toast, onSave}), locOf(ctx, id) }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -141,22 +141,35 @@
 .m3-fs button.on i{background:${OR};color:#fff;box-shadow:0 5px 12px rgba(244,123,32,.3)}
 .m3-fs button.w i{background:#fde9e6;color:#c2412d}
 .m3-fs b.sep{flex:0 0 14px;height:2px;background:#ead7c5;margin-top:17px;border-radius:1px}
-.m3-tab{position:absolute;right:18px;bottom:18px;width:430px;z-index:3;padding:6px 6px 8px;transition:opacity .3s}
-.m3-tt{display:flex;align-items:center;gap:2px;padding:4px 6px 6px}
-.m3-tt>i{width:30px;height:30px;border-radius:9px;background:#fdf0e5;color:${OR};display:grid;place-items:center;margin-right:6px}
-.m3-tt>i svg{width:16px;height:16px}
-.m3-tt button{height:30px;padding:0 10px;border-radius:9px;font-size:12.5px;font-weight:600;color:#55585e}
-.m3-tt button em{font-style:normal;color:#a9abb0;font-weight:500;margin-left:4px;font-size:11.5px}
-.m3-tt button.on{background:#f4f3f1;color:#15171a}
-.m3-tr{max-height:146px;overflow:auto;padding:0 4px}
-.m3-tr button{display:grid;grid-template-columns:64px 1fr auto 44px 12px;align-items:center;gap:8px;width:100%;padding:6px 6px;border-radius:9px;text-align:left;font-size:12.5px}
-.m3-tr button:hover{background:#fbf7f3}
-.m3-tr .c1 b{display:block;font-size:12.5px}.m3-tr .c1 small{display:block;color:#9a9ca1;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.m3-tr .c2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
-.m3-tr .c2 i{width:9px;height:9px;border-radius:50%;flex:none}
-.m3-tr .c4{color:#8a8d93;text-align:right;font-size:12px}
-.m3-tr .c5{color:#c5c7cb}
+.m3-tab{position:absolute;right:18px;bottom:18px;width:510px;max-width:calc(100% - 800px);min-width:400px;z-index:3;padding:6px;transition:opacity .3s}
+.m3-tt{display:flex;align-items:center;gap:6px}
+.m3-ts{flex:1;min-width:0;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 16px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 16px),transparent)}
+.m3-ts::-webkit-scrollbar{display:none}
+.m3-ts button{flex:none;display:flex;align-items:center;gap:5px;height:32px;padding:0 9px;border-radius:10px;font-size:12.5px;font-weight:600;color:#55585e;white-space:nowrap}
+.m3-ts button em{font-style:normal;font-size:11px;font-weight:600;color:#a9abb0}
+.m3-ts button:not(.on):hover{background:#f6f5f3}
+.m3-ts button.on{background:#15171a;color:#fff}.m3-ts button.on em{color:rgba(255,255,255,.6)}
+.m3-ts button.z{color:#a9abb0}
+.m3-tx{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#f4f3f1;color:#55585e}
+.m3-tx svg{width:16px;height:16px;transition:transform .3s}
+.m3.tbo .m3-tx svg{transform:rotate(180deg)}
+.m3-tr{display:none;max-height:236px;overflow:auto;overscroll-behavior:contain;margin-top:6px;padding:6px 0 0;border-top:1px solid #efede9}
+.m3.tbo .m3-tr{display:block}
+.m3-tr .r{display:grid;grid-template-columns:36px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:7px 8px;border-radius:11px;text-align:left;font:inherit;color:inherit}
+.m3-tr button.r{cursor:pointer}.m3-tr button.r:hover{background:#faf6f1}
+.m3-tr .bd{font-style:normal;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff;background:var(--c,#9a9ca1)}
+.m3-tr .bd.l{background:#f2f1ef;color:#3a3d42;font-size:10.5px;line-height:1.15;text-align:center}.m3-tr .bd.l b{display:block;font-size:13px}
+.m3-tr .bd svg{width:17px;height:17px}
+.m3-tr .tx{min-width:0}
+.m3-tr .tx b{display:block;font-size:13px;font-weight:600;color:#15171a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-tr .tx small{display:block;margin-top:1px;font-size:11.5px;color:#8a8d93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-tr .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:12.5px;font-weight:600;color:#3a3d42;white-space:nowrap;font-variant-numeric:tabular-nums}
+.m3-tr .rt small{font-size:11px;font-weight:500;color:#8a8d93}
+.m3-tr .bar{width:70px;height:5px;border-radius:3px;background:#efede9;overflow:hidden}.m3-tr .bar i{display:block;height:100%;border-radius:3px;background:var(--c,#f07f1e)}
+.m3-tr .pos{color:#1f7a3b}.m3-tr .neg{color:#c2412d}
 .m3-tr .m3-chip{height:22px;font-size:11px}
+.m3-tr .m3-empty{padding:14px 8px;font-size:12.5px;color:#8a8d93}
+@media (min-width:1181px){.m3-flow{width:min(760px,calc(100% - 552px))}.m3:not(.tbo) .m3-panel{max-height:calc(100% - 166px)}.m3.tbo .m3-panel{max-height:max(260px,calc(100% - 420px))}}
 .m3-lbs{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
 .m3-lb{position:absolute;left:0;top:0;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;display:flex;align-items:center;gap:8px;height:28px;padding:0 11px;border-radius:9px;background:${OR};color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;box-shadow:0 6px 16px rgba(170,80,10,.28);transition:opacity .25s;will-change:transform}
 .m3-lb:after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-bottom:0;border-top-color:${OR}}
@@ -3095,15 +3108,25 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   }
   function table(k) {
     table.k = k;
+    if (table.o == null) { try { table.o = localStorage.getItem('cdc_m3tab') === '1'; } catch (e) { table.o = false; } }
+    root.classList.toggle('tbo', !!table.o);
     const tabs = [['cor', 'Scaffali', P.racks.length], ['mov', 'Movimenti', D.MM.length], ['spe', 'Spedizioni', D.ddtM.length], ...(D.gas ? [['mez', 'Mezzi', D.gas.V.length]] : []), ['low', 'Riordino', D.low.length]];
+    const MO = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+    const dBd = d => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `<i class="bd l"><span><b>${+m[3]}</b>${MO[+m[2] - 1]}</span></i>` : '<i class="bd l">—</i>'; };
+    const row = (at, bd, t, sub, rt) => `<${at ? 'button type="button" class="r" ' + at : 'div class="r"'}>${bd}<span class="tx"><b>${t}</b><small>${sub}</small></span><span class="rt">${rt}</span></${at ? 'button' : 'div'}>`;
     let rows = '';
-    if (k === 'cor') rows = P.racks.map(r => { const c = D.catOf.get(r.cat), A2 = rackArts(r), top = A2.slice().sort((a, b) => b.g - a.g)[0], lw = A2.filter(x => x.low).length; return `<button type="button" data-rack3="${esc(r.id)}"><span class="c1"><b>${esc(r.code)}</b><small>${esc(r.cat || KIND[r.k].n)}</small></span><span class="c2"><i style="background:${c ? c.colH : '#c9c6c0'}"></i>${esc(top ? top.a.descrizione : 'vuoto')}${top ? ' · ' + N(top.g) : ''}</span>${lw ? '<span class="m3-chip a">Sotto scorta</span>' : '<span class="m3-chip g"><i></i>Ok</span>'}<span class="c4">${pc(A2.length, r.bays * r.lv)} %</span><span class="c5">›</span></button>`; }).join('');
-    else if (k === 'mov') rows = D.MM.slice().sort((a, b) => String(b.data).localeCompare(String(a.data))).slice(0, 40).map(m => { const a = C.artOf(m.articolo), q = C.num(m.quantita), p2 = P.byArt.get(m.articolo); return `<button type="button" ${p2 ? `data-art3="${esc(m.articolo)}"` : ''}><span class="c1"><b>${esc(C.dIt(m.data).slice(0, 5))}</b><small>${esc(p2 ? p2.code : m.tipo || '')}</small></span><span class="c2">${esc(a ? a.descrizione : 'Articolo eliminato')}</span><span class="m3-chip ${q > 0 ? 'g' : 'a'}">${q > 0 ? '+' : ''}${N(q)}</span><span class="c4">${esc((m.causale || '').slice(0, 8))}</span><span class="c5">›</span></button>`; }).join('');
-    else if (k === 'spe') rows = D.ddtM.slice(0, 30).map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><span class="c1"><b>${esc(C.dnum(x.d))}</b><small>${esc(C.dIt(x.d.data).slice(0, 5))}</small></span><span class="c2">${esc(x.cliN)}</span>${x.d.fattura ? '<span class="m3-chip g">Fatturato</span>' : '<span class="m3-chip a">Da fatturare</span>'}<span class="c4">${N(C.num(x.d.colli))} colli</span><span class="c5">›</span></button>`; }).join('');
-    else if (k === 'mez' && D.gas) rows = D.gas.V.map(v => `<button type="button" data-veh3="${esc(v.p)}"><span class="c1"><b>${esc(plFmt(v.p))}</b><small>${esc(v.name || v.kind)}</small></span><span class="c2">${esc(v.drv.join(', ') || v.uso || '—')}</span><span class="m3-chip ${v.lM ? 'g' : 'n'}">${N(Math.round(v.lM))} L</span><span class="c4">${v.cons ? v.cons.toFixed(1).replace('.', ',') + ' km/L' : '—'}</span><span class="c5">›</span></button>`).join('');
-    else rows = D.low.slice(0, 40).map(x => { const p2 = P.byArt.get(x.id); return `<button type="button" data-art3="${esc(x.id)}"><span class="c1"><b>${esc(p2 ? p2.code : x.a.codice || '—')}</b><small>min. ${N(x.s)}</small></span><span class="c2">${esc(x.a.descrizione)}</span><span class="m3-chip a">${N(x.g)} ${esc(x.a.um || '')}</span><span class="c4">${pc(x.g, x.s)} %</span><span class="c5">›</span></button>`; }).join('');
-    $('.m3-tab').innerHTML = `<div class="m3-tt"><i>${ic('chart')}</i>${tabs.map(([kk, l, n]) => `<button type="button" data-tab3="${kk}" class="${kk === k ? 'on' : ''}">${l}<em>${n}</em></button>`).join('')}</div><div class="m3-tr">${rows || '<div class="m3-empty">Niente da mostrare</div>'}</div>`;
+    if (k === 'cor') rows = P.racks.map(r => { const c = D.catOf.get(r.cat), col = c ? c.colH : '#9a9ca1', A2 = rackArts(r), top = A2.slice().sort((a, b) => b.g - a.g)[0], lw = A2.filter(x => x.low).length, tot = r.bays * r.lv;
+      return row(`data-rack3="${esc(r.id)}"`, `<i class="bd" style="--c:${col}">${esc(r.code)}</i>`, esc(r.cat || KIND[r.k].n), A2.length ? `${N(A2.length)} articoli · ${esc(top.a.descrizione)}` : 'scaffale vuoto', `${lw ? `<span class="m3-chip a">${N(lw)} sotto scorta</span>` : `<span>${N(A2.length)}/${N(tot)} vani</span>`}<span class="bar" style="--c:${col}"><i style="width:${pc(A2.length, tot)}%"></i></span>`); }).join('');
+    else if (k === 'mov') rows = D.MM.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.creato || '').localeCompare(String(a.creato || ''))).slice(0, 40).map(m => { const a = C.artOf(m.articolo), q = C.num(m.quantita), p2 = P.byArt.get(m.articolo);
+      return row(p2 ? `data-art3="${esc(m.articolo)}"` : '', dBd(m.data), esc(a ? a.descrizione : 'Articolo eliminato'), esc([m.causale || m.tipo, p2 ? p2.code : ''].filter(Boolean).join(' · ')), `<span class="${q > 0 ? 'pos' : 'neg'}">${q > 0 ? '+' : ''}${N(q)} ${esc(a ? a.um || '' : '')}</span><small>${esc(m.tipo || (q > 0 ? 'carico' : 'scarico'))}</small>`); }).join('');
+    else if (k === 'spe') rows = D.ddtM.slice(0, 30).map(x => { const i = trucks.findIndex(t => t.d === x);
+      return row(i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`, dBd(x.d.data), esc(x.cliN || 'Cliente'), esc(['DDT ' + C.dnum(x.d), C.num(x.d.colli) ? N(C.num(x.d.colli)) + ' colli' : ''].filter(Boolean).join(' · ')), x.d.fattura ? '<span class="m3-chip g">Fatturato</span>' : '<span class="m3-chip a">Da fatturare</span>'); }).join('');
+    else if (k === 'mez' && D.gas) rows = D.gas.V.map(v => row(`data-veh3="${esc(v.p)}"`, `<i class="bd l">${ic('truck')}</i>`, esc(plFmt(v.p)) + (v.name ? ` <span style="font-weight:500;color:#8a8d93">${esc(v.name)}</span>` : ''), esc(v.drv.join(', ') || v.uso || 'nessun autista'), `<span>${N(Math.round(v.lM))} L</span><small>${v.cons ? v.cons.toFixed(1).replace('.', ',') + ' km/L' : 'questo mese'}</small>`)).join('');
+    else rows = D.low.slice(0, 40).map(x => { const p2 = P.byArt.get(x.id), pr = pc(x.g, x.s);
+      return row(p2 ? `data-art3="${esc(x.id)}"` : '', `<i class="bd" style="--c:${x.g <= 0 ? '#c2412d' : '#e0892b'}">${ic('alert')}</i>`, esc(x.a.descrizione), esc([p2 ? p2.code : x.a.codice, 'scorta min. ' + N(x.s)].filter(Boolean).join(' · ')), `<span class="neg">${N(x.g)} ${esc(x.a.um || '')}</span><span class="bar" style="--c:#c2412d"><i style="width:${Math.max(4, Math.min(100, pr))}%"></i></span>`); }).join('');
+    $('.m3-tab').innerHTML = `<div class="m3-tt"><div class="m3-ts" role="tablist">${tabs.map(([kk, l, n]) => `<button type="button" role="tab" data-tab3="${kk}" aria-selected="${kk === k && table.o}" class="${kk === k && table.o ? 'on' : ''}${n ? '' : ' z'}">${l}<em>${N(n)}</em></button>`).join('')}</div><button type="button" class="m3-tx" data-tabx title="${table.o ? 'Chiudi l\'elenco' : 'Apri l\'elenco'}" aria-label="${table.o ? 'Chiudi l\'elenco' : 'Apri l\'elenco'}" aria-expanded="${!!table.o}">${ic('down')}</button></div><div class="m3-tr">${rows || `<div class="m3-empty">${{ cor: 'Nessuno scaffale', mov: 'Nessun movimento', spe: 'Nessun DDT questo mese', mez: 'Nessun mezzo', low: 'Niente da riordinare: tutto sopra la scorta minima' }[k] || 'Niente da mostrare'}</div>`}</div>`;
   }
+  function tableOpen(v) { table.o = v; try { localStorage.setItem('cdc_m3tab', v ? '1' : '0'); } catch (e) { } table(table.k || 'cor'); }
   function focusArt(id) {
     const x = D.arts.find(a => a.id === id); if (!x) return;
     const p2 = P.byArt.get(id);
@@ -3543,7 +3566,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const acb = t.closest('[data-acc]'); if (acb) { $('.m3-res').classList.remove('on'); const [id, ty] = acb.dataset.acc.split(':'); select({ t: 'acc', id, ty: ty || '' }, !!(sel && sel.t === 'acc' && sel.id === id)); return; }
     const oft = t.closest('[data-oft]'); if (oft) { OFT = oft.dataset.oft; panel(sel); return; }
     const rv = t.closest('[data-rcv3]'); if (rv) { $('.m3-res').classList.remove('on'); const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); select({ t: 'ricl', key: rv.dataset.rcv3, id: z && z.id }); return; }
-    const tb = t.closest('[data-tab3]'); if (tb) { table(tb.dataset.tab3); return; }
+    const tb = t.closest('[data-tab3]'); if (tb) { const k = tb.dataset.tab3; if (table.o && table.k === k) tableOpen(false); else { table.k = k; tableOpen(true); } return; }
+    if (t.closest('[data-tabx]')) { tableOpen(!table.o); return; }
     const rw = t.closest('[data-rack3]'); if (rw) { $('.m3-res').classList.remove('on'); select({ t: 'rack', id: rw.dataset.rack3 }); return; }
     const ar = t.closest('[data-art3]'); if (ar) { $('.m3-res').classList.remove('on'); focusArt(ar.dataset.art3); return; }
     const vh = t.closest('[data-veh3]'); if (vh) { $('.m3-res').classList.remove('on'); select({ t: 'veh', p: vh.dataset.veh3 }); return; }
