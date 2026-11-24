@@ -9219,7 +9219,8 @@
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-artloc]'); if (!b) return; e.preventDefault(); e.stopPropagation(); artLoc(b.dataset.artloc); }, true);
   function mag3dCtx() {
     return {
-      art: () => GX.art().filter(a => !kitV(a.id)), mov: () => GX.mov(), // v292: i kit componibili non stanno sugli scaffali ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
+      // v292: i kit componibili non stanno sugli scaffali
+      art: () => GX.art().filter(a => !kitV(a.id)), mov: () => GX.mov(), ddt: () => GX.ddt(), cli: () => GX.cli(), fv: () => GX.fv(), artOf, cliOf, dnum, giacMap, magOf, MAGS, magMulti,
       mag: () => mgMag, setMag: m => { mgMag = m; renderMag(); }, num, esc, eur0, fmtNum, dIt, today, orgName: () => ORG.n || 'Magazzino', secPerm,
       ivaOn: () => ivaOn, ivaRate, ivaLbl, xiTransito, xiNum, xiPz, onClose: () => {},
       cfg, write, isOwner: () => isOwnerU(), // v272: disposizione e ubicazioni in Config «mg3d:<magazzino>»
