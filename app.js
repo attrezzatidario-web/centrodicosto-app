@@ -107,6 +107,8 @@
   const monthShort = key => { const [y, m] = key.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('it-IT', { month: 'short' }).replace('.', ''); };
   const shortDate = s => validD(s) ? parseD(s).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const num = v => { if (typeof v === 'number') return v; const n = parseFloat(String(v ?? '').replace(/\s|€/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+  // v294: valori dei campi type=number (sempre col punto decimale: «0.002» non è «2»)
+  const numIn = v => { const t = String(v ?? '').trim(); return /^-?\d*\.?\d+(e-?\d+)?$/i.test(t) ? parseFloat(t) : num(t); };
   const r2 = n => Math.round(n * 100) / 100;
   // IVA: i dati restano sempre IVA esclusa; l'interruttore cambia solo la visualizzazione
   let ivaOn = (() => { try { return localStorage.getItem('cdc_iva') === '1'; } catch { return false; } })();
@@ -8731,8 +8733,44 @@
   // un articolo contiene (anche dentro altri kit) l'articolo «x»?
   function kitHas(id, x, d = 0) { if (id === x) return true; const k = kitOf(id); return !!(k && d <= KIT_MAX && k.c.some(c => kitHas(c.a, x, d + 1))); }
   // movimenti per vendere/scaricare/caricare «q» di un articolo: base = campi comuni del movimento
-  const kitMovs = (id, q, base) => kitLines(id, Math.abs(q)).map(x => ({ action: 'upsert', sheet: 'MagMov', row: { ...base, id: uid(), articolo: x.art, quantita: q < 0 ? -x.q : x.q, costo: num((artOf(x.art) || {}).costo), note: [base.note, x.art !== id ? 'kit ' + ((artOf(id) || {}).descrizione || '') : ''].filter(Boolean).join(' · '), creato: new Date().toISOString() } }));
+  // v294: se esce un pezzo sfuso che non basta, prima si aprono le sue confezioni (se l'apertura automatica è attiva)
+  const kitMovs = (id, q, base) => kitLines(id, Math.abs(q)).flatMap(x => [...(q < 0 ? confAuto(x.art, x.q, base) : []), { action: 'upsert', sheet: 'MagMov', row: { ...base, id: uid(), articolo: x.art, quantita: q < 0 ? -x.q : x.q, costo: num((artOf(x.art) || {}).costo), note: [base.note, x.art !== id ? 'kit ' + ((artOf(id) || {}).descrizione || '') : ''].filter(Boolean).join(' · '), creato: new Date().toISOString() } }]);
   const kitTag = a => { const k = kitOf(a.id); return k ? `<span class="chip kit-chip" title="${k.t === 'v' ? 'Kit componibile: quando lo vendi escono i componenti' : 'Kit assemblato: ha una giacenza sua'}">${k.t === 'v' ? 'Kit' : 'Kit assemblato'} · ${k.c.length}</span>` : ''; };
+  /* ---------- v294: confezioni (es. 1 scatola = 5000 viti) ----------
+     Config «conf:<id confezione>» = { s: id dell'articolo sfuso, n: pezzi in 1 confezione, auto: 1 = quando lo sfuso non basta apre da solo le confezioni }
+     Confezione e sfuso sono due articoli con giacenza, costo e prezzo propri: «Apri» scarica N confezioni e carica N × n pezzi sfusi al costo confezione ÷ n. */
+  const confOf = id => { const c = id && cfg('conf:' + id); if (!c || !c.s || !(num(c.n) > 0) || String(c.s) === id || !artOf(String(c.s)) || !artOf(id)) return null; return { s: String(c.s), n: num(c.n), auto: c.auto ? 1 : 0 }; };
+  const CONFS = () => Object.keys(db.config || {}).filter(k => k.indexOf('conf:') === 0).map(k => k.slice(5)).filter(id => confOf(id));
+  const confBox = sid => { const b = CONFS().find(id => confOf(id).s === sid); return b ? { b, ...confOf(b) } : null; };
+  const cUnit = (c, n) => n > 0 ? Math.round(num(c) / n * 1e6) / 1e6 : 0;
+  const eurU = n => num(n).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 6 }) + ' €';
+  const eurS = n => n && Math.abs(n) < 1 ? eurU(n) : eur(n); // prezzi sotto 1 € con i decimali che servono (es. 1 vite)
+  const confTag = a => { const c = confOf(a.id); if (c) return `<span class="chip kit-chip cf-chip" title="1 ${esc(a.um || 'pz')} = ${fmtNum(c.n, c.n % 1 ? 2 : 0)} ${esc(artOf(c.s).um || 'pz')} sfusi">Conf. × ${fmtNum(c.n, c.n % 1 ? 2 : 0)}</span>`; return confBox(a.id) ? '<span class="chip kit-chip cf-chip" title="Pezzo sfuso: viene dall\'apertura di una confezione">Sfuso</span>' : ''; };
+  // movimenti per aprire (o richiudere) k confezioni; aprendo aggiorna anche il costo del pezzo sfuso
+  function confOps(box, k, mag, dt, open, note) {
+    const c = confOf(box), b = artOf(box), s = artOf(c.s), now = new Date().toISOString(), did = 'cnf' + uid().slice(0, 10), cu = cUnit(b.costo, c.n), pz = r2(k * c.n);
+    const cs = `${open ? 'Apertura' : 'Richiusura'} confezione ${b.codice || b.descrizione}`, nt = note || `${fmtNum(k, k % 1 ? 2 : 0)} ${b.um || 'pz'} × ${fmtNum(c.n, c.n % 1 ? 2 : 0)} ${s.um || 'pz'}`;
+    const ops = [{ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dt, articolo: box, tipo: open ? 'scarico' : 'carico', quantita: open ? -k : k, costo: num(b.costo), causale: cs, doc: did, note: nt, creato: now } },
+      { action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dt, articolo: c.s, tipo: open ? 'carico' : 'scarico', quantita: open ? pz : -pz, costo: cu, causale: cs, doc: did, note: nt, creato: now } }];
+    if (open && cu && num(s.costo) !== cu) ops.push({ action: 'upsert', sheet: 'Articoli', row: { ...s, costo: cu } });
+    return ops;
+  }
+  // apertura automatica: prima di far uscire «q» pezzi sfusi apre le confezioni che mancano (stesso magazzino)
+  let confPend = null;
+  function confAuto(art, q, base) {
+    const bx = confBox(art); if (!bx || !bx.auto || !(q > 0)) return [];
+    if (!confPend) { confPend = new Map(); setTimeout(() => { confPend = null; }); }
+    const mag = base.mag || '', G = giacMapRaw(mag || undefined), P = k => confPend.get(mag + '|' + k) || 0, set = (k, v) => confPend.set(mag + '|' + k, v);
+    // modificando un documento i suoi vecchi movimenti verranno sostituiti: non contano
+    const old = base.doc ? GX.mov().filter(m => m.doc === base.doc && m.articolo === art && (!mag || magOf(m) === mag)).reduce((s, m) => s - num(m.quantita), 0) : 0;
+    const have = (G.get(art) || 0) + P(art) + (old > 0 ? old : 0), need = q - Math.max(0, have);
+    set(art, P(art) - q);
+    if (need <= 1e-9) return [];
+    const k = Math.min(Math.ceil(need / bx.n - 1e-9), Math.floor(Math.max(0, (G.get(bx.b) || 0) + P(bx.b)) + 1e-9)); if (k <= 0) return [];
+    set(bx.b, P(bx.b) - k); set(art, P(art) + k * bx.n);
+    setTimeout(() => toast(`Aperte da sole ${fmtNum(k, 0)} ${artOf(bx.b).um || 'conf.'} di «${artOf(bx.b).descrizione}» (+${fmtNum(k * bx.n, 0)} ${artOf(art).um || 'pz'})`), 1800);
+    return confOps(bx.b, k, base.mag || '', base.data || today(), true, `aperta da sola: ${base.causale || 'scarico'}`);
+  }
   /* ---------- v139: più magazzini e prodotti nei documenti dei fornitori ---------- */
   // elenco in Config «magazzini»; i movimenti senza magazzino appartengono al primo
   const MAGS = () => { const c = cfg('magazzini'); return Array.isArray(c) ? c.map(x => String(x || '').trim()).filter(Boolean) : []; };
@@ -9132,9 +9170,9 @@
     const card = (a, i) => { const g = G.get(a.id) || 0, im = mgPhoto(a);
       return `<div class="card pv-card mg-card${mgMode && mgSel.has(a.id) ? ' mg-on' : ''}" data-art="${esc(a.id)}" role="button" tabindex="0" style="--d:${Math.min(i, 16) * 30}ms">
         <span class="pv-img${im ? ' has' : ''}">${im ? pvImgTag(im, 't') : ''}<b class="ph">${PV_PH}</b></span>
-        <span class="pv-cm">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b>${kitTag(a)}<small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria].filter(Boolean).join(' · '))}</small>
+        <span class="pv-cm">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<b>${esc(a.descrizione)}</b>${kitTag(a)}${confTag(a)}<small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria].filter(Boolean).join(' · '))}</small>
           <span class="mg-cq"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span>${num(a.scorta) ? `<small>scorta min. ${fmtNum(num(a.scorta), 0)}</small>` : ''}</span>
-          <span class="pv-pr">${num(a.prezzo) ? `<strong>${eur(num(a.prezzo) * mgIva(a))}</strong>` : ''}<small>${num(a.costo) ? 'costo ' + eur(num(a.costo) * mgIva(a)) : 'costo da inserire'}</small></span>
+          <span class="pv-pr">${num(a.prezzo) ? `<strong>${eurS(num(a.prezzo) * mgIva(a))}</strong>` : ''}<small>${num(a.costo) ? 'costo ' + eurS(num(a.costo) * mgIva(a)) : 'costo da inserire'}</small></span>
           <button type="button" class="btn sm ghost mg-pm" data-gx="mov-art" data-id="${esc(a.id)}" title="Carico / scarico">±</button><button type="button" class="btn sm ghost mg-pm mg-locb mg-locc" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button></span></div>`; };
     const sc = (x, i) => `<div class="card pv-card mg-card" data-gx="srv-edit" data-id="${esc(x.id)}" role="button" tabindex="0"><span class="pv-img"><b class="ph">SV</b></span><span class="pv-cm"><b>${esc(x.d)}</b><small>${esc([x.cod, 'servizio'].filter(Boolean).join(' · '))}</small><span class="pv-pr">${num(x.p) ? `<strong>${eur(num(x.p) * (ivaOn ? 1 + num(x.iva) / 100 : 1))}</strong>` : ''}<small>${esc(x.um || '')}</small></span></span></div>`;
     const gcard = (g, i) => { const tot = g.arts.reduce((n, x) => n + (G.get(x.id) || 0), 0), cols = new Set(g.arts.map(x => (mgLink(x) || {}).c && mgLink(x).c[0])).size, a0 = g.arts[0], L0 = mgLink(a0);
@@ -9182,7 +9220,7 @@
       <div class="gx-chips"><button type="button" class="chip-f${mgLow || mgAvail || mgOut ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgAvail ? ' on' : ''}" data-mgav="1">Disponibili <em>${A.filter(a => (G.get(a.id) || 0) > 0).length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button><button type="button" class="chip-f${mgOut ? ' on' : ''}" data-mgout="1">Esauriti <em>${A.filter(a => (G.get(a.id) || 0) <= 0).length}</em></button>${KITS().length || mgKit ? `<button type="button" class="chip-f${mgKit ? ' on' : ''}" data-mgkit="1">Composti <em>${KITS().length}</em></button>` : ''}</div>
       <div class="mg-vw"><div class="tr-seg pv-gvw" role="group" aria-label="Vista"><button type="button" data-mgview="g" class="${mgGrid ? 'on' : ''}" title="Schede con foto"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></svg></button><button type="button" data-mgview="l" class="${mgGrid ? '' : 'on'}" title="Elenco"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div></div>
       ${mgGrid ? mgGridHtml(F, SF, G, low, mgIva) : `<div class="card gx-list"><table class="gx-tbl"><thead><tr><th>Articolo</th><th class="r">Giacenza</th><th class="r">Scorta min.</th><th class="r">Costo</th><th class="r">Prezzo</th><th class="r">Valore</th><th></th></tr></thead><tbody>
-      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<div class="mg-ar">${mgThumb(a)}<div class="mg-at"><b>${esc(a.descrizione)}</b>${kitTag(a)}<small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eur(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eur(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) && !kitV(a.id) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost mg-locb" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
+      ${F.slice(0, 400).map(a => { const g = G.get(a.id) || 0; return `<tr data-art="${esc(a.id)}"${mgMode && mgSel.has(a.id) ? ' class="mg-on"' : ''}><td data-l="Articolo">${mgMode ? `<input type="checkbox" class="mg-ck" data-mgck="${esc(a.id)}"${mgSel.has(a.id) ? ' checked' : ''} aria-label="Seleziona">` : ''}<div class="mg-ar">${mgThumb(a)}<div class="mg-at"><b>${esc(a.descrizione)}</b>${kitTag(a)}${confTag(a)}<small>${esc([a.codice, a.codForn ? 'forn. ' + a.codForn : '', a.categoria, a.fornitore].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span></td><td class="r" data-l="Scorta min.">${num(a.scorta) ? fmtNum(num(a.scorta), 0) : '—'}</td><td class="r" data-l="Costo">${num(a.costo) ? eurS(num(a.costo) * mgIva(a)) : '—'}</td><td class="r" data-l="Prezzo">${num(a.prezzo) ? eurS(num(a.prezzo) * mgIva(a)) : '—'}</td><td class="r" data-l="Valore">${g > 0 && num(a.costo) && !kitV(a.id) ? eur0(g * num(a.costo) * mgIva(a)) : '—'}</td><td class="r gx-ra"><button type="button" class="btn sm ghost mg-locb" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button><button type="button" class="btn sm ghost" data-gx="mov-art" data-id="${esc(a.id)}">±</button></td></tr>`; }).join('') + SF.map(srvRow).join('') || '<tr><td colspan="7" class="gx-none">Nessun articolo trovato</td></tr>'}
       </tbody></table>${mgSup === '__srv' ? `<div class="gx-act mg-sa"><button type="button" class="btn sm" data-gx="srv-new">+ Servizio</button></div>` : ''}${F.length > 400 ? `<p class="muted small gx-more">Mostrati 400 articoli su ${F.length}: usa la ricerca.</p>` : ''}</div>`}`;
     } else {
       const M = GX.mov().map(m => ({ m, a: artOf(m.articolo) })).filter(x => !q || nh([x.a && x.a.codice, x.a && x.a.descrizione, x.m.causale].join(' ')).includes(q)).sort((x, y) => String(y.m.data).localeCompare(String(x.m.data)) || String(y.m.creato).localeCompare(String(x.m.creato)));
@@ -9247,7 +9285,7 @@
   }
   function artForm(a) {
     const n = !a || !a.id; a = a && a.id ? { ...a } : { id: uid(), um: 'PZ', iva: 22, creato: today(), codice: artNext(), ...(a || {}) };
-    const g = n ? 0 : (giacMap().get(a.id) || 0), KS = kitState(n ? '' : a.id);
+    const g = n ? 0 : (giacMap().get(a.id) || 0), KS = kitState(n ? '' : a.id), CS = confState(n ? '' : a.id);
     const f = (k, l, t = 'text', ph = '') => `<label class="f"><span>${l}</span><input name="${k}" type="${t}"${t === 'number' ? ' step="any" inputmode="decimal"' : ''} value="${esc(a[k] ?? '')}" placeholder="${esc(ph)}"${k === 'descrizione' ? ' data-focus required' : ''}></label>`;
     const CAT = categorie();
     openSheet(n ? 'Nuovo articolo' : a.descrizione, `${f('descrizione', 'Descrizione', 'Es. Cemento 32,5 R sacco 25 kg')}
@@ -9258,6 +9296,7 @@
       <div class="f-row">${f('scorta', 'Scorta minima', 'number', 'avviso sotto questa quantità')}${n ? f('giac0', 'Giacenza iniziale', 'number', '0') : `<div class="f"><span>Giacenza attuale</span><div class="gx-giac"><b>${fmtNum(g, g % 1 ? 2 : 0)} ${esc(a.um || '')}</b><button type="button" class="btn sm" data-gx="mov-art" data-id="${esc(a.id)}">Carico / scarico</button></div></div>`}</div>
       ${n ? '' : `<div class="f"><span>Ubicazione in magazzino</span><div class="gx-giac"><b data-artlocc="${esc(a.id)}">${window.CDC_MG3D && window.CDC_MG3D.locOf ? esc((window.CDC_MG3D.locOf(mag3dCtx(), a.id) || { code: 'da scegliere' }).code) : 'sulla mappa'}</b><button type="button" class="btn sm" data-artloc="${esc(a.id)}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>Scegli sulla mappa</button></div></div>`}
       <div class="kt" id="kt"></div>
+      <div class="kt cf" id="cf"></div>
       <label class="f"><span>Note</span><input name="note" value="${esc(a.note || '')}"></label>${n ? '' : artMovHtml(a)}`, fd => {
       const o = { ...a };
       // v292: composizione del kit
@@ -9265,11 +9304,12 @@
       ['descrizione', 'codice', 'codForn', 'um', 'barcode', 'categoria', 'fornitore', 'note'].forEach(k => { o[k] = String(fd.get(k) || '').trim(); });
       if (!o.codice) o.codice = artNext();
       if (o.barcode && GX.art().some(x => x.id !== o.id && codeKey(x.barcode) === codeKey(o.barcode)) && !confirm('Questo codice a barre è già su un altro articolo. Salvare lo stesso?')) return;
-      ['costo', 'prezzo', 'iva', 'scorta'].forEach(k => { const v = String(fd.get(k) ?? '').trim(); o[k] = v === '' ? '' : num(v); });
+      ['costo', 'prezzo', 'iva', 'scorta'].forEach(k => { const v = String(fd.get(k) ?? '').trim(); o[k] = v === '' ? '' : numIn(v); });
       if (o.descrizione.length < 2) { toast('Scrivi la descrizione'); return; }
       if (o.codice && GX.art().some(x => x.id !== o.id && String(x.codice).trim().toUpperCase() === o.codice.toUpperCase())) { toast('Esiste già un articolo con questo codice interno'); return; }
       if (kx && kx.cost != null) o.costo = kx.cost;
-      const ops = [{ action: 'upsert', sheet: 'Articoli', row: o }, ...(kx ? kx.ops : [])], g0 = n && !(kx && kx.v) ? num(fd.get('giac0')) : 0;
+      const cx = confSave(o, CS); if (cx === false) return; // v294: confezione → pezzo sfuso
+      const ops = [{ action: 'upsert', sheet: 'Articoli', row: o }, ...(kx ? kx.ops : []), ...(cx ? cx.ops : [])], g0 = n && !(kx && kx.v) ? numIn(fd.get('giac0')) : 0;
       if (g0) ops.push({ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: today(), articolo: o.id, tipo: 'carico', quantita: g0, costo: num(o.costo), causale: 'Giacenza iniziale', doc: '', note: '', creato: new Date().toISOString() } });
       write(ops); toast(n ? 'Articolo aggiunto' : 'Articolo aggiornato'); return true;
     }, n ? null : () => {
@@ -9277,10 +9317,13 @@
       if (!confirm(`Eliminare «${a.descrizione}» e i suoi movimenti? I DDT e le fatture già fatti restano.${UI.length ? `\n\nÈ un componente di ${UI.length} kit (${UI.slice(0, 3).map(x => x.a.descrizione).join(', ')}${UI.length > 3 ? '…' : ''}): verrà tolto dalla loro composizione.` : ''}`)) return;
       const kOps = KITS().filter(k => kitOf(k).c.some(c => c.a === a.id)).map(k => { const K = cfg('kit:' + k); return { action: 'upsert', sheet: 'Config', row: { chiave: 'kit:' + k, valore: JSON.stringify({ ...K, c: K.c.filter(c => c.a !== a.id) }) } }; });
       if (cfg('kit:' + a.id)) kOps.push({ action: 'delete', sheet: 'Config', id: 'kit:' + a.id });
+      if (cfg('conf:' + a.id)) kOps.push({ action: 'delete', sheet: 'Config', id: 'conf:' + a.id });
+      const cb = confBox(a.id); if (cb) kOps.push({ action: 'delete', sheet: 'Config', id: 'conf:' + cb.b });
       write([{ action: 'delete', sheet: 'Articoli', id: a.id }, ...GX.mov().filter(m => m.articolo === a.id).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id })), ...kOps]); toast('Articolo eliminato'); return true;
     }, n ? 'Aggiungi articolo' : 'Salva');
     $('#sheet-form').classList.add('wide');
     kitUI(a, KS, n);
+    confUI(a, CS, n);
   }
   /* v292: sezione «Composizione» nella scheda articolo */
   function kitState(id) { const k = id && cfg('kit:' + id); return { on: !!(k && Array.isArray(k.c) && k.c.length), t: k && k.t === 'a' ? 'a' : 'v', cm: k ? !!k.cm : true, c: k && Array.isArray(k.c) ? k.c.map(x => ({ a: String(x.a || ''), q: num(x.q) || 1 })).filter(x => artOf(x.a)) : [] }; }
@@ -9291,7 +9334,7 @@
     const draw = () => {
       const G = giacMap(), cost = r2(KS.c.reduce((s, c) => { const x = artOf(c.a); return s + (x ? c.q * (kitOf(c.a) && kitOf(c.a).cm ? kitCost(c.a) : num(x.costo)) : 0); }, 0));
       let av = Infinity, lim = null; KS.c.forEach(c => { if (!artOf(c.a)) return; const v = Math.floor(Math.max(0, G.get(c.a) || 0) / c.q + 1e-9); if (v < av) { av = v; lim = c; } }); if (av === Infinity) av = 0;
-      const pr = num(($('#sheet-form [name=prezzo]') || {}).value), mg = pr && cost ? (pr - cost) / pr * 100 : null;
+      const pr = numIn(($('#sheet-form [name=prezzo]') || {}).value), mg = pr && cost ? (pr - cost) / pr * 100 : null;
       box.innerHTML = `<div class="kt-h"><label class="kt-sw"><input type="checkbox" data-kt="on"${KS.on ? ' checked' : ''}><i></i><span><b>Articolo composto</b><small>kit o distinta base: è fatto da altri articoli del magazzino</small></span></label></div>
         ${KS.on ? `<div class="kt-b">
           <div class="kt-seg" role="radiogroup" aria-label="Tipo di kit"><button type="button" data-kt="t:v" class="${KS.t === 'v' ? 'on' : ''}" role="radio" aria-checked="${KS.t === 'v'}"><b>Componibile</b><small>non ha giacenza sua: quando lo vendi o lo scarichi escono i componenti</small></button><button type="button" data-kt="t:a" class="${KS.t === 'a' ? 'on' : ''}" role="radio" aria-checked="${KS.t === 'a'}"><b>Assemblato</b><small>lo prepari prima: «Assembla» scarica i componenti e carica il kit</small></button></div>
@@ -9312,7 +9355,7 @@
       if (e.target.id === 'kt-in') { const v = e.target.value.trim(), x = A.find(y => lab(y) === v) || (/^\S+$/.test(v) ? artByCode(v) : null); if (x) addA(x); else if (v) toast('Scegli un articolo dall\'elenco'); return; }
       if (e.target.matches('[data-kt="on"]')) { KS.on = e.target.checked; draw(); return; }
       if (e.target.matches('[data-kt="cm"]')) { KS.cm = e.target.checked; return; }
-      if (e.target.matches('[data-kq]')) { const i = +e.target.closest('.kt-r').dataset.i; KS.c[i].q = Math.max(0, num(e.target.value)); draw(); }
+      if (e.target.matches('[data-kq]')) { const i = +e.target.closest('.kt-r').dataset.i; KS.c[i].q = Math.max(0, numIn(e.target.value)); draw(); }
     });
     box.addEventListener('click', e => {
       const b = e.target.closest('[data-kt]'), o = e.target.closest('[data-ktopen]');
@@ -9361,6 +9404,109 @@
     ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dt, articolo: a.id, tipo: asm ? 'carico' : 'scarico', quantita: asm ? n : -n, costo: cost || num(a.costo), causale: cs, doc: did, note: `${k.c.length} componenti`, creato: now } });
     write(ops); toast(asm ? `Assemblati ${n} kit` : `Smontati ${n} kit`); closeSheet();
   }
+  /* v294: sezione «Confezione» nella scheda articolo (es. 1 scatola = 5000 viti) */
+  function confState(id) {
+    const c = id && cfg('conf:' + id), s = c && artOf(String(c.s || ''));
+    return { on: !!confOf(id), n: c && num(c.n) > 0 ? num(c.n) : '', s: s ? s.id : '', m: s || !id ? (s ? 'x' : 'new') : 'new', nm: '', um: s ? (s.um || 'PZ') : 'PZ', p: s && s.prezzo !== '' && s.prezzo != null ? num(s.prezzo) : '', auto: c ? !!c.auto : true };
+  }
+  function confUI(a, CS, nuovo) {
+    const box = $('#cf'); if (!box) return;
+    const lab = x => (x.codice ? x.codice + ' — ' : '') + x.descrizione;
+    const A = GX.art().filter(x => x.id !== a.id && !confOf(x.id)).sort((x, y) => String(x.descrizione).localeCompare(String(y.descrizione), 'it'));
+    const fv = k => ($('#sheet-form [name=' + k + ']') || {}).value || '';
+    const bx = nuovo ? null : confBox(a.id), saved = !nuovo && confOf(a.id);
+    const sum = () => {
+      const el = $('#cf-sum'); if (!el) return;
+      const n = num(CS.n), cost = numIn(fv('costo')), cu = cUnit(cost, n), p = CS.p === '' ? null : num(CS.p), mg = p && cu ? (p - cu) / p * 100 : null, u = CS.um || 'PZ', ub = fv('um') || a.um || 'CONF', pb = numIn(fv('prezzo'));
+      el.innerHTML = `<div><span>Costo di 1 ${esc(u)}</span><b>${n && cost ? eurU(cu) : '—'}</b><small>${n && cost ? `${eur(cost)} ÷ ${fmtNum(n, n % 1 ? 2 : 0)}` : n ? 'scrivi il costo della confezione' : 'scrivi quanti pezzi contiene'}</small></div>
+        <div><span>Margine sul pezzo</span><b class="${mg == null ? '' : mg >= 0 ? 'kt-ok' : 'kt-ko'}">${mg == null ? '—' : fmtNum(mg, 0) + '%'}</b><small>${p ? 'prezzo ' + eurU(p) : 'scrivi il prezzo di 1 ' + esc(u)}</small></div>
+        <div><span>Sfusa rende</span><b>${p && n ? eur(p * n) : '—'}</b><small>${p && n ? (pb ? `intera ${eur(pb)} · ${p * n >= pb ? '+' : ''}${eur(p * n - pb)}` : `${fmtNum(n, 0)} × ${eurU(p)}`) : 'venduta tutta a pezzi'}</small></div>`;
+    };
+    const draw = () => {
+      const G = giacMap(), ub = fv('um') || a.um || 'CONF', s = artOf(CS.s);
+      const fromH = bx ? (() => { const b = artOf(bx.b), gb = Math.max(0, G.get(bx.b) || 0), gs = G.get(a.id) || 0; return `<div class="cf-from"><span><b>Pezzo sfuso di <button type="button" class="link" data-cfopen="${esc(b.id)}">${esc(b.descrizione)}</button></b><small>1 ${esc(b.um || 'conf.')} = ${fmtNum(bx.n, bx.n % 1 ? 2 : 0)} ${esc(a.um || 'pz')} · costo di 1 ${esc(a.um || 'pz')} ${eurU(cUnit(b.costo, bx.n))}${bx.auto ? ' · si apre da sola quando servono pezzi' : ''}</small><small>Sfusi <b>${fmtNum(gs, gs % 1 ? 2 : 0)}</b> · confezioni chiuse <b>${fmtNum(gb, gb % 1 ? 2 : 0)}</b> (= ${fmtNum(gb * bx.n, 0)}) · totale <b>${fmtNum(gs + gb * bx.n, 0)} ${esc(a.um || 'pz')}</b></small></span><button type="button" class="btn sm primary" data-cf="from">Apri confezioni…</button></div>`; })() : '';
+      box.innerHTML = `${fromH}${bx && !CS.on ? '' : `<div class="kt-h"><label class="kt-sw"><input type="checkbox" data-cf="on"${CS.on ? ' checked' : ''}><i></i><span><b>Confezione da usare anche a pezzi</b><small>es. 1 scatola = 5000 viti: la apri e usi o vendi la singola vite, con il suo costo e il suo prezzo</small></span></label></div>`}
+        ${CS.on ? `<div class="kt-b">
+          <div class="cf-eq"><span>1 <b>${esc(ub)}</b> contiene</span><input data-cfn type="number" min="0" step="any" inputmode="decimal" value="${esc(CS.n)}" placeholder="5000" aria-label="Pezzi in una confezione"><select data-cfu aria-label="Unità del pezzo sfuso">${[...new Set([...UM, CS.um])].map(u => `<option${u === CS.um ? ' selected' : ''}>${esc(u)}</option>`).join('')}</select></div>
+          <div class="kt-seg" role="radiogroup" aria-label="Articolo sfuso"><button type="button" data-cf="m:new" class="${CS.m === 'new' ? 'on' : ''}" role="radio" aria-checked="${CS.m === 'new'}"><b>Crea l'articolo sfuso</b><small>nuovo articolo con giacenza, costo e prezzo del singolo pezzo</small></button><button type="button" data-cf="m:x" class="${CS.m === 'x' ? 'on' : ''}" role="radio" aria-checked="${CS.m === 'x'}"><b>Usa un articolo che ho già</b><small>es. le viti sfuse sono già in magazzino</small></button></div>
+          <div class="f-row">${CS.m === 'new' ? `<label class="f"><span>Nome dell'articolo sfuso</span><input data-cfnm value="${esc(CS.nm)}" placeholder="${esc((fv('descrizione') || a.descrizione || 'Articolo') + ' — sfuso')}"></label>` : `<label class="f"><span>Articolo sfuso</span><input data-cfs list="cf-arts" value="${esc(s ? lab(s) : '')}" placeholder="cerca nome o codice" autocomplete="off"><datalist id="cf-arts">${A.slice(0, 4000).map(x => `<option value="${esc(lab(x))}">`).join('')}</datalist></label>`}<label class="f"><span>Prezzo di vendita di 1 ${esc(CS.um)} €</span><input data-cfp type="number" min="0" step="any" inputmode="decimal" value="${esc(CS.p)}" placeholder="IVA esclusa"></label></div>
+          <div class="kt-sum" id="cf-sum"></div>
+          <label class="gx-chk"><input type="checkbox" data-cf="auto"${CS.auto ? ' checked' : ''}> Quando i pezzi sfusi non bastano (DDT, fatture, scarichi) apri da solo le confezioni</label>
+          ${saved ? (() => { const c = confOf(a.id), gb = G.get(a.id) || 0, gs = G.get(c.s) || 0, su = artOf(c.s).um || 'pz'; return `<div class="kt-asm"><span><b>${fmtNum(gb, gb % 1 ? 2 : 0)} ${esc(a.um || '')} chiuse · ${fmtNum(gs, gs % 1 ? 2 : 0)} ${esc(su)} sfusi</b><small>in tutto ${fmtNum(Math.max(0, gb) * c.n + gs, 0)} ${esc(su)} · Apri = scarica le confezioni e carica i pezzi · Richiudi = il contrario</small></span><button type="button" class="btn sm primary" data-cf="open">Apri…</button><button type="button" class="btn sm" data-cf="close">Richiudi…</button><button type="button" class="btn sm ghost" data-cfopen="${esc(c.s)}">Scheda sfuso</button></div>`; })() : ''}
+        </div>` : ''}`;
+      sum();
+    };
+    const savedJ = JSON.stringify(confState(nuovo ? '' : a.id));
+    box.addEventListener('input', e => {
+      const t = e.target;
+      if (t.matches('[data-cfn]')) { CS.n = t.value === '' ? '' : Math.max(0, numIn(t.value)); sum(); }
+      else if (t.matches('[data-cfp]')) { CS.p = t.value === '' ? '' : Math.max(0, numIn(t.value)); sum(); }
+      else if (t.matches('[data-cfnm]')) CS.nm = t.value;
+    });
+    box.addEventListener('change', e => {
+      const t = e.target;
+      if (t.matches('[data-cf="on"]')) { CS.on = t.checked; const su = $('#sheet-form [name=um]'); if (CS.on && su && su.value === 'PZ' && !saved) su.value = 'CONF'; draw(); if (CS.on) { const i = $('#cf [data-cfn]'); if (i && !i.value) i.focus(); } }
+      else if (t.matches('[data-cf="auto"]')) CS.auto = t.checked;
+      else if (t.matches('[data-cfu]')) { CS.um = t.value; draw(); }
+      else if (t.matches('[data-cfs]')) { const v = t.value.trim(), x = A.find(y => lab(y) === v) || (/^\S+$/.test(v) ? artByCode(v) : null); if (x && x.id !== a.id && !confOf(x.id)) { CS.s = x.id; CS.um = x.um || CS.um; if (CS.p === '' && num(x.prezzo)) CS.p = num(x.prezzo); draw(); } else if (v) toast('Scegli un articolo dall\'elenco'); }
+    });
+    box.addEventListener('click', e => {
+      const o = e.target.closest('[data-cfopen]'); if (o) { const x = artOf(o.dataset.cfopen); if (x) { closeSheet(); setTimeout(() => artForm(x), 260); } return; }
+      const b = e.target.closest('[data-cf]'); if (!b || b.tagName === 'INPUT') return; const k = b.dataset.cf;
+      if (k === 'm:new' || k === 'm:x') { CS.m = k.slice(2); draw(); }
+      if (k === 'open' || k === 'close') { if (JSON.stringify(CS) !== savedJ) return toast('Salva prima la scheda, poi apri le confezioni'); confOpenForm(a.id, k === 'open', a.id); }
+      if (k === 'from') confOpenForm(bx.b, true, a.id);
+    });
+    ['costo', 'prezzo', 'descrizione'].forEach(k => { const i = $('#sheet-form [name=' + k + ']'); if (i) i.addEventListener('input', () => { if (CS.on) sum(); }); });
+    const us = $('#sheet-form [name=um]'); if (us) us.addEventListener('change', () => { if (CS.on) draw(); });
+    draw();
+  }
+  // al salvataggio della scheda: { ops } · false = non salvare · null = niente da fare
+  function confSave(o, CS) {
+    const had = !!cfg('conf:' + o.id);
+    if (!CS.on) { if (!had) return null; if (!isOwnerU()) { toast('La confezione la cambia solo il titolare: il resto è salvato'); return null; } return { ops: [{ action: 'delete', sheet: 'Config', id: 'conf:' + o.id }] }; }
+    const n = num(CS.n); if (!(n > 0)) { toast('Scrivi quanti pezzi ci sono in una confezione'); return false; }
+    if (!isOwnerU()) { if (!had || JSON.stringify(confState(o.id)) !== JSON.stringify(CS)) toast('La confezione la imposta solo il titolare: il resto è salvato'); return null; }
+    let s;
+    if (CS.m === 'x') {
+      s = artOf(CS.s); if (!s) { toast('Scegli l\'articolo sfuso'); return false; }
+      if (s.id === o.id) { toast('L\'articolo sfuso deve essere un altro articolo'); return false; }
+      if (confOf(s.id)) { toast(`«${s.descrizione}» è già una confezione: scegli il pezzo sfuso`); return false; }
+      const ob = confBox(s.id); if (ob && ob.b !== o.id) { toast(`«${s.descrizione}» è già lo sfuso di «${artOf(ob.b).descrizione}»`); return false; }
+      s = { ...s };
+    } else {
+      const nm = String(CS.nm || '').trim() || `${o.descrizione} — sfuso`;
+      let cod = (o.codice || artNext(1)) + '-S', i = 2; const used = new Set(GX.art().map(x => String(x.codice || '').trim().toUpperCase()));
+      while (used.has(cod.toUpperCase())) cod = (o.codice || 'ART') + '-S' + i++;
+      s = { id: uid(), descrizione: nm, codice: cod, codForn: '', um: CS.um, barcode: '', categoria: o.categoria || '', fornitore: o.fornitore || '', iva: o.iva, scorta: '', note: `sfuso di ${o.descrizione}`, creato: today() };
+      CS.s = s.id; CS.m = 'x';
+    }
+    s.um = CS.um || s.um || 'PZ';
+    if (num(o.costo)) s.costo = cUnit(o.costo, n); else if (s.costo == null) s.costo = '';
+    if (CS.p !== '') s.prezzo = num(CS.p); else if (s.prezzo == null) s.prezzo = '';
+    return { ops: [{ action: 'upsert', sheet: 'Articoli', row: s }, { action: 'upsert', sheet: 'Config', row: { chiave: 'conf:' + o.id, valore: JSON.stringify({ s: s.id, n, auto: CS.auto ? 1 : 0, agg: new Date().toISOString() }) } }] };
+  }
+  // apri (o richiudi) N confezioni dal pannello
+  async function confOpenForm(box, open, back) {
+    const c = confOf(box); if (!c) return; const b = artOf(box), s = artOf(c.s), multi = magMulti();
+    const G0 = giacMap(), ub = b.um || 'conf.', su = s.um || 'pz', fq = x => fmtNum(x, x % 1 ? 2 : 0);
+    const pr = (k, G) => { const gb = G.get(box) || 0, gs = G.get(c.s) || 0, d = r2(k * c.n); return `<div><span>${esc(b.descrizione)}</span><b>${open ? '−' : '+'}${fq(k)} ${esc(ub)} <small>ora ${fq(gb)} → ${fq(r2(gb + (open ? -k : k)))}</small></b></div><div class="kt-pk"><span>${esc(s.descrizione)}<small>${eurU(cUnit(b.costo, c.n))} l'uno</small></span><b>${open ? '+' : '−'}${fq(d)} ${esc(su)} <small>ora ${fq(gs)} → ${fq(r2(gs + (open ? d : -d)))}</small></b></div>`; };
+    const def = open ? 1 : Math.max(1, Math.floor((G0.get(c.s) || 0) / c.n + 1e-9));
+    const P = modal(open ? `Apri «${b.descrizione}»` : `Richiudi in «${b.descrizione}»`, `${multi ? magSel(magLast(), 'mag', 'Magazzino') : magSel('')}
+      <div class="f-row"><label class="f"><span>Quante ${open ? 'confezioni apri' : 'confezioni richiudi'}</span><input name="q" type="number" min="1" step="1" inputmode="numeric" value="${def}" data-focus required></label><label class="f"><span>Data</span><input name="data" type="date" value="${today()}"></label></div>
+      <p class="muted small" style="margin:2px 0 6px">1 ${esc(ub)} = ${fmtNum(c.n, c.n % 1 ? 2 : 0)} ${esc(su)}</p><div class="kt-prev" id="cf-prev">${pr(def, G0)}</div>`, open ? 'Apri' : 'Richiudi');
+    const qi = document.querySelector('.md-box [name=q]'), mi = document.querySelector('.md-box [name=mag]'), upd = () => { const el = document.getElementById('cf-prev'); if (el) el.innerHTML = pr(Math.max(0, Math.round(num(qi.value))), giacMap((mi && mi.value) || undefined)); };
+    if (qi) qi.addEventListener('input', upd); if (mi) mi.addEventListener('change', upd);
+    const r = await P; if (!r) return;
+    const k = Math.max(0, Math.round(num(r.fd.get('q')))); if (!k) return toast('Scrivi quante confezioni');
+    const mag = magNeed(r.fd); if (mag === null) return;
+    const G = giacMap(mag || undefined);
+    if (open && (G.get(box) || 0) < k && !confirm(`Ci sono ${fq(G.get(box) || 0)} ${ub} in giacenza. Aprirne ${k} lo stesso?`)) return;
+    if (!open && (G.get(c.s) || 0) < k * c.n && !confirm(`Ci sono solo ${fq(G.get(c.s) || 0)} ${su} sfusi (servono ${fq(k * c.n)}). Richiudere lo stesso?`)) return;
+    write(confOps(box, k, mag, String(r.fd.get('data') || today()), open));
+    toast(open ? `Aperte ${k} ${ub}: +${fq(k * c.n)} ${su}` : `Richiuse ${k} ${ub}: −${fq(k * c.n)} ${su}`);
+    closeSheet(); const x = artOf(back || box); if (x) setTimeout(() => artForm(x), 300);
+  }
   function movForm(artId) {
     const A = GX.art().slice().sort((a, b) => String(a.descrizione).localeCompare(String(b.descrizione), 'it')), G = giacMap();
     if (!A.length) return toast('Aggiungi prima un articolo');
@@ -9373,7 +9519,7 @@
       <div class="f-row"><label class="f"><span>Causale</span><select name="causale">${CAUS.carico.map(c => `<option>${c}</option>`).join('')}</select></label><label class="f"><span>Note</span><input name="note" placeholder="es. merce per il cantiere"></label></div>
       <div class="mv-ddt" data-mvddt><div class="f-row"><label class="f"><span>DDT del fornitore n.</span><input name="ddtn" placeholder="facoltativo"></label><label class="f"><span>Fornitore</span><input name="ddtf" placeholder="dall'articolo"></label></div><div class="ad-box" id="mv-doc"></div></div>
       <p class="muted small" data-mvh>La quantità si aggiunge alla giacenza.</p>`, async fd => {
-      const id = String(fd.get('articolo')), a = artOf(id), q = num(fd.get('q'));
+      const id = String(fd.get('articolo')), a = artOf(id), q = numIn(fd.get('q'));
       if (!a) return; if (!String(fd.get('q') || '').trim()) { toast('Scrivi la quantità'); return; }
       const mag = magNeed(fd); if (mag === null) return;
       // v292: kit componibile = muovo i componenti
@@ -9398,7 +9544,8 @@
       const ops = [], dfr = tipo === 'carico' && (ddtn || mvFile) ? { id: uid(), tipo: 'ddt', fornitore: ddtf, numero: ddtn, data: dataM, totale: '', file: '', nomeFile: '', mime: '', fattura: '', note: `Carico ${a.descrizione}`, creato: new Date().toISOString() } : null;
       if (dfr && mvFile && !isLocal()) { try { busy('Salvo il DDT nel tuo Drive…'); dfr.file = await api('uploadDoc', { name: `DDT ${ddtf} ${ddtn} ${dataM}.${mvFile.ext}`.replace(/[\\/]/g, '-').replace(/\s+/g, ' '), mime: mvFile.mime, data: mvFile.data }); dfr.nomeFile = mvFile.name; dfr.mime = mvFile.mime; } catch (e) { busy(); toast('DDT non salvato: ' + e.message); return; } busy(); }
       if (dfr) ops.push({ action: 'upsert', sheet: 'DocForn', row: dfr });
-      ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dataM, articolo: id, tipo, quantita: qty, costo: tipo === 'carico' ? num(fd.get('costo')) || num(a.costo) : num(a.costo), causale: String(fd.get('causale') || ''), doc: dfr ? dfr.id : '', note: [ddtn ? 'DDT n. ' + ddtn : '', String(fd.get('note') || '').trim()].filter(Boolean).join(' · '), creato: new Date().toISOString() } });
+      if (tipo === 'scarico') ops.push(...confAuto(id, Math.abs(qty), { mag, data: dataM, causale: String(fd.get('causale') || 'scarico') })); // v294
+      ops.push({ action: 'upsert', sheet: 'MagMov', row: { mag, id: uid(), data: dataM, articolo: id, tipo, quantita: qty, costo: tipo === 'carico' ? numIn(fd.get('costo')) || num(a.costo) : num(a.costo), causale: String(fd.get('causale') || ''), doc: dfr ? dfr.id : '', note: [ddtn ? 'DDT n. ' + ddtn : '', String(fd.get('note') || '').trim()].filter(Boolean).join(' · '), creato: new Date().toISOString() } });
       write(ops);
       toast(tipo === 'rettifica' ? 'Giacenza aggiornata' : tipo === 'carico' ? 'Carico registrato' : 'Scarico registrato'); return true;
     }, null, 'Registra');
@@ -9574,7 +9721,7 @@
       el.innerHTML = `${nm && !ro ? `<label class="pv-rf"><span>Ricarico per ${esc(nm)}</span><span class="pv-ri"><input data-dxric inputmode="decimal" value="${rc != null ? esc(fmtIn(rc)) : ''}" placeholder="${esc(fmtNum((pvRic() - 1) * 100, 0))}"> %</span></label>` : '<span class="muted small">Scegli il cliente: i prezzi dei prodotti usano il suo ricarico personale (lo stesso dei preventivi).</span>'}<button type="button" class="pv-eye dx-eye${pvCli ? ' on' : ''}" data-dx="eye" aria-pressed="${pvCli}"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>${pvCli ? 'Vista cliente' : 'Prezzi d\'acquisto visibili'}</span></button>`; };
     const reprice = () => { const nm = cliName(); let n2 = 0; R.forEach(l => { if (l.sup && !l.man && pvCats[l.sup]) { const v = docPrice(nm, l.it, l.vc); if (v != null && v !== num(l.p)) { l.p = v; n2++; } } }); return n2; };
     const addSel = arr => { const nm = cliName(); arr.forEach(x => { const nl = docLineFrom(x, nm), ex = R.find(l => l.sup === nl.sup && l.it === nl.it && l.vc === nl.vc && l.d === nl.d); if (ex) ex.q = num(ex.q) + num(nl.q); else { const b0 = R.findIndex(l => !l.art && !l.sup && !String(l.d || '').trim()); if (b0 >= 0) R[b0] = nl; else R.push(nl); } }); draw(); };
-    box.addEventListener('input', e => { const r = e.target.closest('.dx-r'), k = e.target.dataset.k; if (!r || !k) return; const l = R[+r.dataset.i]; l[k] = e.target.value; if (k === 'd') { l.art = ''; l.c = ''; delete l.sup; delete l.it; delete l.vc; delete l.srv; l.acq = ''; } if (k === 'p') l.man = 1; tot(); });
+    box.addEventListener('input', e => { const r = e.target.closest('.dx-r'), k = e.target.dataset.k; if (!r || !k) return; const l = R[+r.dataset.i]; l[k] = (k === 'q' || k === 'p' || k === 'sc') && e.target.value !== '' ? numIn(e.target.value) : e.target.value; if (k === 'd') { l.art = ''; l.c = ''; delete l.sup; delete l.it; delete l.vc; delete l.srv; l.acq = ''; } if (k === 'p') l.man = 1; tot(); });
     const dxMagSel = $('#sheet-form [name=mag]'); if (dxMagSel) dxMagSel.addEventListener('change', tot);
     $('#sheet-form [name=cliente]').addEventListener('change', () => { ricDraw(); const n2 = reprice(); if (n2) { draw(); toast(`Prezzi aggiornati per il cliente (${n2} righe)`); } });
     $('#dx-ric').addEventListener('change', e => { if (!e.target.matches('[data-dxric]')) return; const v = String(e.target.value || '').trim(); if (v !== '' && (isNaN(num(v)) || num(v) < 0)) return toast('Scrivi un ricarico valido'); cliRicSet(cliName(), v); const n2 = reprice(); draw(); toast(n2 ? `Ricarico salvato · ${n2} prezzi aggiornati` : 'Ricarico salvato'); });

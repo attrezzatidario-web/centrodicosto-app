@@ -4548,3 +4548,18 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 }
 .kt-add .btn { flex: none; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .kt-add .btn svg { width: 16px; height: 16px; }
+
+/* v294 · confezioni (1 scatola = N pezzi sfusi) */
+.kt.cf:empty { display: none; }
+.cf-eq { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg); font-size: 14px; }
+.cf .cf-eq input { width: 120px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font: inherit; font-weight: 600; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.cf-eq select, .cf-eq input { flex: none; width: auto; height: auto; margin: 0; }
+.cf-eq select { min-width: 84px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font: inherit; color: var(--ink); }
+.cf-from { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.cf-from > span { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 3px; }
+.cf-from > span > b { font-size: 14px; } .cf-from small { font-size: 12px; color: var(--muted); } .cf-from small b { color: var(--ink); font-weight: 600; }
+.cf-from .link { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+.cf-from:last-child { border-bottom: 0; }
+.kt-pk span small { display: block; font-size: 11px; color: var(--muted); margin: 0; }
+.chip.kit-chip.cf-chip { background: color-mix(in srgb, #0f766e 12%, var(--surface)); color: #0f766e; }
+@media (max-width: 560px) { .cf-eq input { width: 96px; } }
