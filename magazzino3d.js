@@ -1,4 +1,4 @@
-/* Magazzino 3D (v283) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v284) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -351,6 +351,17 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-kv span{display:block;font-size:11px;color:#8a8d93}.m3-kv b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m3-kv a{color:${OR};text-decoration:none}
 .m3-b12{grid-template-columns:repeat(12,1fr)!important}
 .m3-acts{display:flex;gap:8px;flex-wrap:wrap}.m3-acts .m3-go{flex:1 1 140px;margin:0}
+
+/* v284: gasolio */
+.m3-dl{font-style:normal;font-weight:700;color:#8a8d93}.m3-dl.up{color:#c2410c}.m3-dl.dn{color:#2a8a4a}
+.m3-hb>button{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:4px 6px;margin:-4px -6px;border-radius:10px;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--k)*50ms)}
+.m3-hb>button:hover{background:#f6f5f2}.m3-hb span b .m3-pl{transform:scale(.85);transform-origin:left center;margin-right:-6px}
+.m3-hb u{position:relative}.m3-hb u .avg{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#16181b;border-radius:1px;opacity:.55}
+.m3-an .m3-pi{width:30px;height:30px;border-radius:9px;background:#fde9e6;color:#d9452f}.m3-an .m3-pi svg{width:15px;height:15px}.m3-an .tx b{display:flex;align-items:center;gap:6px;font-weight:600}.m3-an .tx b .m3-pl{transform:scale(.8);transform-origin:left center;margin-right:-10px}
+.m3-ok{background:#e7f5ea;color:#1f7a3b;border-radius:12px;padding:10px 12px;font-size:12.5px;font-weight:500}
+.m3-last{background:#111316;color:#fff;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-last .m3-ey{color:#ffb02e}.m3-last div{display:flex;align-items:center;justify-content:space-between;gap:10px}.m3-last div>b{font-size:28px;font-weight:800;letter-spacing:-.02em;color:#ffb02e}.m3-last div>b small{font-size:13px;margin-left:3px;color:#fff;opacity:.7}.m3-last>small{color:rgba(255,255,255,.7);font-size:12px}
+button.m3-chip{border:0;cursor:pointer;font:inherit}
 /* v280: telefono e tablet */
 .m3-lost{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(246,245,242,.92);backdrop-filter:blur(6px);font-size:15px}
 .m3-lost small{color:#8a8d93;font-size:12.5px}
@@ -906,7 +917,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     L.items.filter(i => i.t === 'zone').forEach(z => add([z.x, 4.5, z.z], `${esc(z.name || ZONE[z.k][0])}${sub[z.k] ? ` <em>${sub[z.k]}</em>` : ''}`, '', { t: 'zone', z: z.k, id: z.id }, 340));
     add([L.W / 4, 10.4, L.D / 2 + 13], `Uffici <em>${OFF ? OFF.OD.CL.length : D.cli.length} clienti · ${OFF ? OFF.OD.FR.length : 0} fornitori</em>`, 'wh', { t: 'zone', z: 'uffe' }, 260).offClosed = true;
     if (OFF) OFF.anc.forEach(A => { const L3 = add([0, 0, 0], `${A.t} <em>${A.s}</em>`, 'sm', { t: 'zone', z: 'uffe' }, 140, A.a); L3.dy = 0; L3.offOnly = true; });
-    if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 6.6, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
+    if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 7.4, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
       fleetVeh.forEach(f => { const L3 = add([0, 0, 0], `${esc(plFmt(f.v.p))}${f.v.name ? ` <em>${esc(f.v.name.slice(0, 18))}</em>` : ''}`, 'sm wh', { t: 'veh', p: f.v.p }, 95, f.o); L3.dy = f.v.kind === 'truck' ? 4.2 : 3.2; }); }
     R2.forEach(it => { const g = WH.children.find(c => c.userData.eid === it.id); const c = D.catOf.get(it.cat), n = [...P.byArt.values()].filter(v => v.rk === it).length, pz = c ? 0 : 0;
       const pos = g ? [it.x, (it.k === 'pallet' ? (it.lv - 1) * rackLh(it) + 2.6 : it.lv * rackLh(it) + 1.2) + 1.2, it.z] : [it.x, 6, it.z];
@@ -996,12 +1007,26 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const name = String(Nm[p] || Nm[Object.keys(Nm).find(k => Pl(k) === p)] || '').trim(), rentK = Object.keys(Rt).find(k => Pl(k) === p), mz = M2[p] || M2[Object.keys(M2).find(k => Pl(k) === p)] || {};
       const sum = L2 => L2.reduce((a, r) => a + C.num(r.litri), 0);
       return { p, s, name, reg: reg.has(p), rent: rentK ? C.num(Rt[rentK]) : 0, drv: C.gasDrv ? C.gasDrv(p) : [], centro: mz.centro || '', uso, owner, km, cons: kl ? km / kl : 0, odo: Math.max(0, ...s.map(r => C.num(r.km))), last: s[s.length - 1] || null,
-        lM: sum(mm), cM: mm.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, nM: mm.length, lT: sum(s), cT: s.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, m6: keys.map(k => sum(s.filter(r => String(r.data).slice(0, 7) === k))), kind: kindOf(name + ' ' + uso + ' ' + owner) };
+        lM: sum(mm), cM: mm.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, nM: mm.length, kmM: (() => { let t = 0, pv = 0; s.forEach(r => { const k = C.num(r.km); if (!k) return; if (pv && k > pv && k - pv < 5000 && String(r.data).slice(0, 7) === m0) t += k - pv; pv = k; }); return t; })(), lT: sum(s), cT: s.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, m6: keys.map(k => sum(s.filter(r => String(r.data).slice(0, 7) === k))), kind: kindOf(name + ' ' + uso + ' ' + owner) };
     }).sort((a, b) => (b.reg - a.reg) || b.lT - a.lT).slice(0, 20);
     const rM = rows.filter(r => String(r.data).slice(0, 7) === m0), lM = rM.reduce((a, r) => a + C.num(r.litri), 0);
     let km = 0, kl = 0; V.forEach(v => { if (v.cons) { km += v.km; kl += v.km / v.cons; } });
     const lastR = rows.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || C.num(b.km) - C.num(a.km));
-    return { V, price, mul, lM, cM: rM.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul, nM: rM.length, cons: kl ? km / kl : 0, rent: V.reduce((a, v) => a + v.rent, 0), lastR, keys, nAll: rows.length };
+    const k12 = []; { const d = new Date(m0 + '-15'); for (let i = 11; i >= 0; i--) { const x = new Date(d); x.setMonth(x.getMonth() - i); k12.push(x.toISOString().slice(0, 7)); } }
+    const inM = k => r => String(r.data).slice(0, 7) === k, lit = L2 => L2.reduce((a, r) => a + C.num(r.litri), 0), eur = L2 => L2.reduce((a, r) => a + C.num(r.litri) * pr(r), 0) * mul;
+    const rP = rows.filter(inM(k12[10])), l12 = k12.map(k => lit(rows.filter(inM(k)))), c12 = k12.map(k => eur(rows.filter(inM(k))));
+    const drv = new Map(); rM.forEach(r => { const n = String(r.operatore || '').trim(); if (!n || n === '?') return; const o = drv.get(n) || { n, l: 0, k: 0 }; o.l += C.num(r.litri); o.k++; drv.set(n, o); });
+    const nd = new Date(+m0.slice(0, 4), +m0.slice(5), 0).getDate(), days = Array.from({ length: nd }, (_, i) => lit(rM.filter(r => +String(r.data).slice(8, 10) === i + 1)));
+    const cons = kl ? km / kl : 0, d90 = (() => { const d = new Date(C.today() + 'T12:00:00'); d.setDate(d.getDate() - 90); return d.toISOString().slice(0, 10); })(), AN = [];
+    V.forEach(v => { v.l100 = v.cons ? 100 / v.cons : 0; v.eurKm = v.cons && price ? price * mul / v.cons : 0; v.l12 = k12.map(k => lit(v.s.filter(inM(k))));
+      const L3 = v.s.map(r => C.num(r.litri)).filter(Boolean).sort((a, b) => a - b), med = L3.length >= 4 ? L3[Math.floor(L3.length / 2)] : 0; let prev = null;
+      v.s.forEach(r => { const l = C.num(r.litri), k = C.num(r.km), pk = prev ? C.num(prev.km) : 0, rec = String(r.data) >= d90;
+        if (rec) { if (!k && v.odo) AN.push({ r, v, m: 'km non inseriti' }); else if (pk && k && k < pk) AN.push({ r, v, m: `km inferiori al pieno precedente (${N(pk)})` });
+          else if (pk && k && v.cons && l && k - pk < 5000) { const c2 = (k - pk) / l; if (c2 < v.cons * .6 || c2 > v.cons * 1.6) AN.push({ r, v, m: `consumo ${dec1(100 / c2)} L/100 km (di solito ${dec1(100 / v.cons)})` }); }
+          if (med && l > med * 1.7 && l > 20) AN.push({ r, v, m: `${N(l)} L, molto sopra il solito (${N(Math.round(med))} L)` }); }
+        if (k) prev = r; }); });
+    AN.sort((a, b) => String(b.r.data).localeCompare(String(a.r.data))); V.forEach(v => { v.an = AN.filter(a => a.v === v).length; });
+    return { V, price, mul, lM, cM: eur(rM), nM: rM.length, lP: lit(rP), cP: eur(rP), cons, eurKm: cons && price ? price * mul / cons : 0, kmM: V.reduce((a, v) => a + v.kmM, 0), rent: V.reduce((a, v) => a + v.rent, 0), lastR, keys, k12, l12, c12, drv, days, AN, nAll: rows.length };
   }
   const FL = () => { const hw = L.W / 2, hd = L.D / 2; return { x0: -hw - 36, x1: -hw - 5, z0: -hd - 4, z1: hd + 4, cx: -hw - 20.5, st: { x: -hw - 20.5, z: hd - 5.5 } }; };
   function plateTex(p) {
@@ -1090,86 +1115,154 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     slots.forEach((s, i) => floorText(g, String(i + 1).padStart(2, '0'), 1.6, s.x + (s.ry ? 2.2 : -2.2), s.z, Math.PI / 2, 'rgba(255,255,255,.75)').position.y = .18);
     // linea di mezzeria della corsia
     for (let zz = z0; zz < F.st.z - 9; zz += 3) B.add('lm', G.box, mat(0xf4f4f2), m4(cx, .17, zz, .14, .02, 1.6));
-    // distributore: pensilina, isole, colonnine, totem prezzo, cisterna
-    const st = F.st, cw = 12, cd = 9.5;
-    for (const sx of [-1, 1]) for (const sz2 of [-1, 1]) mesh(G.cyl, mat(0xd7dadf), st.x + sx * (cw / 2 - 1.2), 2.75, st.z + sz2 * (cd / 2 - 1.5), g, { s: [.42, 5.2, .42] });
-    bx(g, cw, .55, cd, 0xfbfbfa, st.x, 5.2, st.z); bx(g, cw + .1, .42, .12, 0xf47b20, st.x, 5.25, st.z + cd / 2); bx(g, cw + .1, .42, .12, 0xf47b20, st.x, 5.25, st.z - cd / 2); bx(g, .12, .42, cd, 0xf47b20, st.x - cw / 2, 5.25, st.z); bx(g, .12, .42, cd, 0xf47b20, st.x + cw / 2, 5.25, st.z);
-    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j += 2) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6 }); OWN.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.6, .5, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 3.6, 5.16, st.z + j * 2.2); g.add(lp); }
-    const sg = textTex([['GASOLIO', 78, 800, 60, null, '#ffffff'], [C.orgName().toUpperCase().slice(0, 26), 30, 700, 118, null, 'rgba(255,255,255,.9)']], { bg: '#f47b20', w: 768, h: 150 });
-    planeT(sg, 5.2, 1, g, st.x, 5.27, st.z + cd / 2 + .1);
+    // ---- area di rifornimento (v284): piazzale in cemento con giunti e canaline, pensilina, due isole con erogatori, terminale badge, arresto d'emergenza
+    const st = F.st, cw = 15, cd = 13, IX = 2.9, cy0 = 5.4; CANO = { mats: [], u: CANO ? CANO.u : 1, want: CANO ? CANO.want : 1 };
+    bx(g, cw + 3.4, .05, cd + 4.4, 0xc9c7c2, st.x, .16, st.z, { ns: 1 });
+    for (let i = -3; i <= 3; i++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x + i * 2.6, .214, st.z, .04, .012, cd + 4.2));
+    for (let j = -3; j <= 3; j++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x, .214, st.z + j * 2.6, cw + 3.2, .012, .04));
+    for (const s of [-1, 1]) { B.add('drn', G.box, mat(0x3a3f46), m4(st.x, .218, st.z + s * (cd / 2 + 1.75), cw + 3, .014, .32)); B.add('drn', G.box, mat(0x3a3f46), m4(st.x + s * (cw / 2 + 1.25), .218, st.z, .32, .014, cd + 3.8)); }
+    for (const [dx, dz] of [[-5.5, -cd / 2 - .9], [5.5, cd / 2 + .9]]) { B.add('mh', G.cyl, mat(0x4a4f57), m4(st.x + dx, .22, st.z + dz, .9, .016, .9)); B.add('mhr', G.cyl, mat(0x6b7078), m4(st.x + dx, .222, st.z + dz, .7, .016, .7)); }
+    // corsia: frecce, linea di arresto, scritta STOP
+    for (const zz of [st.z + cd / 2 + .9, st.z - cd / 2 - .9]) { const ar = planeT(arrowTex(), 1.5, 1.5, g, st.x, .232, zz, {}); ar.rotation.x = -Math.PI / 2; ar.rotation.z = 0; }
+    B.add('stopl', G.box, mat(0xf4f4f2), m4(st.x, .226, st.z - 3.6, 4, .012, .22));
+    { const t2 = textTex([['STOP', 90, 800, 70, null, 'rgba(255,255,255,.92)']], { w: 320, h: 120 }); const p2 = planeT(t2, 2.2, .82, g, st.x, .232, st.z - 4.4, {}); p2.rotation.x = -Math.PI / 2; p2.rotation.z = Math.PI; }
+    // pensilina: colonne rivestite con piede arancione, copertura, fascia, luci a led, telecamere
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bx(g, .46, cy0 - .44, .46, 0xeef0f2, px, .44, pz); bx(g, .52, .9, .52, 0xf47b20, px, .44, pz); B.add('ccl', G.box, mat(0xd9dce0), m4(px, cy0 - .2, pz, .62, .3, .62)); }
+    const cM = c => { const m = new T.MeshLambertMaterial({ color: c, transparent: true }); m.userData.o0 = 1; OWN.push(m); CANO.mats.push(m); return m; }, cDeck = cM(0xfbfbfa), cOr = cM(0xf47b20), cCap = cM(0xffffff);
+    bx(g, cw, .8, cd, cDeck, st.x, cy0, st.z);
+    for (const s of [-1, 1]) { bx(g, cw + .14, .52, .1, cOr, st.x, cy0 + .14, st.z + s * (cd / 2 + .05)); bx(g, .1, .52, cd + .14, cOr, st.x + s * (cw / 2 + .05), cy0 + .14, st.z); }
+    bx(g, cw + .2, .1, cd + .2, cCap, st.x, cy0 + .8, st.z);
+    for (let i = -2; i <= 2; i++) for (const j of [-1, 0, 1]) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6, transparent: true }); m2.userData.o0 = 1; OWN.push(m2); CANO.mats.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.7, .42, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 2.8, cy0 - .012, st.z + j * 3.6); g.add(lp); }
+    const sg = textTex([['GASOLIO · AdBlue', 66, 800, 56, null, '#ffffff'], [C.orgName().toUpperCase().slice(0, 30) + ' · DISTRIBUTORE INTERNO', 26, 700, 108, null, 'rgba(255,255,255,.9)']], { bg: '#f47b20', w: 1024, h: 140 });
+    for (const s of [-1, 1]) { const pq = planeT(sg, 7, .96, g, st.x, cy0 + .42, st.z + s * (cd / 2 + .11), s < 0 ? { ry: Math.PI } : {}); pq.material.transparent = true; pq.material.userData.o0 = 1; CANO.mats.push(pq.material); }
+    for (const [sx, sz] of [[-1, -1], [1, 1]]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bx(g, .16, .16, .3, 0x2b2f35, px, cy0 - .62, pz + sz * .33); mesh(G.cyl, mat(0x1d1f22), px, cy0 - .55, pz + sz * .5, g, { s: [.1, .1, .1], rx: Math.PI / 2, ns: 1 }); }
+    // cartello di sicurezza su una colonna
+    { const t2 = textTex([['AREA DI RIFORNIMENTO', 30, 800, 40, null, '#ffffff'], ['Spegnere il motore', 28, 700, 92, null, '#ffffff'], ['Vietato fumare · usare il badge', 24, 600, 136, null, 'rgba(255,255,255,.88)']], { bg: '#1f4fb4', w: 420, h: 170, round: 12 }); planeT(t2, 1.3, .53, g, st.x - IX, 2.6, st.z + 2.3 + .245, {}); }
     pumpDraw(0, GD.price); pumpTex = new T.CanvasTexture(pumpCv); pumpTex.colorSpace = T.SRGBColorSpace; OWN.push(pumpTex);
-    const isl = [-2.3, 2.3];
-    isl.forEach((ix, k) => {
-      bx(g, 1.3, .22, 4.4, 0xd8d5ce, st.x + ix, .16, st.z); bx(g, 1.3, .06, 4.4, 0xf2c418, st.x + ix, .38, st.z, { ns: 1 });
-      const px = st.x + ix, pz = st.z; bx(g, .75, 1.75, .55, 0xf1f2f4, px, .44, pz); bx(g, .78, .32, .58, 0xf47b20, px, 2.19, pz); bx(g, .8, .08, .6, 0x2b2f35, px, 2.5, pz);
-      for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.52, .35, 1); sc.position.set(px + s * .38, 1.75, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); bx(g, .06, .22, .1, 0x1d1f22, px + s * .4, 1.05, pz + .12); bx(g, .1, .08, .06, 0x2cbf5d, px + s * .41, 1.25, pz - .12, { ns: 1 }); }
-      for (const s of [-1, 1]) { mesh(G.cyl, mat(0xf2c418), px, .9, pz + s * 2.05, g, { s: [.22, .95, .22] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.1, pz + s * 2.05, .26, .12, .26)); }
+    const termT = textTex([['BADGE', 40, 800, 52, null, '#5df08a'], ['Avvicina la tessera', 22, 600, 96, null, 'rgba(255,255,255,.85)'], ['poi scegli il mezzo', 22, 600, 128, null, 'rgba(255,255,255,.6)']], { bg: '#0f1a14', w: 256, h: 160, round: 8 });
+    const hoseM = mat(0x1d1f22);
+    [-IX, IX].forEach(ix => {
+      const px = st.x + ix, pz = st.z, fc = ix < 0 ? 1 : -1; // lato verso la corsia centrale
+      bx(g, 1.3, .26, 6.4, 0xd8d5ce, px, .2, pz); bx(g, 1.34, .03, 6.44, 0xbcb8b0, px, .46, pz, { ns: 1 });
+      for (const s of [-1, 1]) { bx(g, 1.34, .28, .3, M.haz, px, .19, pz + s * 3.08); mesh(G.cyl, mat(0xf2c418), px, .85, pz + s * 3.55, g, { s: [.2, 1.3, .2] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.05, pz + s * 3.55, .23, .12, .23)); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .7, pz + s * 3.55, .23, .12, .23)); }
+      // erogatore: zoccolo, corpo, pannelli, testata con display su due lati, pistole gasolio e AdBlue, tubi
+      bx(g, 1.0, .16, .76, 0x8e959e, px, .48, pz); bx(g, .86, 1.5, .62, 0xf4f5f6, px, .64, pz); for (const s of [-1, 1]) bx(g, .02, 1.1, .5, 0xf47b20, px + s * .44, .84, pz, { ns: 1 });
+      bx(g, .92, .58, .68, 0x2b2f35, px, 2.14, pz); bx(g, .96, .08, .72, 0xf47b20, px, 2.72, pz);
+      for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.56, .37, 1); sc.position.set(px + s * .465, 2.43, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); }
+      for (const s of [-1, 1]) for (const [dz, col, nm] of [[-.18, 0x1d1f22, 'd'], [.18, 0x2f6db4, 'a']]) {
+        bx(g, .14, .3, .16, 0x3a3f46, px + s * .5, 1.15, pz + dz);
+        const busy = s === fc && nm === 'd' && ix < 0; if (busy) continue; // pistola in uso
+        bx(g, .1, .12, .26, col, px + s * .6, 1.27, pz + dz); mesh(G.cyl, mat(0x9aa1a9), px + s * .6, 1.2, pz + dz + .16, g, { s: [.03, .14, .03], rx: .6, ns: 1 });
+        const hs = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(px + s * .44, 2.0, pz + dz), new T.Vector3(px + s * .62, 1.35, pz + dz * 1.4), new T.Vector3(px + s * .72, .7, pz + dz), new T.Vector3(px + s * .62, 1.2, pz + dz)]), 20, .025, 6); OWN.push(hs); mesh(hs, col === 0x2f6db4 ? mat(0x2a4f86) : hoseM, 0, 0, 0, g, { ns: 1 });
+      }
+      // terminale badge e arresto d'emergenza alle estremità dell'isola
+      const tz = pz + 2.55; bx(g, .3, 1.0, .24, 0x2b2f35, px, .47, tz); bx(g, .44, .52, .3, 0x1d1f22, px, 1.47, tz); const ts = planeT(termT, .36, .23, g, px + fc * .155, 1.8, tz, { ry: fc * Math.PI / 2 }); ts.renderOrder = 1;
+      bx(g, .03, .14, .2, 0x3a3f46, px + fc * .16, 1.55, tz, { ns: 1 });
+      const ez = pz - 2.6; bx(g, .1, 1.0, .1, 0xc5cad1, px, .47, ez); bx(g, .24, .24, .14, 0xf2c418, px, 1.47, ez); mesh(G.sph, mat(0xd62b1f), px + fc * .1, 1.59, ez, g, { s: [.14, .14, .14], ns: 1 });
+      mesh(G.cyl, mat(0x2f6db4), px, .82, pz - 1.6, g, { s: [.3, .7, .3] }); mesh(G.cyl, mat(0xeef0f2), px, 1.25, pz + 1.55, g, { s: [.18, .26, .18] });
     });
-    // totem del prezzo
-    const tot = textTex([['GASOLIO', 44, 800, 46, null, '#ffffff'], [GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', 84, 800, 140, null, '#f5c518'], ['€ / litro', 30, 600, 204, null, 'rgba(255,255,255,.85)'], [`${N(GD.lM)} L nel mese`, 26, 600, 262, null, 'rgba(255,255,255,.8)']], { bg: '#17191c', w: 320, h: 300, round: 18 });
-    bx(g, 1.7, 4.6, .45, 0xf47b20, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5); planeT(tot, 1.45, 1.36, g, st.x + cw / 2 + 2.2, 3.55, st.z + cd / 2 - .245); bx(g, 1.2, .6, .5, 0x2b2f35, st.x + cw / 2 + 2.2, .16, st.z + cd / 2 - .5);
-    // cisterna del gasolio su selle, con vasca di contenimento e scaletta
+    // totem del prezzo a led
+    const tot = textTex([['GASOLIO', 44, 800, 46, null, '#ffffff'], [GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', 90, 800, 142, null, '#ffb02e'], ['€ / litro', 30, 600, 204, null, 'rgba(255,255,255,.85)'], [`${N(Math.round(GD.lM))} L nel mese`, 26, 600, 262, null, 'rgba(255,255,255,.8)']], { bg: '#111316', w: 320, h: 300, round: 18 });
+    const ttx = st.x + cw / 2 + 2.6, ttz = st.z + cd / 2 + 1.4;
+    bx(g, 1.8, .5, .7, 0x8e959e, ttx, .2, ttz); bx(g, 1.6, 4.4, .42, 0xf47b20, ttx, .7, ttz); bx(g, 1.64, .5, .46, 0xffffff, ttx, 4.6, ttz); planeT(tot, 1.4, 1.31, g, ttx, 3.4, ttz + .215);
+    // deposito: vasca di contenimento, cisterna a doppia parete con piastre ADR, sfiato, armadio di carico, pompa, parapetto, antincendio, kit antisversamento
     const tx = F.x0 + 5, tz = st.z + 1.5;
-    bx(g, 3.6, .5, 7.4, 0xc9c6bf, tx, .16, tz); bx(g, 3.2, .1, 7, 0x9a978f, tx, .62, tz, { ns: 1 });
-    mesh(G.cyl, mat(0xeef0f2), tx, 2.25, tz, g, { s: [2.5, 6, 2.5], rx: Math.PI / 2 }); mesh(G.sph, mat(0xeef0f2), tx, 2.25, tz + 3, g, { s: [2.5, 2.5, .7] }); mesh(G.sph, mat(0xeef0f2), tx, 2.25, tz - 3, g, { s: [2.5, 2.5, .7] });
-    mesh(G.cyl, mat(0xf47b20), tx, 2.25, tz, g, { s: [2.53, .5, 2.53], rx: Math.PI / 2 });
-    for (const s of [-1, 1]) bx(g, 2.4, 1.1, .35, 0x7d848d, tx, .6, tz + s * 2);
-    bx(g, .3, .25, .3, 0x2b2f35, tx, 3.45, tz + 1.5); mesh(G.cyl, mat(0x2b2f35), tx + .3, 3.5, tz - 1.2, g, { s: [.12, .6, .12] });
-    const tl = textTex([['GASOLIO', 64, 800, 46, null, '#1d1f22'], ['infiammabile · non fumare', 22, 600, 96, null, '#55585e']], { bg: '#ffffff', w: 400, h: 120, round: 10 });
-    for (const s of [-1, 1]) planeT(tl, 2, .6, g, tx + s * 1.3, 2.3, tz, { ry: s * Math.PI / 2 });
-    for (let k = 0; k < 6; k++) B.add('lad', G.box, mat(0x9aa1a9), m4(tx - 1.45, .9 + k * .45, tz - 2.6, .05, .05, .5)); for (const s of [-1, 1]) B.add('lad', G.box, mat(0x9aa1a9), m4(tx - 1.45, 1.95, tz - 2.6 + s * .25, .05, 2.6, .05));
-    // tubo dalla cisterna alle colonnine
-    const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .4, tz - 2), new T.Vector3(tx + 4, .25, tz - 3), new T.Vector3(st.x - 2.3, .25, st.z + 1)]), 24, .07, 6); OWN.push(tube); mesh(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
-    // carrello antincendio e cartelli
-    bx(g, .45, .7, .35, 0xd62b1f, st.x - cw / 2 - 1, .16, st.z - 3); mesh(G.cyl, mat(0xd62b1f), st.x - cw / 2 - 1, 1.15, st.z - 3, g, { s: [.32, .55, .32] });
-    const ns = textTex([['⛔', 80, 400, 64]], { bg: '#ffffff', w: 128, h: 128, round: 64 }); bx(g, .06, 1.8, .06, 0x8e959e, st.x - cw / 2 - 1, .16, st.z + 3); planeT(ns, .7, .7, g, st.x - cw / 2 - 1, 2.2, st.z + 3.05);
+    bx(g, 4.4, .62, 8.6, 0xc9c6bf, tx, .16, tz); bx(g, 3.9, .04, 8.1, 0x8f8c85, tx, .74, tz, { ns: 1 }); for (const s of [-1, 1]) { bx(g, .25, .16, 8.6, 0xbab7b0, tx + s * 2.08, .78, tz); bx(g, 4.4, .16, .25, 0xbab7b0, tx, .78, tz + s * 4.18); }
+    mesh(G.cyl, mat(0xeef0f2), tx, 2.35, tz, g, { s: [2.5, 6, 2.5], rx: Math.PI / 2 }); mesh(G.sph, mat(0xeef0f2), tx, 2.35, tz + 3, g, { s: [2.5, 2.5, .7] }); mesh(G.sph, mat(0xeef0f2), tx, 2.35, tz - 3, g, { s: [2.5, 2.5, .7] });
+    for (const zz of [-1.6, 1.6]) mesh(G.cyl, mat(0xf47b20), tx, 2.35, tz + zz, g, { s: [2.53, .35, 2.53], rx: Math.PI / 2 });
+    for (const s of [-1, 1]) { bx(g, 2.3, 1.0, .35, 0x7d848d, tx, .76, tz + s * 2); }
+    const adr = textTex([['30', 70, 800, 62, null, '#111'], ['1202', 70, 800, 142, null, '#111']], { bg: '#f28a1d', w: 220, h: 180, round: 6 });
+    for (const s of [-1, 1]) { planeT(adr, .5, .41, g, tx + s * 1.27, 2.35, tz + .3, { ry: s * Math.PI / 2 }); }
+    const tl = textTex([['GASOLIO', 60, 800, 46, null, '#1d1f22'], ['doppia parete · infiammabile', 22, 600, 96, null, '#55585e']], { bg: '#ffffff', w: 420, h: 120, round: 10 });
+    for (const s of [-1, 1]) planeT(tl, 1.9, .54, g, tx + s * 1.27, 2.35, tz - 1.25, { ry: s * Math.PI / 2 });
+    mesh(G.cyl, mat(0x9aa1a9), tx + .6, 4.4, tz - 2.2, g, { s: [.1, 1.8, .1] }); mesh(G.cyl, mat(0x2b2f35), tx + .6, 5.35, tz - 2.2, g, { s: [.22, .12, .22] });
+    bx(g, .5, .32, .5, 0x2b2f35, tx - .3, 3.6, tz + 1.2); mesh(G.cyl, mat(0x9aa1a9), tx - .3, 4.0, tz + 1.2, g, { s: [.12, .5, .12] });
+    bx(g, 1.0, 1.3, .6, 0xd8dbe0, tx + 1.4, .78, tz + 4.7); bx(g, .9, .02, .02, 0x2b2f35, tx + 1.4, 1.55, tz + 5.01, { ns: 1 });
+    bx(g, .9, .6, .7, 0x4f6b54, tx - 1.2, .78, tz + 3.6); mesh(G.cyl, mat(0x6f7680), tx - .6, 1.1, tz + 3.6, g, { s: [.3, .5, .3], rz: Math.PI / 2 });
+    for (let i = 0; i < 10; i++) { const zz = tz - 4.2 + i * .93; for (const s of [-1, 1]) B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.36, zz, .05, 1.1, .05)); }
+    for (const s of [-1, 1]) { B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.9, tz, .06, .06, 8.4)); B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.4, tz, .04, .04, 8.4)); }
+    for (const zz of [-1, 1]) { bx(g, .4, .7, .3, 0xd62b1f, tx - 2.7, .2, tz + zz * 2.6); mesh(G.cyl, mat(0xd62b1f), tx - 2.7, 1.2, tz + zz * 2.6, g, { s: [.3, .55, .3] }); }
+    bx(g, 1.0, .9, .7, 0xf2c418, tx + 2.9, .2, tz - 3.4); planeT(textTex([['KIT', 40, 800, 44, null, '#1d1f22'], ['antisversamento', 22, 700, 86, null, '#1d1f22']], { w: 256, h: 110 }), .9, .39, g, tx + 2.9, .78, tz - 3.4 + .355);
+    planeT(textTex([['DEPOSITO GASOLIO', 34, 800, 44, null, '#fff'], ['Vietato fumare e usare fiamme libere', 22, 600, 92, null, 'rgba(255,255,255,.9)']], { bg: '#d62b1f', w: 512, h: 120, round: 10 }), 2.4, .56, g, tx, 1.55, tz + 4.33);
+    // AdBlue: cisternetta da 1000 L su pallet con gabbia
+    { const ax = tx, az = tz - 6.4; bx(g, 1.2, .15, 1.0, 0xc8a27a, ax, .2, az); bx(g, 1.08, .95, .9, 0xf4f6f8, ax, .36, az); bx(g, .3, .12, .3, 0x2f6db4, ax, 1.31, az);
+      for (let i = 0; i < 5; i++) { B.add('ibc', G.box, mat(0x9aa1a9), m4(ax - .55 + i * .275, .85, az + .46, .025, 1.0, .025)); B.add('ibc', G.box, mat(0x9aa1a9), m4(ax - .55 + i * .275, .85, az - .46, .025, 1.0, .025)); }
+      for (const y of [.6, 1.0, 1.32]) { B.add('ibc', G.box, mat(0x9aa1a9), m4(ax, y, az + .46, 1.12, .025, .025)); B.add('ibc', G.box, mat(0x9aa1a9), m4(ax, y, az - .46, 1.12, .025, .025)); }
+      planeT(textTex([['AdBlue', 52, 800, 56, null, '#ffffff']], { bg: '#2f6db4', w: 256, h: 96, round: 8 }), .6, .23, g, ax, .85, az + .48); }
+    // tubazione interrata segnalata dalla cisterna alle isole
+    const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .5, tz - 2), new T.Vector3(tx + 4, .24, tz - 3), new T.Vector3(st.x - IX, .24, st.z + 1)]), 24, .07, 6); OWN.push(tube); mesh(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
     B.flush();
     // mezzi: quello dell'ultimo rifornimento è alla colonnina, gli altri nei posti
     const lastP = GD.lastR[0] ? C.plate(GD.lastR[0].targa) : '';
     let k = 0; fleetVeh = [];
     GD.V.forEach(v => {
       let o;
-      if (v.p === lastP && GD.V.length) { o = vehicle(g, v, st.x, st.z, Math.PI / 2); v.atPump = 1; }
+      if (v.p === lastP && GD.V.length) { o = vehicle(g, v, st.x, st.z, Math.PI / 2); o.position.y = .215; v.atPump = 1; }
       else { const s = slots[k++]; if (!s) return; o = vehicle(g, v, s.x, s.z, s.ry); }
       fleetVeh.push({ v, o });
     });
     // tubo della colonnina fino al bocchettone del mezzo al rifornimento
     const vp = fleetVeh.find(f => f.v.atPump);
-    if (vp) { const h2 = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(st.x - 2.3 + .38, 1.1, st.z + .1), new T.Vector3(st.x - 1.7, .45, st.z + .6), new T.Vector3(st.x - 1.1, 1.05, st.z + 1.1)]), 16, .035, 6); OWN.push(h2); mesh(h2, mat(0x1d1f22), 0, 0, 0, g, { ns: 1 }); movers.push({ t: 'pump', l: C.num(GD.lastR[0].litri) || 40, price: GD.price, last: 0 }); }
+    if (vp) { const hw2 = { truck: 1.3, van: .99, car: .87, pickup: .92 }[vp.v.kind] || 1, fx = st.x - hw2 - .03, fz = st.z + .55, pxD = st.x - IX + .44;
+      const nz = new T.Group(); nz.position.set(fx - .04, 1.16, fz); g.add(nz); bx(nz, .26, .1, .09, 0x1d1f22, -.15, -.06, 0); bx(nz, .08, .16, .07, 0x1d1f22, -.22, -.2, 0); mesh(G.cyl, mat(0x9aa1a9), .03, -.01, 0, nz, { s: [.035, .14, .035], rz: Math.PI / 2, ns: 1 });
+      const h2 = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(pxD, 2.0, st.z - .18), new T.Vector3(pxD + .3, 1.2, st.z + .05), new T.Vector3(fx - .7, .62, fz - .2), new T.Vector3(fx - .36, 1.08, fz)]), 28, .028, 6); OWN.push(h2); mesh(h2, mat(0x1d1f22), 0, 0, 0, g, { ns: 1 });
+      const op = person(g, fx - .6, fz + .2, 0xf47b20, null, { mode: 'fuel' }); op.position.y = .21; op.rotation.y = Math.PI / 2; movers.push({ o: op, t: 'bob', ph: 3 });
+      movers.push({ t: 'pump', l: C.num(GD.lastR[0].litri) || 40, price: GD.price, last: 0 }); }
     // area cliccabile del parco mezzi e del distributore
     const hz = new T.Mesh(G.box, M.hit); hz.scale.set(w, .6, d); hz.position.set(cx, .2, cz); hz.userData.k = { t: 'zone', z: 'flotta' }; g.add(hz); pick.push(hz);
     const hf = new T.Mesh(G.box, M.hit); hf.scale.set(cw + 6, 5.6, cd); hf.position.set(st.x + 1.5, 2.8, st.z); hf.userData.k = { t: 'fuel' }; g.add(hf); pick.push(hf);
     const ht = new T.Mesh(G.box, M.hit); ht.scale.set(3.6, 4, 7.4); ht.position.set(tx, 2, tz); ht.userData.k = { t: 'fuel' }; g.add(ht); pick.push(ht);
   }
-  let fleetVeh = [];
+  let fleetVeh = [], CANO = null;
+  // pensilina trasparente quando si guarda il distributore
+  function canoTick(dt) { const C2 = CANO; if (!C2 || Math.abs(C2.u - C2.want) < .002) return; C2.u += (C2.want - C2.u) * Math.min(1, dt * 3.2); if (Math.abs(C2.u - C2.want) < .004) C2.u = C2.want; C2.mats.forEach(m => { m.opacity = m.userData.o0 * C2.u; m.depthWrite = C2.u > .95; }); }
   const vehOf = p => D.gas && D.gas.V.find(v => v.p === p);
   const plHtml = (p, big) => `<span class="m3-pl${big ? ' big' : ''}"><i>I</i><b>${esc(plFmt(p))}</b></span>`;
   const bars6 = (vals, keys) => { const mx = Math.max(1, ...vals); const MN = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']; return `<div class="m3-b6">${vals.map((v, i) => `<div><span>${v ? N(Math.round(v)) : ''}</span><i style="--h:${(v / mx * 100).toFixed(1)}%"${i === vals.length - 1 ? ' class="c"' : ''}></i><small>${MN[+keys[i].slice(5) - 1]}</small></div>`).join('')}</div>`; };
   const gasBtns = () => (C.gasW && C.gasW() ? `<button type="button" class="m3-go" data-m3="gasadd">${ic('fuel')}Registra un rifornimento</button>` : '') + `<button type="button" class="m3-go ghost" data-m3="gasopen">${ic('chart')}Apri la sezione Gasolio</button>`;
+  const pct = (a, b) => b ? Math.round((a - b) / b * 100) : null;
+  const dlt = (a, b, lbl) => { const p = pct(a, b); return p == null ? '' : `<span class="m3-dl ${p > 0 ? 'up' : p < 0 ? 'dn' : ''}">${p > 0 ? '▲' : p < 0 ? '▼' : '='} ${Math.abs(p)}%</span> ${lbl}`; };
+  const MN3 = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const dec1 = v => v.toFixed(1).replace('.', ',');
+  const bars12 = (vals, keys, fmt) => { const mx = Math.max(1, ...vals); return `<div class="m3-b14 m3-b12">${vals.map((v, i) => `<div title="${MN3[+keys[i].slice(5) - 1]} ${keys[i].slice(0, 4)}: ${fmt(v)}"><i style="--h:${(v / mx * 100).toFixed(1)}%;--k:${i}"${i === vals.length - 1 ? ' class="c"' : ''}></i><small>${MN3[+keys[i].slice(5) - 1][0].toUpperCase()}</small></div>`).join('')}</div>`; };
+  const anRow = a => `<button type="button" class="m3-row m3-an" data-veh3="${esc(a.v.p)}"><i class="m3-pi">${ic('alert')}</i><span class="tx"><b>${plHtml(a.v.p)} ${esc(a.m)}</b><small>${esc([C.dIt(a.r.data), N(C.num(a.r.litri)) + ' L', String(a.r.operatore || '').trim()].filter(x => x && x !== '?').join(' · '))}</small></span></button>`;
   function fleetPanel(Pn) {
     const GD = D.gas; if (!GD) return '';
+    const mPrev = MN3[+GD.k12[10].slice(5) - 1];
     if (Pn.t === 'zone') {
-      return head(ic('van'), 'or', 'Parco mezzi · gasolio', 'Mezzi aziendali', `${GD.V.length} mezzi · distributore interno`, 1) + `<div class="m3-pb"><div class="m3-grid">
-        ${stat('Gasolio nel mese', N(Math.round(GD.lM)), 'L', `${GD.nM} rifornimenti`)}${stat('Costo carburante', GD.price || GD.cM ? C.eur0(GD.cM) : '—', '', GD.price ? `${GD.price.toFixed(3).replace('.', ',')} €/L` : 'prezzo €/L da impostare')}
-        ${stat('Consumo medio', GD.cons ? GD.cons.toFixed(1).replace('.', ',') : '—', GD.cons ? 'km/L' : '', GD.cons ? `${(100 / GD.cons).toFixed(1).replace('.', ',')} L ogni 100 km` : 'servono i km')}${stat('Noleggi', GD.rent ? C.eur0(GD.rent * GD.mul) : '—', GD.rent ? '/mese' : '', `${GD.V.filter(v => v.rent).length} mezzi a noleggio`)}</div>
+      const cs = GD.V.filter(v => v.cons).sort((a, b) => b.l100 - a.l100), mx = Math.max(1, ...cs.map(v => v.l100)), avg = GD.cons ? 100 / GD.cons : 0;
+      const dv = [...GD.drv.values()].sort((a, b) => b.l - a.l).slice(0, 6), dmx = Math.max(1, ...dv.map(d => d.l));
+      return head(ic('van'), 'or', 'Parco mezzi · gasolio', 'Mezzi aziendali', `${GD.V.length} mezzi · distributore interno`, 1) + `<div class="m3-pb">
+        <div class="m3-chips">${GD.AN.length ? `<button type="button" class="m3-chip r" data-m3="gasan"><i></i>${GD.AN.length} rifornimenti da controllare</button>` : '<span class="m3-chip g"><i></i>Nessuna anomalia</span>'}${GD.rent ? `<span class="m3-chip" style="background:#e6efff;color:#1f55b8">Noleggi ${C.eur0(GD.rent * GD.mul)}/mese</span>` : ''}</div>
+        <div class="m3-grid">${stat('Gasolio nel mese', N(Math.round(GD.lM)), 'L', dlt(GD.lM, GD.lP, 'su ' + mPrev))}${stat('Spesa carburante', GD.price || GD.cM ? C.eur0(GD.cM) : '—', '', dlt(GD.cM, GD.cP, 'su ' + mPrev))}
+        ${stat('Consumo medio', avg ? dec1(avg) : '—', avg ? 'L/100 km' : '', GD.cons ? `${dec1(GD.cons)} km con un litro` : 'servono i km')}${stat('Costo al km', GD.eurKm ? GD.eurKm.toFixed(2).replace('.', ',') : '—', GD.eurKm ? '€/km' : '', GD.kmM ? `${N(GD.kmM)} km nel mese` : 'carburante · servono i km')}</div>
         ${gasBtns()}
-        <div class="m3-h4">Mezzi <em>${GD.V.length}</em></div><div class="m3-rows m3-ilist">${GD.V.map(v => `<button type="button" class="m3-row" data-veh3="${esc(v.p)}">${plHtml(v.p)}<span class="tx"><b>${esc(v.name || ({ van: 'Furgone', truck: 'Autocarro', car: 'Auto', pickup: 'Pick-up' })[v.kind])}</b><small>${esc([v.drv.length ? 'guida ' + v.drv.join(', ') : v.uso, v.last ? 'ultimo ' + C.dIt(v.last.data) : 'nessun rifornimento'].filter(Boolean).join(' · '))}</small></span><span class="m3-chip ${v.lM ? 'g' : 'n'}">${N(Math.round(v.lM))} L</span></button>`).join('') || '<div class="m3-empty">Nessun mezzo: aggiungili dalla sezione Gasolio con «+ Mezzo»</div>'}</div></div>`;
+        <div class="m3-h4">Litri · ultimi 12 mesi <em>${C.eur0(GD.c12.reduce((a, b) => a + b, 0))}</em></div>${bars12(GD.l12, GD.k12, v => N(Math.round(v)) + ' L')}
+        ${cs.length ? `<div class="m3-h4">Consumi per mezzo <em>media ${dec1(avg)} L/100 km</em></div><div class="m3-hb">${cs.map((v, i) => `<button type="button" data-veh3="${esc(v.p)}" style="--k:${i}"><span><b>${plHtml(v.p)} ${esc(v.name || '')}</b><small>${dec1(v.l100)} L/100 km</small></span><u><i style="--w:${(v.l100 / mx * 100).toFixed(1)}%;--c:${v.l100 > avg * 1.2 ? '#d9452f' : v.l100 < avg * .85 ? '#2a8a4a' : '#f3a868'}"></i><b class="avg" style="left:${(avg / mx * 100).toFixed(1)}%"></b></u></button>`).join('')}</div>` : ''}
+        ${dv.length ? `<div class="m3-h4">Per autista · ${MN3[+GD.k12[11].slice(5) - 1]}</div><div class="m3-hb">${dv.map((d, i) => `<div style="--k:${i}"><span><b>${esc(d.n)}</b><small>${N(Math.round(d.l))} L · ${d.k} ${d.k === 1 ? 'pieno' : 'pieni'}</small></span><u><i style="--w:${(d.l / dmx * 100).toFixed(1)}%;--c:#2f6db4"></i></u></div>`).join('')}</div>` : ''}
+        <div class="m3-h4">Mezzi <em>${GD.V.length}</em></div><div class="m3-rows m3-ilist">${GD.V.map(v => `<button type="button" class="m3-row" data-veh3="${esc(v.p)}">${plHtml(v.p)}<span class="tx"><b>${esc(v.name || ({ van: 'Furgone', truck: 'Autocarro', car: 'Auto', pickup: 'Pick-up' })[v.kind])}</b><small>${esc([v.drv.length ? 'guida ' + v.drv.join(', ') : v.uso, v.last ? 'ultimo ' + C.dIt(v.last.data) : 'nessun rifornimento'].filter(Boolean).join(' · '))}</small></span>${v.an ? `<span class="m3-chip r"><i></i>${v.an}</span>` : ''}<span class="m3-chip ${v.lM ? 'g' : 'n'}">${N(Math.round(v.lM))} L</span></button>`).join('') || '<div class="m3-empty">Nessun mezzo: aggiungili dalla sezione Gasolio con «+ Mezzo»</div>'}</div></div>`;
     }
     if (Pn.t === 'fuel') {
-      return head(ic('fuel'), 'or', 'Distributore interno', 'Gasolio', `${GD.nAll} rifornimenti registrati`, 1) + `<div class="m3-pb"><div class="m3-grid">
-        ${stat('Prezzo', GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', '€/L', GD.price ? 'impostato nella sezione Gasolio' : 'da impostare')}${stat('Erogati nel mese', N(Math.round(GD.lM)), 'L', `${GD.nM} rifornimenti`)}</div>
+      const lr = GD.lastR[0], lv = lr && vehOf(C.plate(lr.targa)), dmx = Math.max(1, ...GD.days), today = +C.today().slice(8, 10);
+      return head(ic('fuel'), 'or', 'Distributore interno', 'Gasolio', `${GD.nAll} rifornimenti registrati`, 1) + `<div class="m3-pb">
+        <div class="m3-grid">${stat('Prezzo', GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', '€/L', GD.price ? 'impostato nella sezione Gasolio' : 'da impostare')}${stat('Erogati nel mese', N(Math.round(GD.lM)), 'L', `${GD.nM} rifornimenti · ${dlt(GD.lM, GD.lP, '')}`)}
+        ${stat('Media per pieno', GD.nM ? N(Math.round(GD.lM / GD.nM)) : '—', GD.nM ? 'L' : '', 'nel mese')}${stat('Spesa nel mese', GD.price || GD.cM ? C.eur0(GD.cM) : '—', '', GD.mul !== 1 ? 'IVA inclusa' : 'carburante')}</div>
+        ${lr ? `<div class="m3-last"><span class="m3-ey">Ultimo rifornimento</span><div>${plHtml(C.plate(lr.targa), 1)}<b>${N(C.num(lr.litri))}<small>L</small></b></div><small>${esc([C.dIt(lr.data), C.num(lr.km) ? N(C.num(lr.km)) + ' km' : '', String(lr.operatore || '').trim(), lv && lv.name].filter(x => x && x !== '?').join(' · '))}</small></div>` : ''}
         ${gasBtns()}
+        <div class="m3-h4">Litri giorno per giorno · ${MN3[+GD.k12[11].slice(5) - 1]}</div><div class="m3-b14" style="grid-template-columns:repeat(${GD.days.length},1fr);gap:2px">${GD.days.map((v, i) => `<div title="${i + 1}: ${N(Math.round(v))} L"><i style="--h:${(v / dmx * 100).toFixed(1)}%;--k:${i}"${i + 1 === today ? ' class="c"' : ''}></i><small>${(i + 1) % 5 === 0 || i === 0 ? i + 1 : ''}</small></div>`).join('')}</div>
+        <div class="m3-h4">Da controllare <em>${GD.AN.length}</em></div>${GD.AN.length ? `<div class="m3-rows">${GD.AN.slice(0, 12).map(anRow).join('')}</div>` : '<div class="m3-ok">Nessuna anomalia negli ultimi 90 giorni: km in ordine e consumi regolari.</div>'}
         <div class="m3-h4">Ultimi rifornimenti <em>${GD.lastR.length}</em></div><div class="m3-tl m3-tl2">${GD.lastR.slice(0, 14).map(r => { const p = C.plate(r.targa), v = vehOf(p); return `<button type="button" ${v ? `data-veh3="${esc(p)}"` : ''}><b>${esc(C.dIt(r.data).slice(0, 5))}</b>${plHtml(p)}<span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></button>`; }).join('') || '<div class="m3-empty">Nessun rifornimento</div>'}</div></div>`;
     }
     const v = vehOf(Pn.p); if (!v) return '';
-    const KN = { van: 'Furgone', truck: 'Autocarro', car: 'Auto aziendale', pickup: 'Pick-up' }[v.kind];
+    const KN = { van: 'Furgone', truck: 'Autocarro', car: 'Auto aziendale', pickup: 'Pick-up' }[v.kind], van = GD.AN.filter(a => a.v === v), avg = GD.cons ? 100 / GD.cons : 0;
     return head(ic(v.kind === 'truck' ? 'truck' : 'van'), '', KN + (v.atPump ? ' · al distributore' : ''), plHtml(v.p, 1), esc([v.name, v.owner].filter(Boolean).join(' · ') || 'mezzo aziendale'), 1) + `<div class="m3-pb">
-      <div class="m3-chips">${v.drv.length ? `<span class="m3-chip">${ic('users', ' style="width:13px;height:13px"')}${esc(v.drv.join(', '))}</span>` : ''}${v.centro ? `<span class="m3-chip n">centro ${esc(v.centro)}</span>` : ''}${v.rent ? `<span class="m3-chip" style="background:#e6efff;color:#1f55b8">Noleggio ${C.eur0(v.rent * D.gas.mul)}/mese</span>` : ''}${v.uso ? `<span class="m3-chip n">${esc(v.uso.toLowerCase())}</span>` : ''}</div>
-      <div class="m3-grid">${stat('Contachilometri', v.odo ? N(v.odo) : '—', v.odo ? 'km' : '', v.last && C.num(v.last.km) ? 'al ' + C.dIt(v.last.data) : 'km non registrati')}${stat('Consumo', v.cons ? v.cons.toFixed(1).replace('.', ',') : '—', v.cons ? 'km/L' : '', v.cons ? `${(100 / v.cons).toFixed(1).replace('.', ',')} L/100 km · ${N(v.km)} km` : 'servono i km')}
-      ${stat('Gasolio nel mese', N(Math.round(v.lM)), 'L', `${v.nM} pieni · ${C.eur0(v.cM)}`)}${stat('Totale', N(Math.round(v.lT)), 'L', `${v.s.length} pieni · ${C.eur0(v.cT)}`)}</div>
-      <div class="m3-h4">Litri negli ultimi 6 mesi</div>${bars6(v.m6, D.gas.keys)}
+      <div class="m3-chips">${v.atPump ? '<span class="m3-chip a"><i></i>In rifornimento</span>' : ''}${v.drv.length ? `<span class="m3-chip">${ic('users', ' style="width:13px;height:13px"')}${esc(v.drv.join(', '))}</span>` : ''}${v.centro ? `<span class="m3-chip n">centro ${esc(v.centro)}</span>` : ''}${v.rent ? `<span class="m3-chip" style="background:#e6efff;color:#1f55b8">Noleggio ${C.eur0(v.rent * D.gas.mul)}/mese</span>` : ''}${v.uso ? `<span class="m3-chip n">${esc(v.uso.toLowerCase())}</span>` : ''}</div>
+      <div class="m3-grid">${stat('Contachilometri', v.odo ? N(v.odo) : '—', v.odo ? 'km' : '', v.last && C.num(v.last.km) ? 'al ' + C.dIt(v.last.data) : 'km non registrati')}${stat('Consumo', v.l100 ? dec1(v.l100) : '—', v.l100 ? 'L/100 km' : '', v.cons ? (avg ? `${v.l100 > avg * 1.2 ? 'sopra' : v.l100 < avg * .85 ? 'sotto' : 'in linea con'} la media (${dec1(avg)})` : `${dec1(v.cons)} km/L`) : 'servono i km')}
+      ${stat('Gasolio nel mese', N(Math.round(v.lM)), 'L', `${v.nM} pieni · ${C.eur0(v.cM)}`)}${stat('Costo al km', v.eurKm ? v.eurKm.toFixed(2).replace('.', ',') : '—', v.eurKm ? '€/km' : '', `${N(v.km)} km misurati · ${C.eur0(v.cT)} in tutto`)}</div>
+      <div class="m3-h4">Litri · ultimi 12 mesi <em>${N(Math.round(v.l12.reduce((a, b) => a + b, 0)))} L</em></div>${bars12(v.l12, GD.k12, x => N(Math.round(x)) + ' L')}
       ${gasBtns()}
-      <div class="m3-h4">Rifornimenti <em>${v.s.length}</em></div><div class="m3-tl m3-tl2">${v.s.slice().reverse().slice(0, 12).map(r => `<div><b>${esc(C.dIt(r.data))}</b><span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></div>`).join('') || '<div class="m3-empty">Nessun rifornimento registrato</div>'}</div></div>`;
+      ${van.length ? `<div class="m3-h4">Da controllare <em>${van.length}</em></div><div class="m3-rows">${van.slice(0, 8).map(anRow).join('')}</div>` : ''}
+      <div class="m3-h4">Rifornimenti <em>${v.s.length}</em></div><div class="m3-tl m3-tl2">${v.s.slice().reverse().slice(0, 12).map((r, i, A) => { const nx = A[i + 1], dk = nx && C.num(r.km) && C.num(nx.km) && C.num(r.km) > C.num(nx.km) && C.num(r.km) - C.num(nx.km) < 5000 ? C.num(r.km) - C.num(nx.km) : 0; return `<div><b>${esc(C.dIt(r.data))}</b><span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}${dk ? ` · ${dec1(C.num(r.litri) / dk * 100)} L/100` : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></div>`; }).join('') || '<div class="m3-empty">Nessun rifornimento registrato</div>'}</div></div>`;
   }
 
 
@@ -1229,6 +1322,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (md === 'push') { sL = sR = -1.12 + s * .04 * a; eL = eR = -.28; zL = .16; zR = -.16; lean = .2 + .04 * a; hx = .04; hy *= .3; tw *= .4; }
     else if (md === 'drive') { hL = hR = -1.5; kL = kR = 1.5; aL = aR = .05; sL = -.88 + R.steer * .25; sR = -.88 - R.steer * .25; eL = eR = -.62; zL = .1; zR = -.1; lean = -.06 + Math.sin(t * 2.2 + sd) * .01; tw = R.look * .42; hy = R.look * 1.2 + (1 - R.look) * Math.sin(t * .5 + sd) * .25; hx = .05; bob = Math.sin(t * 9) * .004 * Math.min(1, R.vib || 0); sway = 0; }
     else if (md === 'work') { const ty = t * 10; sL = -.52 + Math.sin(ty) * .05; sR = -.52 + Math.sin(ty + 1.7) * .05; eL = -1.0 + Math.max(0, Math.sin(ty * .9)) * .12; eR = -1.0 + Math.max(0, Math.sin(ty * .9 + 2)) * .12; zL = .2; zR = -.2; const up = Math.pow(Math.max(0, Math.sin(t * .31 + sd)), 10); hx = .34 - .42 * up; hy = up * Math.sin(t * .7 + sd) * .6; lean = .1; }
+    else if (md === 'fuel') { sR = -1.22 + Math.sin(t * 1.3 + sd) * .03; eR = -.2; zR = -.05; sL = .08; eL = -.3; zL = .1; const lk = Math.pow(Math.max(0, Math.sin(t * .4 + sd)), 6); hx = .18 - .1 * lk; hy = .7 * lk; lean = .05; }
     else if (md === 'scan') { const cy = (t * .55 + sd) % 4, up = cy < 1.6 ? Math.sin(Math.min(1, cy / .35) * Math.PI / 2) * (cy > 1.25 ? Math.max(0, (1.6 - cy) / .35) : 1) : 0; sL = -.62; eL = -1.15; zL = .22; sR = -.55 - .75 * up; eR = -1.05 + .85 * up; zR = -.12; hx = .3 - .25 * up; hy = -.25 * up + Math.sin(t * .4 + sd) * .1 * (1 - up); lean = .06; }
     R.hipL.rotation.x = hL; R.hipR.rotation.x = hR; R.knL.rotation.x = kL; R.knR.rotation.x = kR; R.anL.rotation.x = aL; R.anR.rotation.x = aR;
     R.shL.rotation.set(sL, 0, zL); R.shR.rotation.set(sR, 0, zR); R.elL.rotation.x = eL; R.elR.rotation.x = eR;
@@ -1960,7 +2054,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       if (m.t !== 'fork' && m.o && m.o.userData && m.o.userData.rig) rigTick(m.o, t, dt);
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
-    focusTick(t, dt); ricTick(t, dt); offTick(t, dt);
+    focusTick(t, dt); ricTick(t, dt); offTick(t, dt); canoTick(dt);
   }
 
   /* ---------------- interfaccia ---------------- */
@@ -2105,13 +2199,13 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
   function select(k, noFly) {
     if (EDIT) return;
-    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || k.t !== 'ofr') offUnfocus(); if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
+    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || k.t !== 'ofr') offUnfocus(); if (CANO) CANO.want = k && k.t === 'fuel' ? .14 : 1; if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
     else if (k.t === 'ofr') { zoneChip('uffe'); OFT = k.kd; if (!noFly) offView(k.kd, k.id); else offFocus(k.kd, k.id); }
     else if (k.t === 'ricl') { zoneChip('ric'); if (!k.key) return select({ t: 'zone', z: 'ric', id: k.id }, noFly); if (!noFly) ricView(k.key); else ricFocus(k.key); }
-    else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x - 2, ty: 1.5, tz: F.st.z, dist: 40, az: -0.85, pol: 1.02 }); } }
+    else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x + .5, ty: 1.4, tz: F.st.z + 1, dist: 30, az: -0.55, pol: 1.0 }); } }
     else if (k.t === 'veh') { zoneChip('flotta'); const f = fleetVeh.find(x => x.v.p === k.p); if (f && !noFly) { const p2 = new T.Vector3(); f.o.getWorldPosition(p2); fly({ tx: p2.x, ty: 1, tz: p2.z, dist: 21, az: f.o.rotation.y + Math.PI / 2 - .7, pol: .86 }); } }
     else if (k.t === 'truck') { zoneChip('spe'); const t = trucks[k.i]; if (t && !noFly) { const p2 = new T.Vector3(); t.g.getWorldPosition(p2); fly({ tx: p2.x, tz: p2.z, dist: 62, az: t.road ? -0.35 : 0.65, pol: .96 }); } }
     else if (k.t === 'belt' || k.t === 'desk' || k.t === 'dock' || k.t === 'wall') { zoneChip(k.t === 'dock' ? 'spe' : 'pre'); if (!noFly) { const it = L.items.find(i => i.id === k.id); if (it) fly({ tx: it.x, tz: it.z, dist: 40, az: -0.5, pol: .95 }); } }
@@ -2392,6 +2486,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (a === 'play') { if (tourOn) stopTour(); else startTour(); return; }
     if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else if (t.closest('.m3-co')) { unfocus(); if (sel && sel.art) sel = { t: 'rack', id: sel.id }; } else select(null); return; }
     if (a === 'gocli' || a === 'gofor') { const f = a === 'gocli' ? C.goCli : C.goForn; close(); setTimeout(() => { if (f) f(); else location.hash = a === 'gocli' ? '#clienti' : '#fornitori'; }, 350); return; }
+    if (a === 'gasan') { select({ t: 'fuel' }); return; }
     if (a === 'verify') return verify();
     if (a === 'aim') { if (sel) select(sel); return; }
     if (a === 'edit') return enterEdit();
@@ -2498,7 +2593,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     Object.values(M).forEach(m => m.dispose && m.dispose()); Object.keys(M).forEach(k => delete M[k]);
     Object.values(TX).forEach(t => t && t.dispose && t.dispose()); Object.keys(TX).forEach(k => delete TX[k]);
     if (R) { R.dispose(); R.forceContextLoss && R.forceContextLoss(); }
-    R = scene = ENV = WH = null; OFF = null; pick = []; labels = []; movers = []; trucks = []; hiMesh = selHelper = null;
+    R = scene = ENV = WH = null; OFF = null; CANO = null; pick = []; labels = []; movers = []; trucks = []; hiMesh = selHelper = null;
   }
   // qualità per dispositivo: telefono / tablet / computer (scende da sola se il 3D si ferma per memoria)
   let Q = null, SUN = null, lostN = 0, lostT0 = 0, GLT = 0;
