@@ -8524,20 +8524,24 @@
   }
   async function srvForm(s0) {
     const n = !s0, s = s0 ? { ...s0 } : { id: uid(), cod: srvNext(), d: '', um: 'H', p: '', costo: '', iva: 22, note: '' };
-    const r = await modal(n ? 'Nuovo servizio' : 'Modifica servizio', `<p class="muted small" style="margin:0 0 12px">Una riga pronta da mettere in DDT, fatture e preventivi: manodopera, trasporto, montaggio, sopralluogo…</p>
+    const PH = { v: ownImg(s.id), ch: false };
+    const P = modal(n ? 'Nuovo servizio' : 'Modifica servizio', `<p class="muted small" style="margin:0 0 12px">Una riga pronta da mettere in DDT, fatture e preventivi: manodopera, trasporto, montaggio, sopralluogo…</p>
+      <div class="ph-pk" id="ph-srv"></div>
       <label class="f"><span>Descrizione</span><input name="d" required data-focus value="${esc(s.d)}" placeholder="Es. Manodopera tecnico specializzato"></label>
       <div class="f-row f3"><label class="f"><span>Codice</span><input name="cod" value="${esc(s.cod || '')}"></label><label class="f"><span>Unità</span><select name="um">${[...new Set([...SRV_UM, s.um || 'H'])].map(u => `<option${u === s.um ? ' selected' : ''}>${u}</option>`).join('')}</select></label><label class="f"><span>IVA</span><select name="iva">${IVE.map(v => `<option value="${v}"${num(s.iva) === v ? ' selected' : ''}>${v}%</option>`).join('')}</select></label></div>
       <div class="f-row"><label class="f"><span>Prezzo al cliente € (IVA esclusa)</span><input name="p" inputmode="decimal" value="${esc(s.p === '' || s.p == null ? '' : fmtIn(s.p))}"></label><label class="f"><span>Costo per te € (facoltativo)</span><input name="costo" inputmode="decimal" value="${esc(s.costo === '' || s.costo == null ? '' : fmtIn(s.costo))}" placeholder="per vedere il margine"></label></div>
       <label class="f"><span>Note (compaiono nella descrizione)</span><input name="note" value="${esc(s.note || '')}" placeholder="facoltativo"></label>`, n ? 'Aggiungi servizio' : 'Salva', n ? '' : '<button type="button" class="btn ghost st-btn-d" data-md="del">Elimina</button>');
+    phUI(document.querySelector('.md-box #ph-srv'), PH, '');
+    const r = await P;
     if (!r) return null;
     const L = SRV().map(x => ({ ...x }));
-    if (r.action === 'del') { if (!confirm(`Eliminare «${s.d}»? I documenti già fatti restano.`)) return null; setConfig('servizi', L.filter(x => x.id !== s.id)); toast('Servizio eliminato'); return null; }
+    if (r.action === 'del') { if (!confirm(`Eliminare «${s.d}»? I documenti già fatti restano.`)) return null; setConfig('servizi', L.filter(x => x.id !== s.id)); if (cfg('img:' + s.id) && isOwnerU()) write([{ action: 'delete', sheet: 'Config', id: 'img:' + s.id }]); toast('Servizio eliminato'); return null; }
     const fd = r.fd, o = { ...s, d: String(fd.get('d') || '').trim(), cod: String(fd.get('cod') || '').trim() || srvNext(), um: String(fd.get('um') || 'H'), iva: num(fd.get('iva')), note: String(fd.get('note') || '').trim() };
     const pv = String(fd.get('p') || '').trim(), cv = String(fd.get('costo') || '').trim(); o.p = pv === '' ? '' : num(pv); o.costo = cv === '' ? '' : num(cv);
     if (o.d.length < 2) { toast('Scrivi la descrizione del servizio'); return srvForm(o.id && !n ? o : null); }
     const i = L.findIndex(x => x.id === o.id); if (i >= 0) L[i] = o; else L.push(o);
     L.sort((a, b) => String(a.d).localeCompare(String(b.d), 'it'));
-    setConfig('servizi', L); toast(n ? 'Servizio aggiunto' : 'Servizio aggiornato'); return o;
+    setConfig('servizi', L); const po = phOps(o.id, PH); if (po.length) write(po); toast(n ? 'Servizio aggiunto' : 'Servizio aggiornato'); return o;
   }
   function renderSrvSet() {
     const el = $('#s-srv'); if (!el) return;
@@ -8548,7 +8552,7 @@
   }
   function pvSrvCat() {
     const items = SRV().map(s => {
-      const it = { id: s.id, n: s.d, cl: 'Servizi', g: 'srv', sc: s.note || '', sz: ['Pz'], c: [[s.cod || s.id, '', num(s.p) || null, [0], '']], uv: 1, peso: null, dim: [null, null, null], mod: '', sp: [['Codice', s.cod], ['Unità', s.um]].filter(x => x[1]), url: '', um: s.um || 'H', d: s.note || '', code: s.cod || '', srv: 1, iva: s.iva };
+      const it = { id: s.id, n: s.d, cl: 'Servizi', g: 'srv', sc: s.note || '', sz: ['Pz'], c: [[s.cod || s.id, '', num(s.p) || null, [0], ownImg(s.id)]], uv: 1, peso: null, dim: [null, null, null], mod: '', sp: [['Codice', s.cod], ['Unità', s.um]].filter(x => x[1]), url: '', um: s.um || 'H', d: s.note || '', code: s.cod || '', srv: 1, iva: s.iva };
       it.k = amNorm(`${it.n} ${s.cod || ''} ${s.note || ''} servizio`);
       pvListSup[it.id] = 'srv'; delete pvListPub[it.id];
       if (num(s.costo)) pvListRaw[it.id] = num(s.costo); else delete pvListRaw[it.id];
@@ -9103,7 +9107,7 @@
   /* v242: la foto dell'articolo di magazzino è quella del prodotto nel catalogo del fornitore (cercata per codice fornitore) */
   const mgSupKey = a => { const k = mgSupOf(a); if (k === '__none') return ''; return Object.keys(PV_SUP).find(s => s !== 'mag' && s !== 'srv' && PV_SUP[s].file && pvCliKey(PV_SUP[s].n) === k) || ''; };
   const mgLoadedSup = new Set();
-  const mgPhoto = (a, d = 0) => { const L = mgLink(a); if (L) return pvImg(L.cat, L.c) || ''; const bx = d < 3 && confBox(a.id); return bx ? mgPhoto(artOf(bx.b), d + 1) : ''; }; // v295: lo sfuso mostra la foto della sua confezione
+  const mgPhoto = (a, d = 0) => { const own = ownImg(a.id); if (own) return own; const L = mgLink(a); if (L) return pvImg(L.cat, L.c) || ''; const bx = d < 3 && confBox(a.id); return bx ? mgPhoto(artOf(bx.b), d + 1) : ''; }; // v295: lo sfuso mostra la foto della sua confezione
   // v295: ogni confezione seguita dal suo articolo sfuso (riga «figlia»)
   const mgGroupOrder = F => { const ids = new Set(F.map(a => a.id)), sub = new Set(), out = []; F.forEach(a => { const bx = confBox(a.id); if (bx && ids.has(bx.b)) { sub.add(a.id); return; } out.push(a); const c = confOf(a.id); if (c && ids.has(c.s)) out.push(artOf(c.s)); }); out.sub = sub; return out; };
   const mgSubName = a => { const bx = confBox(a.id), b = bx && artOf(bx.b); const rest = b && String(a.descrizione || '').indexOf(b.descrizione) === 0 ? String(a.descrizione).slice(b.descrizione.length).replace(/^[\s—–-]+/, '').trim() : null; return rest == null ? esc(a.descrizione) : 'Sfuso' + (rest && !/^sfus/i.test(rest) ? ' · ' + esc(rest) : '') + ' <em>al pezzo</em>'; };
@@ -9177,7 +9181,7 @@
           <span class="mg-cq"><span class="gx-q${low(a) ? ' low' : g <= 0 ? ' zero' : ''}">${g <= 0 ? 'Esaurito' : fmtNum(g, g % 1 ? 2 : 0) + ' ' + esc(a.um || '')}</span>${num(a.scorta) ? `<small>scorta min. ${fmtNum(num(a.scorta), 0)}</small>` : ''}</span>
           <span class="pv-pr">${num(a.prezzo) ? `<strong>${eurS(num(a.prezzo) * mgIva(a))}</strong>` : ''}<small>${num(a.costo) ? 'costo ' + eurS(num(a.costo) * mgIva(a)) : 'costo da inserire'}</small></span>
           <button type="button" class="btn sm ghost mg-pm" data-gx="mov-art" data-id="${esc(a.id)}" title="Carico / scarico">±</button><button type="button" class="btn sm ghost mg-pm mg-locb mg-locc" data-artloc="${esc(a.id)}" title="Ubicazione: scegli dalla mappa" aria-label="Ubicazione"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></button></span></div>`; };
-    const sc = (x, i) => `<div class="card pv-card mg-card" data-gx="srv-edit" data-id="${esc(x.id)}" role="button" tabindex="0"><span class="pv-img"><b class="ph">SV</b></span><span class="pv-cm"><b>${esc(x.d)}</b><small>${esc([x.cod, 'servizio'].filter(Boolean).join(' · '))}</small><span class="pv-pr">${num(x.p) ? `<strong>${eur(num(x.p) * (ivaOn ? 1 + num(x.iva) / 100 : 1))}</strong>` : ''}<small>${esc(x.um || '')}</small></span></span></div>`;
+    const sc = (x, i) => `<div class="card pv-card mg-card" data-gx="srv-edit" data-id="${esc(x.id)}" role="button" tabindex="0">${ownImg(x.id) ? `<span class="pv-img has"><img src="${esc(ownImg(x.id))}" alt=""><b class="ph">SV</b></span>` : '<span class="pv-img"><b class="ph">SV</b></span>'}<span class="pv-cm"><b>${esc(x.d)}</b><small>${esc([x.cod, 'servizio'].filter(Boolean).join(' · '))}</small><span class="pv-pr">${num(x.p) ? `<strong>${eur(num(x.p) * (ivaOn ? 1 + num(x.iva) / 100 : 1))}</strong>` : ''}<small>${esc(x.um || '')}</small></span></span></div>`;
     const gcard = (g, i) => { const tot = g.arts.reduce((n, x) => n + (G.get(x.id) || 0), 0), cols = new Set(g.arts.map(x => (mgLink(x) || {}).c && mgLink(x).c[0])).size, a0 = g.arts[0], L0 = mgLink(a0);
       return `<div class="card pv-card mg-card" data-mgitem="${esc(g.key)}" role="button" tabindex="0" style="--d:${Math.min(i, 16) * 30}ms">${pvThumb(L0.cat, L0.it, L0.c)}<span class="pv-cm"><b>${esc(L0.it.n)}</b><small>${esc(pvCode(L0.it))} · ${esc(String(L0.it.cl || '').toLowerCase())}</small>
         <span class="mg-cq"><span class="gx-q${tot <= 0 ? ' zero' : ''}">${tot <= 0 ? 'Esaurito' : fmtNum(tot, tot % 1 ? 2 : 0) + ' ' + esc(a0.um || '')}</span><small>${g.arts.length} ${g.arts.length === 1 ? 'articolo' : 'articoli'}${cols > 1 ? ' · ' + cols + ' colori' : ''}</small></span></span></div>`; };
@@ -9218,7 +9222,7 @@
       const FO = mgGroupOrder(F);
       mgIds = FO.map(a => a.id);
       const mgGrid = mgSup !== '__srv' && (mgView ? mgView === 'g' : !!mgSup);
-      const srvRow = x => { const k = ivaOn ? 1 + num(x.iva) / 100 : 1; return `<tr class="mg-srvr" data-gx="srv-edit" data-id="${esc(x.id)}"><td data-l="Articolo"><b>${esc(x.d)}</b> <span class="chip soon">Servizio</span><small>${esc([x.cod, x.um, x.note].filter(Boolean).join(' · '))}</small></td><td class="r" data-l="Giacenza">—</td><td class="r" data-l="Scorta min.">—</td><td class="r" data-l="Costo">${num(x.costo) ? eur(num(x.costo) * k) : '—'}</td><td class="r" data-l="Prezzo">${x.p === '' || x.p == null ? '—' : eur(num(x.p) * k)}</td><td class="r" data-l="Valore">—</td><td class="r gx-ra"></td></tr>`; };
+      const srvRow = x => { const k = ivaOn ? 1 + num(x.iva) / 100 : 1; return `<tr class="mg-srvr" data-gx="srv-edit" data-id="${esc(x.id)}"><td data-l="Articolo"><div class="mg-ar"><span class="mg-th">SV${ownImg(x.id) ? `<img src="${esc(ownImg(x.id))}" alt="">` : ''}</span><div class="mg-at"><b>${esc(x.d)} <span class="chip soon">Servizio</span></b><small>${esc([x.cod, x.um, x.note].filter(Boolean).join(' · '))}</small></div></div></td><td class="r" data-l="Giacenza">—</td><td class="r" data-l="Scorta min.">—</td><td class="r" data-l="Costo">${num(x.costo) ? eur(num(x.costo) * k) : '—'}</td><td class="r" data-l="Prezzo">${x.p === '' || x.p == null ? '—' : eur(num(x.p) * k)}</td><td class="r" data-l="Valore">—</td><td class="r gx-ra"></td></tr>`; };
       if (mgMode) { const nS = mgN(); h += `<div class="gx-note mg-bar"><span>Selezionati: <b id="mg-n">${nS}</b></span><span class="mg-acts"><button type="button" class="btn sm" data-mgs="all">Seleziona tutti (${F.length})</button><button type="button" class="btn sm" data-mgs="none">Nessuno</button><button type="button" class="btn sm" data-mgs="edit"${nS ? '' : ' disabled'}>Modifica</button><button type="button" class="btn sm danger-ghost" data-mgs="del"${nS ? '' : ' disabled'}>Elimina</button></span></div>`; }
       h += `<div class="mg-sups" role="group" aria-label="Fornitore"><button type="button" class="mg-sp mg-all${mgSup === '' ? ' on' : ''}" data-mgsup="" title="Tutti i prodotti e i servizi"><b>Tutti</b><em>${A.length + nSrv}</em></button>${SL.map(x => `<button type="button" class="mg-sp${mgSup === x.k ? ' on' : ''}" data-mgsup="${esc(x.k)}" title="${esc(x.nm)}">${x.logo ? `<img src="logo-${esc(x.logo)}.svg" alt="${esc(x.nm)}" loading="lazy">` : `<b>${esc(x.nm)}</b>`}<em>${x.n}</em></button>`).join('')}${nSrv ? `<button type="button" class="mg-sp mg-srv${mgSup === '__srv' ? ' on' : ''}" data-mgsup="__srv" title="Servizi e lavorazioni"><b>Servizi</b><em>${nSrv}</em></button>` : ''}</div>
       <div class="gx-chips"><button type="button" class="chip-f${mgLow || mgAvail || mgOut ? '' : ' on'}" data-mglow="0">Tutti <em>${A.length}</em></button><button type="button" class="chip-f${mgAvail ? ' on' : ''}" data-mgav="1">Disponibili <em>${A.filter(a => (G.get(a.id) || 0) > 0).length}</em></button><button type="button" class="chip-f${mgLow ? ' on' : ''}" data-mglow="1">Sotto scorta <em>${nLow}</em></button><button type="button" class="chip-f${mgOut ? ' on' : ''}" data-mgout="1">Esauriti <em>${A.filter(a => (G.get(a.id) || 0) <= 0).length}</em></button>${KITS().length || mgKit ? `<button type="button" class="chip-f${mgKit ? ' on' : ''}" data-mgkit="1">Composti <em>${KITS().length}</em></button>` : ''}</div>
@@ -9287,12 +9291,34 @@
       <div class="am-list">${M.map(m => { const q = num(m.quantita), t = TP[m.tipo] || TP.rettifica, sub = [m.causale, m.note, magMulti() ? magOf(m) : ''].filter(Boolean).join(' · ');
       return `<div class="am-r"><div><b>${esc(dIt(m.data))}</b> <span class="chip ${t[1]}">${t[0]}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</div><b class="${q < 0 ? 'gx-neg' : 'gx-pos'}">${q > 0 ? '+' : ''}${fmtNum(q, q % 1 ? 2 : 0)} ${esc(a.um || '')}</b></div>`; }).join('') || '<div class="am-r"><span class="muted">Nessun movimento</span></div>'}</div>`;
   }
+  /* v297: foto propria di articoli e servizi — Config «img:<id>» = JPEG piccolo (data URL ≤ ~38.000 caratteri, come le foto dei dipendenti) */
+  const ownImg = id => { const v = id && cfg('img:' + id); return typeof v === 'string' && v.indexOf('data:image/') === 0 ? v : ''; };
+  function imgFile(file) {
+    return new Promise((res, rej) => {
+      if (!file || (file.type && !/^image\//.test(file.type))) return rej(new Error('Scegli un\'immagine'));
+      const u = URL.createObjectURL(file), im = new Image();
+      im.onload = () => { URL.revokeObjectURL(u); let side = 480, q = .82, out = '';
+        for (let i = 0; i < 10; i++) { const k = Math.min(1, side / Math.max(im.naturalWidth, im.naturalHeight)), w = Math.max(1, Math.round(im.naturalWidth * k)), h = Math.max(1, Math.round(im.naturalHeight * k)), c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h); out = c.toDataURL('image/jpeg', q); if (out.length <= 38000) return res(out); if (q > .62) q -= .08; else side = Math.round(side * .82); }
+        res(''); };
+      im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Immagine non leggibile: prova con una foto JPG o PNG')); };
+      im.src = u;
+    });
+  }
+  // riquadro foto nei moduli: PH = { v: foto propria, ch: cambiata }, fb = foto del catalogo del fornitore (se c'è)
+  function phUI(host, PH, fb) {
+    if (!host) return;
+    const draw = () => { const im = PH.v || fb; host.innerHTML = `<button type="button" class="ph-im${im ? ' has' : ''}" data-ph="pick" aria-label="${PH.v ? 'Cambia la foto' : 'Aggiungi una foto'}">${im ? `<img src="${esc(im)}" alt="">` : '<svg viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1.3-2h6l1.3 2h1.2A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.3" r="3.3"/></svg>'}</button><span class="ph-tx"><b>Foto</b><small>${PH.v ? 'la tua foto' : fb ? 'dal catalogo del fornitore · puoi metterne una tua' : 'scegli dalla galleria o scattala col telefono'}</small><span class="ph-bt"><button type="button" class="btn sm" data-ph="pick">${PH.v ? 'Cambia' : 'Aggiungi foto'}</button>${PH.v ? '<button type="button" class="btn sm ghost" data-ph="del">Rimuovi</button>' : ''}</span></span><input type="file" accept="image/*" hidden data-phf>`; };
+    host.addEventListener('click', e => { const b = e.target.closest('[data-ph]'); if (!b) return; e.preventDefault(); if (b.dataset.ph === 'pick') $('[data-phf]', host).click(); else { PH.v = ''; PH.ch = true; draw(); } });
+    host.addEventListener('change', async e => { const i = e.target.closest('[data-phf]'); if (!i || !i.files || !i.files[0]) return; try { const d = await imgFile(i.files[0]); if (!d) return toast('Foto troppo pesante, provane un\'altra'); PH.v = d; PH.ch = true; draw(); } catch (er) { toast(er.message); } });
+    draw();
+  }
+  const phOps = (id, PH) => { if (!PH.ch) return []; if (!isOwnerU()) { toast('La foto la cambia solo il titolare: il resto è salvato'); return []; } return PH.v ? [{ action: 'upsert', sheet: 'Config', row: { chiave: 'img:' + id, valore: JSON.stringify(PH.v) } }] : cfg('img:' + id) ? [{ action: 'delete', sheet: 'Config', id: 'img:' + id }] : []; };
   function artForm(a) {
     const n = !a || !a.id; a = a && a.id ? { ...a } : { id: uid(), um: 'PZ', iva: 22, creato: today(), codice: artNext(), ...(a || {}) };
-    const g = n ? 0 : (giacMap().get(a.id) || 0), KS = kitState(n ? '' : a.id), CS = confState(n ? '' : a.id);
+    const g = n ? 0 : (giacMap().get(a.id) || 0), KS = kitState(n ? '' : a.id), CS = confState(n ? '' : a.id), PH = { v: n ? '' : ownImg(a.id), ch: false };
     const f = (k, l, t = 'text', ph = '') => `<label class="f"><span>${l}</span><input name="${k}" type="${t}"${t === 'number' ? ' step="any" inputmode="decimal"' : ''} value="${esc(a[k] ?? '')}" placeholder="${esc(ph)}"${k === 'descrizione' ? ' data-focus required' : ''}></label>`;
     const CAT = categorie();
-    openSheet(n ? 'Nuovo articolo' : a.descrizione, `${f('descrizione', 'Descrizione', 'Es. Cemento 32,5 R sacco 25 kg')}
+    openSheet(n ? 'Nuovo articolo' : a.descrizione, `<div class="ph-pk" id="ph-art"></div>${f('descrizione', 'Descrizione', 'Es. Cemento 32,5 R sacco 25 kg')}
       <div class="f-row f3">${f('codice', 'Codice interno', 'automatico')}${f('codForn', 'Codice del fornitore', 'es. 4933451240')}<label class="f"><span>Unità</span><select name="um">${UM.map(u => `<option${u === a.um ? ' selected' : ''}>${u}</option>`).join('')}</select></label></div>
       <div class="f-row"><label class="f"><span>Codice a barre</span><span class="scan-fld"><input name="barcode" value="${esc(a.barcode || '')}" placeholder="EAN · scansiona o scrivi" inputmode="numeric"><button type="button" class="scan-ib" data-scanfill="barcode" title="Scansiona con la fotocamera" aria-label="Scansiona con la fotocamera">${SCAN_IC}</button></span></label><label class="f"><span>Fornitore</span><input name="fornitore" list="art-forn" value="${esc(a.fornitore || '')}"><datalist id="art-forn">${[...new Set([...FOR().map(x => x.nome), ...GX.art().map(x => x.fornitore)].map(x => String(x || '').trim()).filter(Boolean))].sort().map(x => `<option value="${esc(x)}">`).join('')}</datalist></label></div>
       <label class="f"><span>Categoria</span><input name="categoria" list="art-cats" value="${esc(a.categoria || '')}"><datalist id="art-cats">${CAT.map(c => `<option value="${esc(c)}">`).join('')}</datalist></label>
@@ -9313,7 +9339,7 @@
       if (o.codice && GX.art().some(x => x.id !== o.id && String(x.codice).trim().toUpperCase() === o.codice.toUpperCase())) { toast('Esiste già un articolo con questo codice interno'); return; }
       if (kx && kx.cost != null) o.costo = kx.cost;
       const cx = confSave(o, CS); if (cx === false) return; // v294: confezione → pezzo sfuso
-      const ops = [{ action: 'upsert', sheet: 'Articoli', row: o }, ...(kx ? kx.ops : []), ...(cx ? cx.ops : [])], g0 = n && !(kx && kx.v) ? numIn(fd.get('giac0')) : 0;
+      const ops = [{ action: 'upsert', sheet: 'Articoli', row: o }, ...(kx ? kx.ops : []), ...(cx ? cx.ops : []), ...phOps(o.id, PH)], g0 = n && !(kx && kx.v) ? numIn(fd.get('giac0')) : 0;
       if (g0) ops.push({ action: 'upsert', sheet: 'MagMov', row: { id: uid(), data: today(), articolo: o.id, tipo: 'carico', quantita: g0, costo: num(o.costo), causale: 'Giacenza iniziale', doc: '', note: '', creato: new Date().toISOString() } });
       write(ops); toast(n ? 'Articolo aggiunto' : 'Articolo aggiornato'); return true;
     }, n ? null : () => {
@@ -9322,10 +9348,12 @@
       const kOps = KITS().filter(k => kitOf(k).c.some(c => c.a === a.id)).map(k => { const K = cfg('kit:' + k); return { action: 'upsert', sheet: 'Config', row: { chiave: 'kit:' + k, valore: JSON.stringify({ ...K, c: K.c.filter(c => c.a !== a.id) }) } }; });
       if (cfg('kit:' + a.id)) kOps.push({ action: 'delete', sheet: 'Config', id: 'kit:' + a.id });
       if (cfg('conf:' + a.id)) kOps.push({ action: 'delete', sheet: 'Config', id: 'conf:' + a.id });
+      if (cfg('img:' + a.id)) kOps.push({ action: 'delete', sheet: 'Config', id: 'img:' + a.id });
       const cb = confBox(a.id); if (cb) kOps.push({ action: 'delete', sheet: 'Config', id: 'conf:' + cb.b });
       write([{ action: 'delete', sheet: 'Articoli', id: a.id }, ...GX.mov().filter(m => m.articolo === a.id).map(m => ({ action: 'delete', sheet: 'MagMov', id: m.id })), ...kOps]); toast('Articolo eliminato'); return true;
     }, n ? 'Aggiungi articolo' : 'Salva');
     $('#sheet-form').classList.add('wide');
+    phUI($('#ph-art'), PH, n ? '' : (() => { const L = mgLink(a); return L ? pvImg(L.cat, L.c) || '' : ''; })());
     kitUI(a, KS, n);
     confUI(a, CS, n);
   }
