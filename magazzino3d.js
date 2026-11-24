@@ -1,4 +1,4 @@
-/* Magazzino 3D (v279) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v280) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -336,6 +336,43 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 @media (max-width:760px){.m3-co{width:min(330px,calc(100% - 20px))}.m3-tip{display:none}}
 .m3-cells i.k{outline:2px solid ${OR};outline-offset:1px}
 @media (max-width:760px){.m3-pal{top:auto;bottom:10px;left:10px;right:10px;width:auto;max-height:150px;flex-direction:row;flex-wrap:wrap}.m3-pal h4,.m3-pal p{display:none}.m3-pal button{width:auto;flex:1 1 30%;padding:5px}.m3-pal button small{display:none}.m3-edbar{left:10px;right:10px;bottom:170px;font-size:12px}.m3.edit .m3-panel{top:60px;left:56px;max-height:calc(100% - 300px);min-height:0}.m3.edit .m3-tools{top:60px}.m3-edbar .k{display:none}.m3-edit span{display:none}}
+
+/* v280: telefono e tablet */
+.m3-lost{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(246,245,242,.92);backdrop-filter:blur(6px);font-size:15px}
+.m3-lost small{color:#8a8d93;font-size:12.5px}
+.m3.tch .m3-tip{display:none!important}
+@media (min-width:761px) and (max-width:1180px){
+ .m3-panel{width:360px;max-height:calc(100% - 100px)}.m3-tools{right:390px}
+ .m3-flow{width:calc(100% - 420px)!important;padding:10px 14px 8px}
+ .m3-brand b{display:none}.m3.np .m3-flow{width:calc(100% - 36px)!important;max-width:820px}
+ .m3-fs{overflow-x:auto;justify-content:flex-start;gap:2px;scrollbar-width:none}.m3-fs::-webkit-scrollbar{display:none}.m3-fh em{display:none}
+ .m3-kpis{max-width:calc(100% - 420px);overflow:hidden}.m3.np .m3-kpis{max-width:calc(100% - 110px)}
+}
+@media (min-width:761px) and (max-width:1024px){
+ .m3-shots .m3-btn span,.m3-edit span{display:none}
+ .m3-top{gap:8px;padding:0 12px}.m3-search{max-width:200px}
+ .m3.pn .m3-kpis{display:none}
+}
+@media (max-width:760px){
+ .m3-kpis{display:none!important}
+ .m3-tools{top:auto!important;left:auto!important;right:10px!important;bottom:104px;padding:3px;transition:bottom .35s cubic-bezier(.2,.8,.2,1),opacity .25s}
+ .m3-tools [data-m3="rl"],.m3-tools [data-m3="rr"],.m3-tools hr{display:none}
+ .m3-tools button{width:40px;height:40px}
+ .m3.pn .m3-tools{opacity:0;pointer-events:none}
+ .m3-flow{padding:6px 6px 4px;bottom:10px;left:10px;right:10px;border-radius:18px;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s}
+ .m3-fh{display:none}.m3-fs{margin-top:0}
+ .m3.pn .m3-flow{opacity:0;transform:translateY(30px);pointer-events:none}
+ .m3-panel{top:auto!important;left:0!important;right:0!important;bottom:0;width:auto!important;max-height:56%!important;min-height:0;border-radius:24px 24px 0 0!important;padding-top:14px;box-shadow:0 -12px 40px rgba(20,24,18,.18)!important;transition:transform .4s cubic-bezier(.2,.8,.2,1),max-height .4s cubic-bezier(.2,.8,.2,1),opacity .3s}
+ .m3-panel:before{content:'';position:absolute;left:50%;top:7px;width:42px;height:5px;margin-left:-21px;border-radius:3px;background:#d9d6d0}
+ .m3-panel.big{max-height:calc(100% - 120px)!important}
+ .m3.np .m3-panel{transform:translateY(105%)!important}
+ .m3-ph{padding:12px 16px 4px}
+ .m3-lb{height:24px;font-size:11.5px;padding:0 9px;border-radius:8px}.m3-lb em{display:none}.m3-lb.sm{height:22px;font-size:10.5px}
+ .m3-co{left:10px!important;right:10px!important;top:122px!important;width:auto!important;transform:none!important;max-height:40%;overflow:auto}
+ .m3-lead{display:none!important}
+ .m3-edbar{bottom:12px}
+}
+@media (max-width:760px) and (max-height:700px){.m3-panel{max-height:62%!important}}
 `;
 
   /* ---------------- icone ---------------- */
@@ -852,10 +889,17 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const on = v.z < 1 && d < L2.maxD && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
       const act = sel && L2.k.t === sel.t && L2.k.z === sel.z && L2.k.id === sel.id && L2.k.i === sel.i && L2.k.p === sel.p;
       const quiet = (sel && sel.t === 'rack' && L2.k.t === 'rack' && !act) || (EDIT && L2.k.t !== 'rack');
-      L2.el.classList.toggle('hid', (!on && !act) || quiet);
-      L2.el.style.transform = `translate(${((v.x + 1) / 2 * w).toFixed(1)}px,${((1 - v.y) / 2 * h).toFixed(1)}px) translate(-50%,-100%)`;
+      const px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h; L2.sx = px; L2.sy = py; L2.act = act; L2.vis = (on || act) && !quiet; L2.dd = d;
+      L2.el.style.transform = `translate(${px.toFixed(1)}px,${py.toFixed(1)}px) translate(-50%,-100%)`;
       L2.el.style.zIndex = act ? 3 : (L2.el.classList.contains('sm') ? 1 : 2);
     });
+    // precedenza: selezionata, poi zone grandi, poi le più vicine; si nasconde chi si sovrappone o esce dallo schermo
+    if (!updLabels.n || ++updLabels.n > 8) { updLabels.n = 1; const rt = root.getBoundingClientRect(); updLabels.ob = ['.m3.pn .m3-panel', '.m3-tools', '.m3-flow', '.m3-kpis', '.m3-co.on', '.m3-tab'].map(q => { const e = root.matches(q.split(' ')[0]) && q.includes(' ') ? $(q.split(' ').slice(1).join(' ')) : (q.startsWith('.m3.') ? null : $(q)); if (!e || !e.offsetParent || getComputedStyle(e).opacity === '0') return null; const r = e.getBoundingClientRect(); return r.width ? { x0: r.left - rt.left, x1: r.right - rt.left, y0: r.top - rt.top, y1: r.bottom - rt.top } : null; }).filter(Boolean); }
+    const placed = (updLabels.ob || []).slice(), ord = labels.filter(l => l.vis).sort((a, b) => (b.act - a.act) || (a.el.classList.contains('sm') - b.el.classList.contains('sm')) || a.dd - b.dd);
+    labels.forEach(l => { if (!l.vis) l.el.classList.add('hid'); });
+    ord.forEach(l => { const lw = l.el.offsetWidth || 120, lh = l.el.offsetHeight || 26, r = { x0: l.sx - lw / 2 - 3, x1: l.sx + lw / 2 + 3, y0: l.sy - lh - 9, y1: l.sy + 2 };
+      const out = r.x0 < 2 || r.x1 > w - 2 || r.y0 < 0 || r.y1 > h, hit = placed.some(q => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0);
+      const hide = !l.act && (out || hit); l.el.classList.toggle('hid', hide); if (!hide) placed.push(r); });
   }
 
   /* ---------------- camera ---------------- */
@@ -1665,7 +1709,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   }
 
   /* ---------------- animazioni ---------------- */
-  let o3 = null, viewOff = 0;
+  let o3 = null, viewOff = 0, viewOffY = 0;
   function animate(t, dt) {
     if (!o3) o3 = new T.Object3D();
     movers.forEach(m => {
@@ -2140,10 +2184,15 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function loop(now) {
     raf = requestAnimationFrame(loop);
     if (document.hidden) return;
+    if (Q.fps && lastT && now / 1000 - lastT < 1 / Q.fps - .004) return;
     const t = now / 1000, dt = Math.min(.05, lastT ? t - lastT : .016); lastT = t;
-    stepCam(dt); animate(t, dt);
-    const w = R.domElement.clientWidth, h = R.domElement.clientHeight, want = w > 760 && root.classList.contains('pn') ? (EDIT ? 60 : 180) : 0;
-    viewOff += (want - viewOff) * (1 - Math.exp(-dt * 4)); if (Math.abs(viewOff) > .5) cam.setViewOffset(w, h, viewOff, 0, w, h); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
+    stepCam(dt); animate(t, dt); shadowFollow();
+    const w = R.domElement.clientWidth, h = R.domElement.clientHeight, ph = w <= 760, want = !ph && root.classList.contains('pn') ? (EDIT ? 60 : 180) : 0;
+    if (ph && (!loop.f || ++loop.f > 5)) { loop.f = 1; const rt = root.getBoundingClientRect(), tb = $('.m3-top'), pn = root.classList.contains('pn') ? $('.m3-panel') : null, fl = $('.m3-flow'), co = $('.m3-co.on');
+      const yT = (tb ? tb.getBoundingClientRect().bottom - rt.top : 0) + (co ? co.offsetHeight + 12 : 0), yB = pn ? pn.getBoundingClientRect().top - rt.top : fl && !EDIT ? fl.getBoundingClientRect().top - rt.top : h;
+      loop.wy = clamp(h / 2 - (yT + Math.max(yT + 60, yB)) / 2, -h * .35, h * .35); } else if (!ph) loop.wy = 0;
+    viewOff += (want - viewOff) * (1 - Math.exp(-dt * 4)); viewOffY += ((loop.wy || 0) - viewOffY) * (1 - Math.exp(-dt * 5));
+    if (Math.abs(viewOff) > .5 || Math.abs(viewOffY) > .5) cam.setViewOffset(w, h, viewOff, viewOffY, w, h); else if (cam.view && cam.view.enabled) cam.clearViewOffset();
     if (needPick) { const p2 = needPick; needPick = null; doPick(p2); }
     if (tourOn) { tourT += dt; if (tourT > 5.5) nextTour(); }
     R.render(scene, cam); updLabels();
@@ -2168,13 +2217,24 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (R) { R.dispose(); R.forceContextLoss && R.forceContextLoss(); }
     R = scene = ENV = WH = null; pick = []; labels = []; movers = []; trucks = []; hiMesh = selHelper = null;
   }
+  // qualità per dispositivo: telefono / tablet / computer (scende da sola se il 3D si ferma per memoria)
+  let Q = null, SUN = null, lostN = 0, lostT0 = 0, GLT = 0;
+  function tierQ(t) { const dpr = window.devicePixelRatio || 1;
+    return [{ tier: 0, dpr: Math.min(1.5, dpr), sh: 1024, fps: 30 }, { tier: 1, dpr: Math.min(1.5, dpr), sh: 2048, fps: 40 }, { tier: 2, dpr: Math.min(2, dpr), sh: 4096, fps: 0 }][t]; }
+  function pickQ() { const coarse = matchMedia('(pointer:coarse)').matches, sw = Math.min(screen.width, screen.height), mem = navigator.deviceMemory || 8;
+    return tierQ(coarse && sw < 600 ? 0 : coarse || mem <= 4 || sw < 600 ? 1 : 2); }
+  // l'ombra segue l'inquadratura: dettaglio alto da vicino anche con mappe piccole, senza tremolii (agganciata ai punti della mappa)
+  function shadowFollow() { if (!SUN || !SUN.castShadow) return; const sc = SUN.shadow.camera, sq = Math.round(clamp(CAM.dist * .8, 30, 125) / 5) * 5;
+    if (sc.right !== sq) { sc.left = -sq; sc.right = sq; sc.top = sq; sc.bottom = -sq; sc.updateProjectionMatrix(); }
+    const tex = 2 * sq / SUN.shadow.mapSize.x, tx = Math.round(CAM.tx / tex) * tex, tz = Math.round(CAM.tz / tex) * tex;
+    if (SUN.target.position.x !== tx || SUN.target.position.z !== tz) { SUN.target.position.set(tx, 0, tz); SUN.position.set(tx - 70, 130, tz + 60); SUN.target.updateMatrixWorld(); } }
   function setupScene() {
     scene = new T.Scene(); scene.background = new T.Color(0xa6d673); scene.fog = new T.Fog(0xa6d673, 300, 640);
     cam = new T.PerspectiveCamera(28, 1, .5, 1600);
     scene.add(new T.HemisphereLight(0xffffff, 0x9bc46f, 1.5));
     const sun = new T.DirectionalLight(0xfff6ea, 2.2); sun.position.set(-70, 130, 60); sun.castShadow = true;
     const sc = sun.shadow.camera; sc.left = -120; sc.right = 120; sc.top = 100; sc.bottom = -100; sc.near = 10; sc.far = 380;
-    sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -0.0004; sun.shadow.normalBias = .35; scene.add(sun);
+    sun.shadow.mapSize.set(Q.sh || 1024, Q.sh || 1024); sun.shadow.bias = -0.0004; sun.shadow.normalBias = .35; sun.castShadow = !!Q.sh; scene.add(sun); scene.add(sun.target); SUN = sun;
     const fill = new T.DirectionalLight(0xdfe9ff, .45); fill.position.set(80, 60, -40); scene.add(fill);
   }
   function build() {
@@ -2191,9 +2251,13 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (!document.getElementById('m3-css')) { const s = document.createElement('style'); s.id = 'm3-css'; s.textContent = CSS; document.head.appendChild(s); }
     root = document.createElement('div'); root.className = 'm3 np'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Magazzino 3D'); root.innerHTML = html();
     document.body.appendChild(root); document.documentElement.style.overflow = 'hidden'; open = true;
-    try { R = new T.WebGLRenderer({ canvas: $('.m3-c'), antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true }); }
+    if (!Q) Q = pickQ(); root.classList.toggle('tch', matchMedia('(pointer:coarse)').matches);
+    try { R = new T.WebGLRenderer({ canvas: $('.m3-c'), antialias: true, powerPreference: Q.tier < 2 ? 'default' : 'high-performance', logarithmicDepthBuffer: true }); }
     catch { root.innerHTML = '<div class="m3-load"><b>Il 3D non è supportato su questo dispositivo</b></div>'; setTimeout(close, 2500); return; }
-    R.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap;
+    R.setPixelRatio(Q.dpr); R.shadowMap.enabled = !!Q.sh; R.shadowMap.type = Q.tier < 2 ? T.PCFShadowMap : T.PCFSoftShadowMap;
+    // se il dispositivo toglie la memoria al 3D lo riavviamo (con qualità più bassa se succede di nuovo)
+    R.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); glLost(); }, false);
+    R.domElement.addEventListener('webglcontextrestored', () => glReopen(), false);
     setupScene();
     build(); resize();
     const zt = zoneTarget('all'); Object.assign(CAM, { ty: 0, tx: zt.x, tz: zt.z, dist: zt.dist * 1.6, az: -0.1, pol: .7 }); Object.assign(GOAL, { tx: zt.x, tz: zt.z, dist: zt.dist, az: zt.az, pol: zt.pol }); applyCam();
@@ -2201,12 +2265,30 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointermove', onMove); cv.addEventListener('pointerup', onUp); cv.addEventListener('pointercancel', onUp);
     cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => { cv.classList.remove('hov'); hoverArt(null); hoverRic(null); });
     root.addEventListener('click', onClick); root.addEventListener('change', onChange);
+    const pnl = $('.m3-panel'); let sd = null;
+    pnl.addEventListener('pointerdown', e => { if (root.clientWidth > 760 || e.target.closest('button,input,select,a')) return; const r = pnl.getBoundingClientRect(); if (e.clientY - r.top > 70) return; sd = { y: e.clientY, id: e.pointerId, t: Date.now() }; pnl.setPointerCapture(e.pointerId); pnl.style.transition = 'none'; });
+    pnl.addEventListener('pointermove', e => { if (!sd || e.pointerId !== sd.id) return; const dy = e.clientY - sd.y; pnl.style.transform = `translateY(${Math.max(-40, dy)}px)`; });
+    const sEnd = e => { if (!sd || e.pointerId !== sd.id) return; const dy = e.clientY - sd.y, tap = Math.abs(dy) < 6 && Date.now() - sd.t < 300; sd = null; pnl.style.transition = ''; pnl.style.transform = '';
+      if (tap || dy < -40) pnl.classList.toggle('big', tap ? !pnl.classList.contains('big') : true); else if (dy > 70) { if (pnl.classList.contains('big')) pnl.classList.remove('big'); else { const b = $('[data-m3="pclose"]', pnl); if (b) b.click(); } } };
+    pnl.addEventListener('pointerup', sEnd); pnl.addEventListener('pointercancel', sEnd);
     const inp = $('.m3-search input'); inp.addEventListener('input', () => search(inp.value)); inp.addEventListener('focus', () => { if (inp.value) search(inp.value); });
     const ms = $('.m3-sel'); if (ms) ms.addEventListener('change', () => { C.setMag(ms.value); });
     window.addEventListener('resize', resize); document.addEventListener('keydown', onKey);
     requestAnimationFrame(() => { root.classList.add('on'); const l = $('.m3-load'); if (l) { l.style.opacity = 0; setTimeout(() => l.remove(), 500); } });
     lastT = 0; raf = requestAnimationFrame(loop);
     setTimeout(() => { if (open && !sel && root.clientWidth > 760) select({ t: 'zone', z: 'all' }, 1); else if (open) zoneChip('all'); }, 900);
+  }
+  function glLost() {
+    if (!open) return; cancelAnimationFrame(raf); const now = Date.now(); lostN = now - lostT0 < 90000 ? lostN + 1 : 1; lostT0 = now;
+    if (lostN > 1) Q = Q.tier > 0 ? tierQ(Q.tier - 1) : { ...Q, sh: 0, dpr: 1, fps: 30 };
+    let ov = $('.m3-lost'); if (!ov) { ov = document.createElement('div'); ov.className = 'm3-lost'; root.appendChild(ov); } ov.innerHTML = '<i class="m3-spin"></i><b>Riavvio il 3D…</b><small>Il dispositivo ha liberato la memoria grafica</small>';
+    clearTimeout(GLT); GLT = setTimeout(glReopen, 1200);
+  }
+  function glReopen() {
+    clearTimeout(GLT); if (!open) return; const c = C, ks = sel, g0 = { ...GOAL };
+    open = false; stopTour(); EDIT = null; FA = null; window.removeEventListener('resize', resize); document.removeEventListener('keydown', onKey); cancelAnimationFrame(raf);
+    try { dispose(); } catch (e) { } root.remove(); sel = null;
+    openView(c); Object.assign(GOAL, g0); Object.assign(CAM, g0); if (ks) setTimeout(() => { if (open) select(ks, 1); }, 950);
   }
   function refresh() {
     if (!open || !R) return;
