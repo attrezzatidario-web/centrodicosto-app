@@ -1,4 +1,4 @@
-/* Magazzino 3D (v282) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v283) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -955,9 +955,11 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       CAM.dist = Math.exp(Math.log(f.dist) + (Math.log(t2.dist) - Math.log(f.dist)) * u) + FA.arc * Math.sin(Math.PI * FA.t);
       if (FA.t >= 1) { FA = null; Object.assign(CAM, { tx: t2.tx, tz: t2.tz, ty: t2.ty || 0, az: t2.az, pol: t2.pol, dist: t2.dist }); }
       applyCam(); return; }
-    const k = 1 - Math.exp(-dt * 3.2);
+    if (VEL.on) { const dec = Math.exp(-dt * 3.6); for (const o of [GOAL, CAM]) { o.tx += VEL.x * dt; o.tz += VEL.z * dt; o.az += VEL.a * dt; } VEL.x *= dec; VEL.z *= dec; VEL.a *= dec; clampT(); if (Math.hypot(VEL.x, VEL.z) < CAM.dist * .004 && Math.abs(VEL.a) < .01) VEL.on = 0; }
+    const k = 1 - Math.exp(-dt * 8), kz = 1 - Math.exp(-dt * 10);
     let da = GOAL.az - CAM.az; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
-    CAM.az += da * k; CAM.tx += (GOAL.tx - CAM.tx) * k; CAM.ty += ((GOAL.ty || 0) - CAM.ty) * k; CAM.tz += (GOAL.tz - CAM.tz) * k; CAM.dist += (GOAL.dist - CAM.dist) * k; CAM.pol += (GOAL.pol - CAM.pol) * k;
+    CAM.az += da * k; CAM.tx += (GOAL.tx - CAM.tx) * kz; CAM.ty += ((GOAL.ty || 0) - CAM.ty) * k; CAM.tz += (GOAL.tz - CAM.tz) * kz; CAM.pol += (GOAL.pol - CAM.pol) * k;
+    CAM.dist = Math.exp(Math.log(CAM.dist) + (Math.log(GOAL.dist) - Math.log(CAM.dist)) * kz);
     applyCam();
   }
   const rackG = id => WH && WH.children.find(c => c.userData.eid === id);
@@ -2284,18 +2286,45 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 
   /* ---------------- eventi ---------------- */
   let drag = null, pinch = null; const pts = new Map();
+  const VEL = { x: 0, z: 0, a: 0, on: 0 }; let lastIn = 0, tapT = 0, tapP = null;
+  const now2 = () => performance.now();
+  const clampT = () => { GOAL.tx = clamp(GOAL.tx, -170, 190); GOAL.tz = clamp(GOAL.tz, -150, 150); CAM.tx = clamp(CAM.tx, -175, 195); CAM.tz = clamp(CAM.tz, -155, 155); };
+  const camBusy = () => !!(FA || drag || pinch || VEL.on || now2() - lastIn < 450 || Math.abs(GOAL.dist - CAM.dist) > CAM.dist * .002 || Math.abs(GOAL.tx - CAM.tx) > .03 || Math.abs(GOAL.tz - CAM.tz) > .03 || Math.abs(angD(GOAL.az, CAM.az)) > .003 || Math.abs(GOAL.pol - CAM.pol) > .003);
+  // punto del pavimento sotto il cursore, solo se ragionevolmente vicino (sopra l'orizzonte non si aggancia)
+  function grabAt(x, y) { const p = groundAt(x, y); return p && Math.hypot(p.x - CAM.tx, p.z - CAM.tz) < CAM.dist * 3.5 ? p : null; }
+  // zoom verso un punto: il punto sotto il cursore resta fermo mentre ci si avvicina
+  function zoomAt(cx, cy, f) {
+    const nd = clamp(GOAL.dist * f, 8, 420), rf = nd / GOAL.dist; if (Math.abs(rf - 1) < 1e-4) return;
+    const p = cx != null ? grabAt(cx, cy) : null;
+    if (p) { GOAL.tx = p.x + (GOAL.tx - p.x) * rf; GOAL.tz = p.z + (GOAL.tz - p.z) * rf; }
+    GOAL.dist = nd; clampT(); lastIn = now2();
+  }
+  const track = d => { const t = now2(); d.hist.push({ t, x: CAM.tx, z: CAM.tz, a: CAM.az }); while (d.hist.length > 2 && t - d.hist[0].t > 110) d.hist.shift(); };
   function onDown(e) {
     try { R.domElement.setPointerCapture(e.pointerId); } catch {} pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: GOAL.dist }; flyStop(); drag = null; return; }
+    VEL.on = 0; lastIn = now2();
+    if (pts.size === 2) { const [a, b] = [...pts.values()], c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; flyStop(); drag = null; Object.assign(GOAL, CAM);
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), a: Math.atan2(b.y - a.y, b.x - a.x), c, d0: Math.hypot(a.x - b.x, a.y - b.y), a0: Math.atan2(b.y - a.y, b.x - a.x), c0: { ...c }, g: grabAt(c.x, c.y), mode: null, hist: [] }; return; }
+    if (pts.size > 2) return;
     if (EDIT && e.button === 0 && !e.shiftKey) {
       const id = edPickAt(e.clientX, e.clientY);
       if (id) { const it = L.items.find(i => i.id === id), gp = groundAt(e.clientX, e.clientY); if (it && gp) { if (EDIT.sel !== id) { EDIT.sel = id; edPanel(); } drag = { x: e.clientX, y: e.clientY, moved: 0, item: it, off: { x: gp.x - it.x, z: gp.z - it.z }, orig: JSON.stringify(L), g: WH.children.find(c => c.userData.eid === id) }; return; } }
     }
-    drag = { x: e.clientX, y: e.clientY, rot: e.button === 2 || e.shiftKey ? 1 : 0, moved: 0 };
+    drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, rot: e.button === 2 || e.shiftKey ? 1 : 0, moved: 0, g: null, hist: [] };
   }
   function onMove(e) {
     if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pinch && pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); GOAL.dist = clamp(pinch.dist * pinch.d / Math.max(20, d), 12, 420); stopTour(); return; }
+    if (pinch && pts.size === 2) {
+      const [a, b] = [...pts.values()], nd = Math.hypot(a.x - b.x, a.y - b.y), na = Math.atan2(b.y - a.y, b.x - a.x), nc = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      if (!pinch.mode) { const sd = Math.abs(nd - pinch.d0), sa = Math.abs(angD(na, pinch.a0)), sy = nc.y - pinch.c0.y, flat = Math.abs(Math.sin(na)) < .55;
+        if (flat && Math.abs(sy) > 16 && sd < 22 && sa < .14) pinch.mode = 'tilt'; else if (sd > 10 || sa > .08 || Math.hypot(nc.x - pinch.c0.x, nc.y - pinch.c0.y) > 10) pinch.mode = 'zr'; }
+      if (pinch.mode === 'tilt') { CAM.pol = clamp(CAM.pol - (nc.y - pinch.c.y) * .005, .12, 1.32); }
+      else if (pinch.mode === 'zr') {
+        CAM.dist = clamp(CAM.dist * pinch.d / Math.max(20, nd), 8, 420); CAM.az += angD(na, pinch.a);
+        applyCam(); const p = groundAt(nc.x, nc.y); if (p && pinch.g) { CAM.tx += pinch.g.x - p.x; CAM.tz += pinch.g.z - p.z; } else if (!pinch.g) pinch.g = grabAt(nc.x, nc.y);
+      }
+      clampT(); Object.assign(GOAL, CAM); applyCam(); track(pinch); pinch.d = nd; pinch.a = na; pinch.c = nc; stopTour(); lastIn = now2(); return;
+    }
     if (!drag) { needPick = { x: e.clientX, y: e.clientY, hover: 1 }; return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     if (drag.moved > 4) { R.domElement.classList.add('drag'); stopTour(); if (!drag.item) flyStop(); }
@@ -2305,18 +2334,35 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       if (drag.g) { drag.g.position.set(it.x, 0, it.z); if (it.t !== 'zone') drag.g.rotation.y = it.r * Math.PI / 2; }
       updSelHelper(); return;
     }
-    if (drag.rot) { GOAL.az -= dx * .006; CAM.az = GOAL.az; GOAL.pol = clamp(GOAL.pol - dy * .004, .12, 1.3); CAM.pol = GOAL.pol; return; }
-    const k = CAM.dist * .0016 * (900 / Math.max(500, R.domElement.clientHeight)), s = Math.sin(CAM.az), c = Math.cos(CAM.az);
-    const mx = -dx * k, mz = -dy * k / Math.max(.35, Math.cos(CAM.pol - .2));
-    GOAL.tx += mx * c + mz * s; GOAL.tz += -mx * s + mz * c; GOAL.tx = clamp(GOAL.tx, -160, 180); GOAL.tz = clamp(GOAL.tz, -140, 140); CAM.tx = GOAL.tx; CAM.tz = GOAL.tz;
+    lastIn = now2();
+    if (drag.rot) { CAM.az -= dx * .0052; CAM.pol = clamp(CAM.pol - dy * .0038, .12, 1.32); GOAL.az = CAM.az; GOAL.pol = CAM.pol; applyCam(); track(drag); return; }
+    if (drag.moved < 3) return;
+    if (!drag.g) { Object.assign(GOAL, { tx: CAM.tx, tz: CAM.tz }); drag.g = grabAt(drag.x0, drag.y0) || 'x'; }
+    const p = drag.g !== 'x' ? groundAt(e.clientX, e.clientY) : null;
+    if (p && Math.hypot(p.x - drag.g.x, p.z - drag.g.z) < CAM.dist * 2) { CAM.tx += drag.g.x - p.x; CAM.tz += drag.g.z - p.z; }
+    else { const k = CAM.dist * .0016 * (900 / Math.max(500, R.domElement.clientHeight)), s2 = Math.sin(CAM.az), c2 = Math.cos(CAM.az), mx = -dx * k, mz = -dy * k / Math.max(.35, Math.cos(CAM.pol - .2)); CAM.tx += mx * c2 + mz * s2; CAM.tz += -mx * s2 + mz * c2; }
+    clampT(); GOAL.tx = CAM.tx; GOAL.tz = CAM.tz; applyCam(); track(drag);
+  }
+  // al rilascio la vista continua a scorrere e rallenta (come una mappa)
+  function fling(d) {
+    if (!d || d.hist.length < 2) return; const h0 = d.hist[0], h1 = d.hist[d.hist.length - 1], t = (h1.t - h0.t) / 1000; if (t < .025 || now2() - h1.t > 90) return;
+    const vx = (h1.x - h0.x) / t, vz = (h1.z - h0.z) / t, va = angD(h1.a, h0.a) / t, sp = Math.hypot(vx, vz), mx = CAM.dist * 2.2;
+    if (sp > CAM.dist * .06 || Math.abs(va) > .15) { const f = sp > mx ? mx / sp : 1; Object.assign(VEL, { x: vx * f, z: vz * f, a: clamp(va, -2.4, 2.4), on: 1 }); }
   }
   function onUp(e) {
-    pts.delete(e.pointerId); if (pts.size < 2) pinch = null;
+    pts.delete(e.pointerId);
+    if (pinch && pts.size < 2) { fling(pinch); pinch = null; if (pts.size === 1) { const [q] = [...pts.values()]; drag = { x: q.x, y: q.y, x0: q.x, y0: q.y, rot: 0, moved: 10, g: grabAt(q.x, q.y) || 'x', hist: [] }; } return; }
     if (drag && drag.item) { if (drag.moved >= 5) { EDIT.undo.push(drag.orig); EDIT.dirty = true; rebuild(); } edPanel(); }
     else if (drag && drag.moved < 6) { if (EDIT) { EDIT.sel = null; edPanel(); } else needPick = { x: e.clientX, y: e.clientY }; }
-    drag = null; R.domElement.classList.remove('drag');
+    else if (drag) fling(drag);
+    drag = null; R.domElement.classList.remove('drag'); lastIn = now2();
   }
-  function onWheel(e) { e.preventDefault(); flyStop(); GOAL.dist = clamp(GOAL.dist * Math.exp(e.deltaY * .0012), 12, 420); stopTour(); }
+  function onWheel(e) {
+    e.preventDefault(); flyStop(); VEL.on = 0; stopTour();
+    let dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1); if (e.ctrlKey) dy *= 2.4; // ctrl = pizzico sul trackpad
+    zoomAt(e.clientX, e.clientY, Math.exp(clamp(dy, -260, 260) * .0016));
+  }
+  function onDbl(e) { if (EDIT) return; e.preventDefault(); flyStop(); VEL.on = 0; zoomAt(e.clientX, e.clientY, e.shiftKey ? 1.8 : .5); }
   const ray = new (function () { this.r = null; })();
   function doPick(p) {
     if (!ray.r) ray.r = new T.Raycaster();
@@ -2338,10 +2384,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (!t.closest('.m3-menu') && !t.closest('[data-m3="zones"]') && !t.closest('[data-m3="shots"]')) $$('.m3-menu.on').forEach(m => m.classList.remove('on'));
     if (!t.closest('.m3-search')) $('.m3-res').classList.remove('on');
     if (a === 'close') { if (EDIT && EDIT.dirty && !confirm('Uscire senza salvare le modifiche alla disposizione?')) return; EDIT = null; return close(); }
-    if (a === 'zin') { flyStop(); GOAL.dist = clamp(GOAL.dist * .75, 12, 420); stopTour(); return; }
-    if (a === 'zout') { flyStop(); GOAL.dist = clamp(GOAL.dist / .75, 12, 420); stopTour(); return; }
-    if (a === 'rl') { flyStop(); GOAL.az -= Math.PI / 4; stopTour(); return; }
-    if (a === 'rr') { flyStop(); GOAL.az += Math.PI / 4; stopTour(); return; }
+    if (a === 'zin') { flyStop(); VEL.on = 0; zoomAt(null, null, .62); stopTour(); return; }
+    if (a === 'zout') { flyStop(); VEL.on = 0; zoomAt(null, null, 1 / .62); stopTour(); return; }
+    if (a === 'rl') { flyStop(); VEL.on = 0; GOAL.az -= Math.PI / 4; lastIn = now2(); stopTour(); return; }
+    if (a === 'rr') { flyStop(); VEL.on = 0; GOAL.az += Math.PI / 4; lastIn = now2(); stopTour(); return; }
     if (a === 'home') { if (EDIT) return fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.15, az: -0.15, pol: .42 }); select({ t: 'zone', z: 'all' }); return; }
     if (a === 'play') { if (tourOn) stopTour(); else startTour(); return; }
     if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else if (t.closest('.m3-co')) { unfocus(); if (sel && sel.art) sel = { t: 'rack', id: sel.id }; } else select(null); return; }
@@ -2395,6 +2441,13 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (!open || !document.body.contains(root)) return;
     if (document.querySelector('#sheet:not([hidden])')) return;
     const inp = $('.m3-search input'), typing = /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '');
+    if (!EDIT && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const st2 = CAM.dist * .12, sa = Math.sin(CAM.az), ca = Math.cos(CAM.az), mv = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+      if (mv) { e.preventDefault(); flyStop(); VEL.on = 0; GOAL.tx += (mv[0] * ca + mv[1] * sa) * st2; GOAL.tz += (-mv[0] * sa + mv[1] * ca) * st2; clampT(); lastIn = now2(); return; }
+      if (e.key === '+' || e.key === '=') { e.preventDefault(); flyStop(); zoomAt(null, null, .7); return; }
+      if (e.key === '-' || e.key === '_') { e.preventDefault(); flyStop(); zoomAt(null, null, 1 / .7); return; }
+      if (e.key === 'q' || e.key === 'Q' || e.key === 'e' || e.key === 'E') { flyStop(); GOAL.az += (/q/i.test(e.key) ? -1 : 1) * Math.PI / 8; lastIn = now2(); return; }
+    }
     if (EDIT) {
       if (typing) { if (e.key === 'Enter') document.activeElement.blur(); return; }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); return undo(); }
@@ -2414,7 +2467,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function loop(now) {
     raf = requestAnimationFrame(loop);
     if (document.hidden) return;
-    if (Q.fps && lastT && now / 1000 - lastT < 1 / Q.fps - .004) return;
+    if (Q.fps && lastT && now / 1000 - lastT < 1 / Q.fps - .004 && !camBusy()) return;
     const t = now / 1000, dt = Math.min(.05, lastT ? t - lastT : .016); lastT = t;
     stepCam(dt); animate(t, dt); shadowFollow();
     const w = R.domElement.clientWidth, h = R.domElement.clientHeight, ph = w <= 760, want = !ph && root.classList.contains('pn') ? (EDIT ? 60 : 180) : 0;
@@ -2493,7 +2546,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const zt = zoneTarget('all'); Object.assign(CAM, { ty: 0, tx: zt.x, tz: zt.z, dist: zt.dist * 1.6, az: -0.1, pol: .7 }); Object.assign(GOAL, { tx: zt.x, tz: zt.z, dist: zt.dist, az: zt.az, pol: zt.pol }); applyCam();
     const cv = R.domElement;
     cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointermove', onMove); cv.addEventListener('pointerup', onUp); cv.addEventListener('pointercancel', onUp);
-    cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => { cv.classList.remove('hov'); hoverArt(null); hoverRic(null); });
+    cv.addEventListener('wheel', onWheel, { passive: false }); cv.addEventListener('dblclick', onDbl); cv.addEventListener('contextmenu', e => e.preventDefault()); cv.addEventListener('pointerleave', () => { cv.classList.remove('hov'); hoverArt(null); hoverRic(null); });
     root.addEventListener('click', onClick); root.addEventListener('change', onChange);
     const pnl = $('.m3-panel'); let sd = null;
     pnl.addEventListener('pointerdown', e => { if (root.clientWidth > 760 || e.target.closest('button,input,select,a')) return; const r = pnl.getBoundingClientRect(); if (e.clientY - r.top > 70) return; sd = { y: e.clientY, id: e.pointerId, t: Date.now() }; pnl.setPointerCapture(e.pointerId); pnl.style.transition = 'none'; });
