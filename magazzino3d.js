@@ -1,4 +1,4 @@
-/* Magazzino 3D (v298) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v299) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen(), pickLoc(ctx, idArticolo, {toast, onSave}), locOf(ctx, id) }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -3616,7 +3616,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   function loop(now) {
     raf = requestAnimationFrame(loop);
     if (document.hidden) return;
-    if (Q.fps && lastT && now / 1000 - lastT < 1 / Q.fps - .004 && !camBusy()) return;
+    // v299: mai più di 60 fotogrammi/s (gli schermi a 120/144 Hz scaldavano il PC); fermi da 15 s: 30/s
+    { const lim = Q.fps || 60, f = now2() - lastIn > 15000 ? Math.min(lim, 30) : lim; if (lastT && now / 1000 - lastT < 1 / f - .004 && !camBusy()) return; }
     const t = now / 1000, dt = Math.min(.05, lastT ? t - lastT : .016); lastT = t;
     stepCam(dt); animate(t, dt); shadowFollow();
     const w = R.domElement.clientWidth, h = R.domElement.clientHeight, ph = w <= 760, want = !ph && root.classList.contains('pn') ? (EDIT ? 60 : 180) : 0;

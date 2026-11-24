@@ -4606,3 +4606,9 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .ga-pk.on { border-color: var(--accent); background: var(--accent-soft); }
 .ga-pkl { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 600; color: rgb(75, 85, 99); }
 .f:has(> .ga-pick) { margin-bottom: 14px; }
+
+/* v299 · meno lavoro per la scheda grafica: niente animazioni infinite di sfondo (il PC si scaldava) */
+.app main::before { animation: none !important; }
+.gh-rings, .ov-svg .ov-rp { animation: none !important; }
+.gh-f, .gh-ep, .gh-op, .gl-flow, .gl-op, .cm-pin.on .cm-pulse, .ga-svg .ga-pulse, .ga-svg .ga-w1, .ga-svg .ga-w2, .ga-svg .ga-bub, .ax-grid { animation-iteration-count: 3 !important; }
+.ga-svg .gg-ndl { animation-iteration-count: 1, 2 !important; }
