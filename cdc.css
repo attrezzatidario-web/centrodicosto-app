@@ -4594,3 +4594,15 @@ mark { background: color-mix(in srgb, #f5b301 40%, transparent); color: inherit;
 .ph-tx > b { font-size: 14px; }
 .ph-tx > small { font-size: 12.5px; color: var(--muted); }
 .ph-bt { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+/* v298 · rifornimento dal mezzo */
+.gv-fuel { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 12px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.gv-fuel svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.gv-fuel:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.ga-pick { display: flex; flex-wrap: wrap; gap: 8px; }
+.ga-pk { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 7px 9px; border-radius: 11px; border: 1.5px solid var(--line); background: var(--surface); cursor: pointer; font: inherit; color: var(--ink); transition: border-color .15s, background .15s; }
+.ga-pk small { font-size: 11.5px; color: var(--muted); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ga-pk:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.ga-pk.on { border-color: var(--accent); background: var(--accent-soft); }
+.ga-pkl { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 600; color: rgb(75, 85, 99); }
+.ga-pick + * {} .f:has(> .ga-pick) { margin-bottom: 14px; }

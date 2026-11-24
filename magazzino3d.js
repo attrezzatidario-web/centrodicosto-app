@@ -1,4 +1,4 @@
-/* Magazzino 3D (v296) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v298) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen(), pickLoc(ctx, idArticolo, {toast, onSave}), locOf(ctx, id) }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -305,6 +305,12 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 @keyframes m3dash{to{stroke-dashoffset:-16}}
 .m3-co{position:absolute;left:0;top:0;width:292px;z-index:4;background:rgba(255,255,255,.97);border-radius:18px;padding:14px 14px 12px;box-shadow:0 22px 50px rgba(20,24,18,.22),0 2px 6px rgba(0,0,0,.06);border:1px solid rgba(255,255,255,.9);pointer-events:auto;opacity:0;visibility:hidden;will-change:transform}
 .m3-co.on{visibility:visible;animation:m3co .55s cubic-bezier(.2,1.25,.3,1) both}
+.m3-coi{display:flex;align-items:center;gap:12px;margin:2px 0 2px}.m3-coi>span:last-child{min-width:0;flex:1}
+.m3-cph{flex:none;width:64px;height:64px;border-radius:12px;display:grid;place-items:center;overflow:hidden;background:var(--c,#9a9ca1);color:#fff;font-weight:700;font-size:16px;letter-spacing:.02em;position:relative}
+.m3-cph.has{background:#fff;border:1px solid #ebe9e5;cursor:zoom-in}.m3-cph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.m3-ath{flex:none;width:38px;height:38px;border-radius:10px;overflow:hidden;background:#fff;border:1px solid #ebe9e5;position:relative;display:block}.m3-ath img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.m3-ath.low{box-shadow:0 0 0 2px #ef6a45}.m3-ath.out{opacity:.55;filter:grayscale(1)}
+.m3-zoom{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:rgba(20,22,20,.55);backdrop-filter:blur(4px);cursor:zoom-out;animation:m3in .25s ease both}.m3-zoom div{background:#fff;border-radius:18px;padding:14px;max-width:min(520px,90%);box-shadow:0 30px 80px rgba(0,0,0,.35);text-align:center}.m3-zoom img{display:block;max-width:100%;max-height:60vh;margin:0 auto 10px;object-fit:contain}.m3-zoom b{font-size:14px}
 @keyframes m3co{0%{opacity:0;scale:.86;filter:blur(4px)}60%{filter:blur(0)}100%{opacity:1;scale:1}}
 .m3-co>*{animation:m3in .5s cubic-bezier(.2,.8,.2,1) both}
 .m3-co>:nth-child(2){animation-delay:.06s}.m3-co>:nth-child(3){animation-delay:.1s}.m3-co>:nth-child(4){animation-delay:.14s}.m3-co>:nth-child(5){animation-delay:.18s}.m3-co>:nth-child(6){animation-delay:.22s}.m3-co>:nth-child(7){animation-delay:.27s}
@@ -1464,7 +1470,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   const vehOf = p => D.gas && D.gas.V.find(v => v.p === p);
   const plHtml = (p, big) => `<span class="m3-pl${big ? ' big' : ''}"><i>I</i><b>${esc(plFmt(p))}</b></span>`;
   const bars6 = (vals, keys) => { const mx = Math.max(1, ...vals); const MN = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic']; return `<div class="m3-b6">${vals.map((v, i) => `<div><span>${v ? N(Math.round(v)) : ''}</span><i style="--h:${(v / mx * 100).toFixed(1)}%"${i === vals.length - 1 ? ' class="c"' : ''}></i><small>${MN[+keys[i].slice(5) - 1]}</small></div>`).join('')}</div>`; };
-  const gasBtns = () => (C.gasW && C.gasW() ? `<button type="button" class="m3-go" data-m3="gasadd">${ic('fuel')}Registra un rifornimento</button>` : '') + `<button type="button" class="m3-go ghost" data-m3="gasopen">${ic('chart')}Apri la sezione Gasolio</button>`;
+  const gasBtns = (p = '') => (C.gasW && C.gasW() ? `<button type="button" class="m3-go" data-m3="gasadd" data-p="${esc(p)}">${ic('fuel')}Registra un rifornimento</button>` : '') + `<button type="button" class="m3-go ghost" data-m3="gasopen">${ic('chart')}Apri la sezione Gasolio</button>`;
   const pct = (a, b) => b ? Math.round((a - b) / b * 100) : null;
   const dlt = (a, b, lbl) => { const p = pct(a, b); return p == null ? '' : `<span class="m3-dl ${p > 0 ? 'up' : p < 0 ? 'dn' : ''}">${p > 0 ? '▲' : p < 0 ? '▼' : '='} ${Math.abs(p)}%</span> ${lbl}`; };
   const MN3 = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
@@ -1505,7 +1511,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       <div class="m3-grid">${stat('Contachilometri', v.odo ? N(v.odo) : '—', v.odo ? 'km' : '', v.last && C.num(v.last.km) ? 'al ' + C.dIt(v.last.data) : 'km non registrati')}${stat('Consumo', v.l100 ? dec1(v.l100) : '—', v.l100 ? 'L/100 km' : '', v.cons ? (avg ? `${v.l100 > avg * 1.2 ? 'sopra' : v.l100 < avg * .85 ? 'sotto' : 'in linea con'} la media (${dec1(avg)})` : `${dec1(v.cons)} km/L`) : 'servono i km')}
       ${stat('Gasolio nel mese', N(Math.round(v.lM)), 'L', `${v.nM} pieni · ${C.eur0(v.cM)}`)}${stat('Costo al km', v.eurKm ? v.eurKm.toFixed(2).replace('.', ',') : '—', v.eurKm ? '€/km' : '', `${N(v.km)} km misurati · ${C.eur0(v.cT)} in tutto`)}</div>
       <div class="m3-h4">Litri · ultimi 12 mesi <em>${N(Math.round(v.l12.reduce((a, b) => a + b, 0)))} L</em></div>${bars12(v.l12, GD.k12, x => N(Math.round(x)) + ' L')}
-      ${gasBtns()}
+      ${gasBtns(v.p)}
       ${van.length ? `<div class="m3-h4">Da controllare <em>${van.length}</em></div><div class="m3-rows">${van.slice(0, 8).map(anRow).join('')}</div>` : ''}
       <div class="m3-h4">Rifornimenti <em>${v.s.length}</em></div><div class="m3-tl m3-tl2">${v.s.slice().reverse().slice(0, 12).map((r, i, A) => { const nx = A[i + 1], dk = nx && C.num(r.km) && C.num(nx.km) && C.num(r.km) > C.num(nx.km) && C.num(r.km) - C.num(nx.km) < 5000 ? C.num(r.km) - C.num(nx.km) : 0; return `<div><b>${esc(C.dIt(r.data))}</b><span class="tx2">${N(C.num(r.litri))} L${C.num(r.km) ? ' · ' + N(C.num(r.km)) + ' km' : ''}${dk ? ` · ${dec1(C.num(r.litri) / dk * 100)} L/100` : ''}<small>${esc([String(r.operatore || '').trim(), String(r.uso || '').trim()].filter(x => x && x !== '?').join(' · ').toLowerCase())}</small></span></div>`; }).join('') || '<div class="m3-empty">Nessun rifornimento registrato</div>'}</div></div>`;
   }
@@ -2883,7 +2889,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const ref = Math.max(x.s * 3, x.g, 1), pg = clamp(Math.max(0, x.g) / ref, 0, 1), ps = x.s ? clamp(x.s / ref, 0, 1) : 0;
     const st = x.out ? ['n', 'Esaurito'] : x.low ? ['a', 'Sotto scorta'] : ['g', 'Disponibile'];
     co.innerHTML = `<div class="m3-coh"><span class="m3-loc">${ic('pin', ' style="width:11px;height:11px"')}${esc(p2.code)}</span><span class="m3-chip ${st[0]}"><i></i>${st[1]}</span><button type="button" data-m3="pclose" aria-label="Chiudi">${ic('x')}</button></div>
-      <b class="m3-cot">${esc(x.a.descrizione)}</b><small class="m3-cos">${esc([x.a.codice, x.a.codForn ? 'forn. ' + x.a.codForn : '', x.cat].filter(Boolean).join(' · '))}</small>
+      <div class="m3-coi">${(() => { const im = C.imgTag ? C.imgTag(x.a) : ''; const cc = D.catOf.get(x.cat); return im ? `<span class="m3-cph has" data-m3ph="${esc(x.id)}">${im}</span>` : `<span class="m3-cph" style="--c:${cc ? cc.colH : '#9a9ca1'}">${esc((String(x.a.descrizione || '?').match(/[A-Za-zÀ-ÿ0-9]/g) || ['?']).slice(0, 2).join('').toUpperCase())}</span>`; })()}<span><b class="m3-cot">${esc(x.a.descrizione)}</b><small class="m3-cos">${esc([x.a.codice, x.a.codForn ? 'forn. ' + x.a.codForn : '', x.cat].filter(Boolean).join(' · '))}</small></span></div>
       <div class="m3-coq"><b data-cnt="${x.g}">0</b><span>${esc(x.a.um || 'pz')}</span>${x.val ? `<em>${C.eur0(x.val)}</em>` : ''}</div>
       <div class="m3-cob"><u style="--w:${(pg * 100).toFixed(1)}%"></u>${x.s ? `<i style="left:${(ps * 100).toFixed(1)}%" title="scorta minima"></i>` : ''}</div>
       <small class="m3-cos">${x.s ? `scorta minima ${N(x.s)} ${esc(x.a.um || '')}` : 'nessuna scorta minima'}${last ? ` · ultimo movimento ${esc(C.dIt(last.data))} (${C.num(last.quantita) > 0 ? '+' : ''}${N(C.num(last.quantita))})` : ''}</small>
@@ -2968,9 +2974,9 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   const stat = (l, v, unit, sub, p) => `<div class="m3-st"><span>${l}</span><b>${v}${unit ? `<small>${unit}</small>` : ''}</b>${sub ? `<em>${sub}</em>` : ''}${p != null ? `<div class="m3-bar"><u data-w="${clamp(p, 0, 1).toFixed(3)}"></u></div>` : ''}</div>`;
   const head = (icn, cls, ey, h, p, aim) => `<div class="m3-ph"><i class="m3-pi ${cls || ''}">${icn}</i><div class="m3-pt"><span class="m3-ey">${ey}</span><h3>${h}</h3>${p ? `<p>${p}</p>` : ''}</div><div class="m3-pa">${aim ? `<button type="button" data-m3="aim" aria-label="Inquadra">${ic('target')}</button>` : ''}<button type="button" data-m3="pclose" aria-label="Chiudi">${ic('x')}</button></div></div>`;
   const locChip = x => { const p2 = P.byArt.get(x.id); return p2 ? `<button type="button" class="m3-loc${p2.auto ? ' auto' : ''}" data-loc3="${esc(x.id)}" title="${p2.auto ? 'Ubicazione automatica: tocca per spostare' : 'Ubicazione: tocca per spostare'}">${ic('pin', ' style="width:11px;height:11px"')}${esc(p2.code)}</button>` : (canEdit() ? `<button type="button" class="m3-loc auto" data-loc3="${esc(x.id)}">${ic('pin', ' style="width:11px;height:11px"')}assegna</button>` : ''); };
-  const artRow = (x, hl) => { const st = x.out ? '<span class="m3-chip n"><i></i>Esaurito</span>' : x.low ? '<span class="m3-chip a"><i></i>Sotto scorta</span>' : '<span class="m3-chip g"><i></i>Ok</span>';
-    const p2 = x.s > 0 ? Math.min(1, Math.max(0, x.g) / (x.s * 3)) : (x.out ? 0 : 1);
-    return `<div class="m3-row${hl ? ' k' : ''}" data-art3="${esc(x.id)}">${donut(p2, x.out ? '#c9cbcf' : x.low ? '#ef6a45' : OR)}<span class="tx"><b>${esc(x.a.descrizione || 'Articolo')}</b><small>${esc([x.a.codice, N(x.g) + ' ' + (x.a.um || 'pz'), x.s ? 'min. ' + N(x.s) : ''].filter(Boolean).join(' · '))}</small></span>${locChip(x)}${st}${canW() ? `<button type="button" class="pm" data-gx="mov-art" data-id="${esc(x.id)}" title="Carico / scarico">±</button>` : ''}</div>`; };
+  const artRow = (x, hl) => { const st = x.out ? '<span class="m3-chip n"><i></i>Esaurito</span>' : x.low ? '<span class="m3-chip a"><i></i>Sotto scorta</span>' : '';
+    const p2 = x.s > 0 ? Math.min(1, Math.max(0, x.g) / (x.s * 3)) : (x.out ? 0 : 1), im = C.imgTag ? C.imgTag(x.a) : '';
+    return `<div class="m3-row${hl ? ' k' : ''}" data-art3="${esc(x.id)}">${im ? `<i class="m3-ath${x.out ? ' out' : x.low ? ' low' : ''}">${im}</i>` : donut(p2, x.out ? '#c9cbcf' : x.low ? '#ef6a45' : OR)}<span class="tx"><b>${esc(x.a.descrizione || 'Articolo')}</b><small>${esc([x.a.codice, N(x.g) + ' ' + (x.a.um || 'pz'), x.s ? 'min. ' + N(x.s) : ''].filter(Boolean).join(' · '))}</small></span>${locChip(x)}${st}${canW() ? `<button type="button" class="pm" data-gx="mov-art" data-id="${esc(x.id)}" title="Carico / scarico">±</button>` : ''}</div>`; };
   const mvRow = m => { const a = C.artOf(m.articolo), q = C.num(m.quantita); return `<div class="m3-row"><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic(m.tipo === 'rettifica' ? 'check' : q > 0 ? 'box' : 'truck')}</i><span class="tx"><b>${esc(a ? a.descrizione : 'Articolo eliminato')}</b><small>${esc([C.dIt(m.data), m.causale, C.magMulti() ? C.magOf(m) : ''].filter(Boolean).join(' · '))}</small></span><span class="m3-chip ${q > 0 ? 'g' : 'a'}">${q > 0 ? '+' : ''}${N(q)}</span></div>`; };
   const rackOf = id => L.items.find(i => i.id === id && i.t === 'rack');
   const rackArts = it => D.arts.filter(x => { const p2 = P.byArt.get(x.id); return p2 && p2.rk === it; });
@@ -3515,6 +3521,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   function onClick(e) {
     const t = e.target;
     if (t.closest('[data-gx]')) { $$('.m3-menu.on').forEach(m => m.classList.remove('on')); $('.m3-res').classList.remove('on'); return; }
+    const zm = t.closest('.m3-zoom'); if (zm) { zm.remove(); return; }
+    const phz = t.closest('[data-m3ph]'); if (phz) { const x = D.arts.find(y => y.id === phz.dataset.m3ph), im = phz.querySelector('img'); if (x && im) { const z = document.createElement('div'); z.className = 'm3-zoom'; z.innerHTML = `<div><img src="${esc(im.currentSrc || im.src)}" alt=""><b>${esc(x.a.descrizione)}</b></div>`; root.appendChild(z); } return; }
     const b = t.closest('[data-m3]'), a = b && b.dataset.m3;
     if (!t.closest('.m3-menu') && !t.closest('[data-m3="zones"]') && !t.closest('[data-m3="shots"]')) $$('.m3-menu.on').forEach(m => m.classList.remove('on'));
     if (!t.closest('.m3-search')) $('.m3-res').classList.remove('on');
@@ -3532,7 +3540,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     if (a === 'verify') return verify();
     if (a === 'aim') { if (sel) select(sel); return; }
     if (a === 'edit') return enterEdit();
-    if (a === 'gasadd') { if (C.gasAdd) C.gasAdd(); return; }
+    if (a === 'gasadd') { if (C.gasAdd) C.gasAdd(b.dataset.p || ''); return; }
     if (a === 'gasopen') { close(); if (C.goGas) setTimeout(C.goGas, 50); return; }
     if (a === 'zgas') { select({ t: 'zone', z: 'flotta' }); return; }
     if (a === 'edx') return exitEdit(false);

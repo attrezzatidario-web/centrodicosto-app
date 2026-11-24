@@ -2636,6 +2636,7 @@
     return out;
   }
 
+  const GAS_FUEL_BTN = p => (gasOk() && secPerm('gasolio') === 'w' ? `<button type="button" class="gv-fuel" data-gfuel="${esc(p)}" title="Registra un rifornimento per ${esc(plateFmt(p))}"><svg viewBox="0 0 24 24"><path d="M5 20V5a1.5 1.5 0 0 1 1.5-1.5h6A1.5 1.5 0 0 1 14 5v15M3.5 20h12M14 9h2a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 0 3 0V8l-3-3M7.5 8h4"/></svg>Rifornimento</button>` : '');
   function renderGas() {
     const months = gasMonths();
     const sel = $('#ga-per');
@@ -2654,7 +2655,7 @@
     if (!rows.length) {
       const reg = [...new Set([...Object.keys(gasRent()), ...Object.keys(gasMezzi())].map(plate))];
       body.innerHTML = warn + `<div class="gl-hero ga-hero gl-hero-empty"><div class="gh-top"><div class="gh-art">${gasArt(0)}</div><div class="gh-main"><span class="gh-lbl">${isMain() ? 'Gasolio Attrezzati' : 'Gasolio'}</span><h3>Nessun rifornimento registrato</h3><p>Aggiungi i tuoi mezzi con «+ Mezzo», poi registra i rifornimenti o importa il file Excel.</p></div></div></div>` +
-        (reg.length ? `<div class="card"><div class="card-h"><h3>Mezzi</h3><span class="muted small">${reg.length} registrati</span></div><div class="ga-veh">${reg.map(p => `<div class="gv-c" data-gname="${esc(p)}"><div class="gv-top"><span class="gv-plate"><i>I</i><b>${esc(plateFmt(p))}</b></span></div>${gasName(p) ? `<div class="gv-nick">${esc(gasName(p))}</div>` : ''}${gasDrv(p).length ? `<div class="gv-name">${esc(gasDrv(p).join(', '))}</div>` : ''}</div>`).join('')}</div></div>` : '');
+        (reg.length ? `<div class="card"><div class="card-h"><h3>Mezzi</h3><span class="muted small">${reg.length} registrati</span></div><div class="ga-veh">${reg.map(p => `<div class="gv-c" data-gname="${esc(p)}"><div class="gv-top"><span class="gv-plate"><i>I</i><b>${esc(plateFmt(p))}</b></span></div>${gasName(p) ? `<div class="gv-nick">${esc(gasName(p))}</div>` : ''}${gasDrv(p).length ? `<div class="gv-name">${esc(gasDrv(p).join(', '))}</div>` : ''}${GAS_FUEL_BTN(p)}</div>`).join('')}</div></div>` : '');
       return;
     }
     const V = gasVehicles(all);
@@ -2720,6 +2721,7 @@
         <div class="gv-tank"><i style="width:${(x.l / mv * 100).toFixed(1)}%"></i></div>
         ${x.main && x.rent ? `<div class="gv-rent"><span>Noleggio <b>${eur0(x.rent * gMul())}</b>/mese</span><span>Totale periodo <b>${eur0((x.rent * rm.length + x.fuel) * gMul())}</b></span></div>` : ''}
         <div class="gv-st"><div><small>Pieni</small><b>${x.v.length}</b></div><div><small>Km</small><b>${x.k ? fmtNum(x.k, 0) : '—'}</b></div><div><small>km/L</small><b>${x.cons ? fmtNum(x.cons, 1) : '—'}</b></div><div><small>Ultimo</small><b>${x.last && validD(x.last.data) ? parseD(x.last.data).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : '—'}</b></div></div>
+        ${GAS_FUEL_BTN(x.p)}
       </div>`).join('');
 
     // costo dei mezzi a noleggio
@@ -2833,13 +2835,24 @@
     </svg>`;
   }
 
-  function formGas(r) {
+  // v298: dati del mezzo per il rifornimento (autista registrato, ultimi uso/proprietario/centro, ultimi km)
+  function gasPre(p) {
+    p = plate(p); const R = gasRows().filter(x => plate(x.targa) === p).sort((a, b) => String(b.data).localeCompare(String(a.data)) || num(b.km) - num(a.km)), l = R[0] || {};
+    const drv = [].concat((gasMezzi()[p] || {}).dip || []).map(id => { const d = (db.dipendenti || []).find(x => String(x.id) === String(id)); return d ? `${d.nome || ''} ${d.cognome || ''}`.trim() : ''; }).filter(Boolean);
+    return { p, operatore: drv[0] || gasNorm(l.operatore) || '', proprietario: gasNorm(l.proprietario) || '', uso: gasNorm(l.uso) || '', centro: l.centro || '', km: Math.max(0, ...R.map(x => num(x.km))), last: l.data || '' };
+  }
+  function formGas(r, pre) {
     if (!gasOk()) return toast('Prima aggiorna lo script Google (versione cdc-1.2)');
     const isNew = !r;
     const last = gasRows().slice().sort((a, b) => String(b.data).localeCompare(String(a.data)))[0] || {};
     r = r || { id: 'f' + uid(), data: today(), targa: '', km: '', litri: '', prezzo: '', proprietario: '', operatore: last.operatore || '', centro: last.centro || gasCC(), uso: '', note: '' };
+    if (isNew && pre) { const P0 = gasPre(pre); r = { ...r, targa: P0.p, operatore: P0.operatore || r.operatore, proprietario: P0.proprietario, uso: P0.uso, centro: P0.centro || r.centro }; }
     const V = gasVehicles(gasRows());
+    // mezzi da toccare: registrati + quelli con rifornimenti, i più usati di recente per primi
+    const MZ = [...new Set([...Object.keys(gasRent()), ...Object.keys(gasMezzi())].map(plate).concat([...V.values()].sort((a, b) => String((b.s[b.s.length - 1] || {}).data).localeCompare(String((a.s[a.s.length - 1] || {}).data))).map(x => x.p)))].filter(p => p && p !== '—').slice(0, 16);
+    const kmH = p => { const k = p ? gasPre(p).km : 0; return k ? `ultimo: ${fmtNum(k, 0)} km` : 'contachilometri'; };
     openSheet(isNew ? 'Nuovo rifornimento' : 'Modifica rifornimento', `
+      ${isNew && MZ.length ? `<div class="f"><span class="ga-pkl">Scegli il mezzo</span><div class="ga-pick" role="radiogroup" aria-label="Mezzo">${MZ.map(p => `<button type="button" role="radio" class="ga-pk${plate(r.targa) === p ? ' on' : ''}" data-gpick="${esc(p)}" aria-checked="${plate(r.targa) === p}"><span class="gv-plate"><i>I</i><b>${esc(plateFmt(p))}</b></span>${gasName(p) ? `<small>${esc(gasName(p))}</small>` : ''}</button>`).join('')}</div></div>` : ''}
       <div class="f-row">
         <label class="f"><span>Targa</span><input name="targa" required data-focus list="ga-dl-t" value="${esc(r.targa)}" placeholder="Es. AB123CD" autocapitalize="characters"></label>
         <label class="f"><span>Data</span><input name="data" type="date" required value="${esc(validD(r.data) ? r.data : today())}"></label>
@@ -2847,7 +2860,7 @@
       <datalist id="ga-dl-t">${[...V.values()].map(x => `<option value="${esc(x.p)}">${esc(x.uso)}</option>`).join('')}</datalist>
       <div class="f-row">
         <label class="f"><span>Litri</span><input name="litri" required inputmode="decimal" value="${esc(fmtIn(r.litri))}" placeholder="0,00"></label>
-        <label class="f"><span>Chilometri</span><input name="km" inputmode="numeric" value="${num(r.km) ? esc(String(num(r.km))) : ''}" placeholder="contachilometri"></label>
+        <label class="f"><span>Chilometri</span><input name="km" inputmode="numeric" value="${num(r.km) ? esc(String(num(r.km))) : ''}" placeholder="${esc(isNew ? kmH(r.targa) : 'contachilometri')}"></label>
       </div>
       <div class="f-row">
         <label class="f"><span>Operatore</span><input name="operatore" list="ga-dl-o" value="${esc(r.operatore)}"></label>
@@ -2870,6 +2883,19 @@
         return true;
       },
       isNew ? null : () => { if (!confirm('Eliminare questo rifornimento?')) return; write([{ action: 'delete', sheet: 'Gasolio', id: r.id }]); toast('Rifornimento eliminato'); return true; });
+    if (!isNew) return;
+    // toccando un mezzo (o scrivendo una targa nota) si compilano targa, autista, utilizzo, proprietario e centro
+    const F = $('#sheet-form'), auto = {}; if (!F) return;
+    const setF = (k, v) => { const i = F.querySelector(`[name=${k}]`); if (!i) return; if (i.value === '' || i.value === auto[k]) { i.value = v || ''; auto[k] = i.value; } };
+    const apply = (p, fromInput) => { p = plate(p); const P0 = gasPre(p), known = MZ.includes(p) || V.has(p);
+      $$('.ga-pk', F).forEach(b => { const on = b.dataset.gpick === p; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+      if (!fromInput) { const t = F.querySelector('[name=targa]'); t.value = p; }
+      if (!known) return; ['operatore', 'proprietario', 'uso', 'centro'].forEach(k => { if (P0[k]) setF(k, P0[k]); });
+      const km = F.querySelector('[name=km]'); if (km) km.placeholder = kmH(p);
+      if (!fromInput) { const li = F.querySelector('[name=litri]'); if (li) li.focus(); } };
+    if (pre) { ['operatore', 'proprietario', 'uso', 'centro'].forEach(k => { const i = F.querySelector(`[name=${k}]`); if (i) auto[k] = i.value; }); setTimeout(() => { const li = F.querySelector('[name=litri]'); if (li) li.focus(); }, 80); }
+    F.addEventListener('click', e => { const b = e.target.closest('[data-gpick]'); if (b) { e.preventDefault(); apply(b.dataset.gpick); } });
+    const ti = F.querySelector('[name=targa]'); if (ti) ti.addEventListener('change', () => apply(ti.value, true));
   }
   function formGasRent(focus) {
     const R = gasRent(), N = gasNomi(), list = [...Object.entries(R), ['', ''], ['', '']];
@@ -9245,7 +9271,7 @@
   /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
   async function mag3d() {
     if (mag3d.busy) return; mag3d.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=296'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=298'); }
     catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
     mag3d.busy = 0;
     window.CDC_MG3D.open(mag3dCtx());
@@ -9253,7 +9279,7 @@
   // v288: ubicazione dell'articolo scelta dalla mappa del magazzino (popup di magazzino3d.js, anche senza aprire il 3D)
   async function artLoc(id) {
     if (artLoc.busy) return; artLoc.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=296'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=298'); }
     catch { artLoc.busy = 0; return toast('Mappa non disponibile: controlla la connessione e riprova'); }
     artLoc.busy = 0;
     window.CDC_MG3D.pickLoc(mag3dCtx(), id, { toast, onSave: code => { document.querySelectorAll(`[data-artlocc="${CSS.escape(id)}"]`).forEach(el => { el.textContent = code || 'automatica'; }); } });
@@ -9272,7 +9298,7 @@
       cfg, write, isOwner: () => isOwnerU(), // v272: disposizione e ubicazioni in Config «mg3d:<magazzino>»
       // v273: parco mezzi e distributore di gasolio (stessi dati della sezione Gasolio)
       gasOn: () => modOn('gasolio') && !!secPerm('gasolio'), gasW: () => secPerm('gasolio') === 'w', gas: () => gasRows(), gasMezzi, gasNomi, gasRent, gasPrice, gasDrv, plate, plateFmt, gMul: () => (typeof gMul === 'function' ? gMul() : 1),
-      gasAdd: () => { const b = document.getElementById('ga-add'); if (b) b.click(); }, goGas: () => { location.hash = '#gasolio'; },
+      gasAdd: p => formGas(null, typeof p === 'string' ? p : ''), imgTag: a => { const im = a ? mgPhoto(a) : ''; return im ? pvImgTag(im, 't') : ''; }, goGas: () => { location.hash = '#gasolio'; },
       forn: () => FOR(), fatF: () => faRows(), fornKey, goCli: () => { location.hash = '#clienti'; }, goForn: () => { location.hash = '#fornitori'; },
       // v287: contabilità e archivio documenti (uffici, 1° piano)
       costi: () => db.movimenti || [], rowT: r => sumT([r]), dfo: () => GX.dfo(), go: h => { location.hash = '#' + h; },
@@ -10853,6 +10879,7 @@
       const aco = t.closest('[data-acqopen]'); if (aco) { const [k, id] = aco.dataset.acqopen.split(':'); if (k === 'fa') { const fx = faRows().find(x => x.id === id); if (fx) formFat(fx); } else { const dx = GX.dfo().find(x => x.id === id); if (dx) docFornForm(dx); } return; }
       const acs = t.closest('[data-acqst]'); if (acs) { acqSt = acs.dataset.acqst; renderMov(); return; }
       const mvm = t.closest('[data-mvmode]'); if (mvm) { mvMode = mvm.dataset.mvmode; renderMov(); return; }
+      const gfu = t.closest('[data-gfuel]'); if (gfu) { e.stopPropagation(); formGas(null, gfu.dataset.gfuel); return; }
       const gnm = t.closest('[data-gname]'); if (gnm) { e.stopPropagation(); formGasMezzo(gnm.dataset.gname); return; }
       if (t.closest('#ga-allv')) { gasShowAll = !gasShowAll; renderGas(); return; }
       if (t.closest('#ga-prev') || t.closest('#ga-next')) { const o = [...$('#ga-per').options].map(x => x.value), i = o.indexOf(gasP) + (t.closest('#ga-prev') ? 1 : -1); if (i >= 0 && i < o.length) { gasP = o[i]; gasAnim = true; renderGas(); } return; }
