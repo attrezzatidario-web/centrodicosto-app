@@ -1,4 +1,4 @@
-/* Magazzino 3D (v281) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v282) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -337,6 +337,20 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-cells i.k{outline:2px solid ${OR};outline-offset:1px}
 @media (max-width:760px){.m3-pal{top:auto;bottom:10px;left:10px;right:10px;width:auto;max-height:150px;flex-direction:row;flex-wrap:wrap}.m3-pal h4,.m3-pal p{display:none}.m3-pal button{width:auto;flex:1 1 30%;padding:5px}.m3-pal button small{display:none}.m3-edbar{left:10px;right:10px;bottom:170px;font-size:12px}.m3.edit .m3-panel{top:60px;left:56px;max-height:calc(100% - 300px);min-height:0}.m3.edit .m3-tools{top:60px}.m3-edbar .k{display:none}.m3-edit span{display:none}}
 
+
+/* v282: uffici, clienti e fornitori */
+.m3-av{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:11px;background:var(--c);color:#16181b;font:800 12px/1 Inter,system-ui;font-style:normal;letter-spacing:.02em}
+.m3-av.big{width:100%;height:100%;border-radius:inherit;font-size:15px}
+.m3-seg2{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:#f3f2ef;border-radius:13px;margin:4px 0 2px}
+.m3-seg2 button{display:flex;align-items:center;justify-content:center;gap:7px;height:38px;border:0;border-radius:10px;background:none;font:600 13px Inter,system-ui;color:#5b5f66;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
+.m3-seg2 button svg{width:16px;height:16px}.m3-seg2 button em{font-style:normal;font-weight:600;color:#9a9ca1;font-size:12px}
+.m3-seg2 button.on{background:#fff;color:#16181b;box-shadow:0 2px 8px rgba(0,0,0,.08)}.m3-seg2 button.on em{color:${OR}}
+.m3-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:#8a8d93;margin:2px 2px 6px}.m3-leg span{display:flex;align-items:center;gap:5px}.m3-leg i{width:8px;height:8px;border-radius:50%}
+.m3-kv{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px}
+.m3-kv div{background:#f8f7f5;border-radius:11px;padding:8px 10px;min-width:0;animation:m3in .4s cubic-bezier(.2,.8,.2,1) both}
+.m3-kv span{display:block;font-size:11px;color:#8a8d93}.m3-kv b{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m3-kv a{color:${OR};text-decoration:none}
+.m3-b12{grid-template-columns:repeat(12,1fr)!important}
+.m3-acts{display:flex;gap:8px;flex-wrap:wrap}.m3-acts .m3-go{flex:1 1 140px;margin:0}
 /* v280: telefono e tablet */
 .m3-lost{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(246,245,242,.92);backdrop-filter:blur(6px);font-size:15px}
 .m3-lost small{color:#8a8d93;font-size:12.5px}
@@ -666,15 +680,6 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const px = -hw * .45, pz = hd + 13;
     bx(P2, 34, .2, 18, 0x60666e, px, 0, pz, { ns: 1 });
     for (let r = 0; r < 2; r++) for (let i = 0; i < 6; i++) { const x = px - 13.5 + i * 5.2, z = pz - 4.5 + r * 9; B2.add('pv', G.box, mat(0x27416e), m4(x, 3.3, z, 4.8, .16, 5.6, 0, r ? -.12 : .12)); B2.add('pvp', G.box, mat(0xdedfe1), m4(x, 1.6, z, .18, 3.2, .18)); for (let k = 0; k < 4; k++) B2.add('pvl', G.box, mat(0x6f8fb8), m4(x - 1.8 + k * 1.2, 3.42, z, .03, .02, 5.4, 0, r ? -.12 : .12)); if ((i + r) % 3 !== 2) B2.add('car', G.box, mat(0xffffff), m4(x, .75, z, 2, 1.1, 4.2), [0xffffff, 0xd0d4da, 0x2f3540, 0xc94b3c, 0x6f8fa8][(i * 2 + r) % 5]); }
-    // uffici
-    const ox = hw * .5, oz = hd + 13;
-    const ofc = bx(P2, 26, 6.4, 11, 0xfdfdfc, ox, 0, oz); ofc.userData.k = { t: 'zone', z: 'uffe' }; pick.push(ofc);
-    for (const y of [1.3, 4.1]) { bx(P2, 26.1, 1.4, 11.1, 0x6f8fa8, ox, y, oz, { ns: 1 }); for (let i = 0; i < 7; i++) B2.add('mul', G.box, mat(0xfdfdfc), m4(ox - 12.4 + i * 4.13, y + .7, oz, .22, 1.42, 11.24)); }
-    bx(P2, 26.4, .3, 11.4, 0xeeeeec, ox, 6.4, oz, { ns: 1 });
-    for (let i = 0; i < 5; i++) for (let j = 0; j < 2; j++) B2.add('opv', G.box, mat(0x27416e), m4(ox - 9 + i * 4.4, 7, oz - 2.2 + j * 4.4, 3.6, .18, 2.2, 0, .15));
-    bx(P2, 7, 3.4, 8, 0xf3f2f0, ox + 17, 0, oz + 1); bx(P2, 7.2, .3, 8.2, 0x7fbf5e, ox + 17, 3.4, oz + 1, { ns: 1 });
-    planeT(textTex([[C.orgName().slice(0, 30), 62, 700]], { bg: '#17191c', w: 768, h: 128 }), 10, 1.7, P2, ox + 6, 5.25, oz + 5.62);
-    bx(P2, 2.2, .1, 4, 0xe9e7df, ox - 6, 0, oz + 7.5, { ns: 1 });
     // sfera arancione all'ingresso
     const orb = mesh(G.sph, mat(0xf47b20), 0, 3.6, hd + 10, P2, { s: [4.4, 4.4, 4.4] }); bx(P2, 4, .8, 4, 0x2b2f35, 0, 0, hd + 10); movers.push({ o: orb, t: 'float', y: 3.6 });
     // alberi
@@ -692,6 +697,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (WH) { scene.remove(WH); WH.traverse(o => { if (o.isInstancedMesh) o.dispose(); }); }
     WH = new T.Group(); scene.add(WH); RX = []; FOC = null; RCV = null; RF = null; RH = null; HOV = null; SCAN = null; BACK.length = 0; FADE.length = 0; if (root) { callout(false); const tp = $('.m3-tip'); tp && tp.classList.remove('on'); }
     const W = L.W, Dd = L.D, hw = W / 2, hd = Dd / 2;
+    buildOffice();
     // pavimento in cemento
     bx(WH, W, .48, Dd, 0xe2ded7, 0, 0, 0);
     const ct = TX.concrete.clone(); ct.needsUpdate = true; ct.wrapS = ct.wrapT = T.RepeatWrapping; ct.repeat.set(W / 6, Dd / 6); OWN.push(ct);
@@ -882,7 +888,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   /* ---------------- etichette arancioni ---------------- */
   function zoneTarget(k) {
     if (k === 'all') return { x: 4, z: 8, dist: Math.max(L.W, L.D) * 3.05, az: -0.3, pol: .9 };
-    if (k === 'uffe') return { x: L.W / 4, z: L.D / 2 + 13, dist: 100, az: -0.45, pol: .95 };
+    if (k === 'uffe') return { x: L.W / 4, z: L.D / 2 + 9, dist: 84, az: -0.3, pol: .9 };
     if (k === 'flotta') { if (!D.gas) return null; const F = FL(); return { x: F.cx, z: 2, dist: 118, az: -1.05, pol: .88 }; }
     if (k === 'stk') { const R2 = L.items.filter(i => i.t === 'rack'); if (!R2.length) return null; const bb = R2.map(box2).reduce((a, b) => ({ x0: Math.min(a.x0, b.x0), x1: Math.max(a.x1, b.x1), z0: Math.min(a.z0, b.z0), z1: Math.max(a.z1, b.z1) })); return { x: (bb.x0 + bb.x1) / 2, z: (bb.z0 + bb.z1) / 2 + 2, dist: Math.max(bb.x1 - bb.x0, bb.z1 - bb.z0) * 1.9 + 20, az: -0.5, pol: .88 }; }
     const z = L.items.find(i => i.t === 'zone' && i.k === k); if (!z) return null; const f = foot(z);
@@ -898,7 +904,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const st = zoneTarget('stk'); if (st) add([st.x, 9, st.z - 2], `Scaffalature <em>${R2.length} scaffali · ${N(used)}/${N(nv)} ubicazioni</em>`, '', { t: 'zone', z: 'stk' }, 1e9);
     const sub = { ric: `${D.rcv.length} arrivi in 30 gg`, pre: `${D.ddtM.length} DDT nel mese`, cq: `${D.ret90.length} rettifiche`, spe: `${trucks.filter(t => !t.road && t.d).length} in banchina`, terra: 'stoccaggio a terra', uff: 'ufficio', free: '' };
     L.items.filter(i => i.t === 'zone').forEach(z => add([z.x, 4.5, z.z], `${esc(z.name || ZONE[z.k][0])}${sub[z.k] ? ` <em>${sub[z.k]}</em>` : ''}`, '', { t: 'zone', z: z.k, id: z.id }, 340));
-    add([L.W / 4, 8.6, L.D / 2 + 13], `Uffici <em>${D.cli.length} clienti</em>`, 'wh', { t: 'zone', z: 'uffe' }, 240);
+    add([L.W / 4, 10.4, L.D / 2 + 13], `Uffici <em>${OFF ? OFF.OD.CL.length : D.cli.length} clienti · ${OFF ? OFF.OD.FR.length : 0} fornitori</em>`, 'wh', { t: 'zone', z: 'uffe' }, 260).offClosed = true;
+    if (OFF) OFF.anc.forEach(A => { const L3 = add([0, 0, 0], `${A.t} <em>${A.s}</em>`, 'sm', { t: 'zone', z: 'uffe' }, 140, A.a); L3.dy = 0; L3.offOnly = true; });
     if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 6.6, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
       fleetVeh.forEach(f => { const L3 = add([0, 0, 0], `${esc(plFmt(f.v.p))}${f.v.name ? ` <em>${esc(f.v.name.slice(0, 18))}</em>` : ''}`, 'sm wh', { t: 'veh', p: f.v.p }, 95, f.o); L3.dy = f.v.kind === 'truck' ? 4.2 : 3.2; }); }
     R2.forEach(it => { const g = WH.children.find(c => c.userData.eid === it.id); const c = D.catOf.get(it.cat), n = [...P.byArt.values()].filter(v => v.rk === it).length, pz = c ? 0 : 0;
@@ -914,7 +921,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       const d = cam.position.distanceTo(v); v.project(cam);
       const on = v.z < 1 && d < L2.maxD && Math.abs(v.x) < 1.1 && Math.abs(v.y) < 1.1;
       const act = sel && L2.k.t === sel.t && L2.k.z === sel.z && L2.k.id === sel.id && L2.k.i === sel.i && L2.k.p === sel.p;
-      const quiet = (sel && sel.t === 'rack' && L2.k.t === 'rack' && !act) || (EDIT && L2.k.t !== 'rack');
+      const quiet = (sel && sel.t === 'rack' && L2.k.t === 'rack' && !act) || (EDIT && L2.k.t !== 'rack') || (L2.offOnly && !(OFF && OFF.u > .6)) || (L2.offClosed && OFF && OFF.u > .3);
       const px = (v.x + 1) / 2 * w, py = (1 - v.y) / 2 * h; L2.sx = px; L2.sy = py; L2.act = act; L2.vis = (on || act) && !quiet; L2.dd = d;
       L2.el.style.transform = `translate(${px.toFixed(1)}px,${py.toFixed(1)}px) translate(-50%,-100%)`;
       L2.el.style.zIndex = act ? 3 : (L2.el.classList.contains('sm') ? 1 : 2);
@@ -1372,6 +1379,200 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     return j;
   }
 
+  /* ---------------- uffici: clienti e fornitori (v282) ---------------- */
+  let OFF = null, OFT = 'cli';
+  const fkey = s => (C.fornKey ? C.fornKey(s) : String(s || '').toLowerCase().replace(/\b(s\.?r\.?l\.?s?|s\.?p\.?a\.?|s\.?n\.?c\.?|s\.?a\.?s\.?)\b/g, '').replace(/[^a-z0-9]/g, ''));
+  const isPaid = f => String(f.stato || '').toLowerCase() === 'pagata';
+  const dBack = n => { const d = new Date(C.today() + 'T12:00:00'); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+  const OST = { ok: [0x2a8a4a, 0xe4f2e7, '#2a8a4a'], open: [0xe9a23b, 0xfdf0da, '#d98a1c'], late: [0xd9452f, 0xfbe2dc, '#d9452f'], none: [0x9aa0a8, 0xefeeeb, '#9aa0a8'] };
+  const stTxt = (e) => e.st === 'late' ? 'Scaduto' : e.st === 'open' ? (e.kd === 'cli' ? 'Da incassare' : 'Da pagare') : e.st === 'ok' ? 'In regola' : '';
+  const initials = s => String(s || '?').replace(/\b(s\.?r\.?l\.?s?|s\.?p\.?a\.?|s\.?n\.?c\.?)\b/gi, '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+  const hexC = c => '#' + new T.Color(c).getHexString();
+  function offData() {
+    const td = C.today(), y1 = dBack(365), V = C.fv ? C.fv() : [], amt = f => C.num(f.imponibile) || C.num(f.totale), srtD = (a, b) => String(b.data).localeCompare(String(a.data));
+    const months = []; for (let i = 11; i >= 0; i--) { const d = new Date(td + 'T12:00:00'); d.setDate(1); d.setMonth(d.getMonth() - i); months.push(d.toISOString().slice(0, 7)); }
+    const series = L2 => months.map(m => L2.filter(f => String(f.data).slice(0, 7) === m).reduce((s, f) => s + amt(f), 0));
+    const fin = (e, docs) => { const f12 = docs.filter(f => String(f.data) >= y1), op = docs.filter(f => !isPaid(f)), sc = op.filter(f => f.scadenza && String(f.scadenza) < td);
+      Object.assign(e, { docs: docs.slice().sort(srtD), tot: f12.reduce((s, f) => s + amt(f), 0), open: op.reduce((s, f) => s + C.num(f.totale), 0), nOpen: op.length, late: sc.reduce((s, f) => s + C.num(f.totale), 0), nLate: sc.length, ser: series(f12) });
+      e.st = e.nLate ? 'late' : e.nOpen ? 'open' : (docs.length || e.act) ? 'ok' : 'none'; e.col = PAL[hashS(e.name) % PAL.length]; return e; };
+    const CL = (D.cli || []).map(c => { const dd = D.ddt.filter(x => x.d.cliente === c.id), e = { kd: 'cli', id: String(c.id), name: c.nome || 'Cliente', o: c, city: [c.citta, c.prov && '(' + c.prov + ')'].filter(Boolean).join(' '), ddt: dd, pz: dd.reduce((s, x) => s + (x.pz || 0), 0), act: dd.length };
+      fin(e, V.filter(f => f.cliente === c.id)); e.last = [dd[0] && String(dd[0].d.data), e.docs[0] && String(e.docs[0].data)].filter(Boolean).sort().pop() || ''; return e; });
+    const FA = C.fatF ? C.fatF() : [], FO = C.forn ? C.forn() : [], nm = new Map();
+    FO.forEach(f => { const k = fkey(f.nome); if (k && !nm.has(k)) nm.set(k, { o: f, name: f.nome }); });
+    FA.forEach(f => { const k = fkey(f.fornitore); if (k && !nm.has(k)) nm.set(k, { o: null, name: f.fornitore }); });
+    D.arts.forEach(x => { const k = fkey(x.a.fornitore); if (k && !nm.has(k)) nm.set(k, { o: null, name: String(x.a.fornitore).trim() }); });
+    const FR = [...nm.entries()].map(([k, n]) => { const rc = D.rcv.filter(r => fkey(r.sup) === k), ar = D.arts.filter(x => fkey(x.a.fornitore) === k), o = n.o;
+      const e = { kd: 'for', id: o ? String(o.id) : 'k:' + k, key: k, name: n.name, o, city: o ? [o.citta, o.prov && '(' + o.prov + ')'].filter(Boolean).join(' ') : '', cat: (o && o.categoria) || '', rcv: rc, arts: ar, act: rc.length + ar.length };
+      fin(e, FA.filter(f => fkey(f.fornitore) === k)); e.last = [rc[0] && rc[0].data, e.docs[0] && String(e.docs[0].data)].filter(Boolean).sort().pop() || ''; return e; });
+    const rank = (a, b) => (b.tot - a.tot) || (b.open - a.open) || String(b.last).localeCompare(String(a.last)) || a.name.localeCompare(b.name);
+    CL.sort(rank); FR.sort(rank);
+    return { CL, FR, months };
+  }
+  const offFind = (kd, id) => OFF && (kd === 'cli' ? OFF.OD.CL : OFF.OD.FR).find(e => e.id === String(id));
+  function roomSign(e, code) {
+    const st = e ? OST[e.st] : OST.none, nm = e ? e.name : 'Ufficio libero', sub = e ? [code, stTxt(e), e.st === 'late' ? C.eur0(e.late) : e.st === 'open' ? C.eur0(e.open) : e.tot ? C.eur0(e.tot) + ' in 12 mesi' : ''].filter(Boolean).join(' · ') : code;
+    const t = cvTex(512, 112, (gx, w, h) => { gx.fillStyle = e ? '#ffffff' : '#f4f3f0'; gx.beginPath(); gx.roundRect(0, 0, w, h, 18); gx.fill(); gx.fillStyle = st[2]; gx.beginPath(); gx.roundRect(0, 0, 14, h, [18, 0, 0, 18]); gx.fill();
+      if (e) { gx.fillStyle = hexC(e.col); gx.beginPath(); gx.arc(62, h / 2, 30, 0, Math.PI * 2); gx.fill(); gx.fillStyle = '#16181b'; gx.font = '800 24px Inter, system-ui, sans-serif'; gx.textAlign = 'center'; gx.textBaseline = 'middle'; gx.fillText(initials(nm), 62, h / 2 + 1); }
+      const x0 = e ? 108 : 34; gx.textAlign = 'left'; gx.textBaseline = 'middle'; let fs = 34; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; while (fs > 22 && gx.measureText(nm).width > w - x0 - 20) { fs -= 2; gx.font = `800 ${fs}px Inter, system-ui, sans-serif`; }
+      let n2 = nm; while (gx.measureText(n2).width > w - x0 - 20 && n2.length > 3) n2 = n2.slice(0, -2); if (n2 !== nm) n2 += '…';
+      gx.fillStyle = e ? '#16181b' : '#9a9ca1'; gx.fillText(n2, x0, 42); gx.font = '600 21px Inter, system-ui, sans-serif'; gx.fillStyle = e ? st[2] : '#b0b2b6'; gx.fillText(sub, x0, 82); });
+    OWN.push(t); return t;
+  }
+  function buildOffice() {
+    const hw = L.W / 2, hd = L.D / 2, ox = hw * .5, oz = hd + 13, BW = 30, BD = 13, FH = 3.6, OD = offData();
+    const g = new T.Group(); g.position.set(ox, 0, oz); WH.add(g);
+    const FM = [], fm = (c, o) => { const m = new T.MeshLambertMaterial({ color: c, transparent: true, opacity: o == null ? 1 : o }); m.userData.o0 = m.opacity; FM.push(m); OWN.push(m); return m; };
+    const glassF = fm(0x7f9db6, .92), frameF = fm(0xf7f7f5), darkF = fm(0x2b2f35), orF = fm(0xf47b20), roofF = fm(0xeeeeec), pvF = fm(0x27416e);
+    // basamento, piazza d'ingresso, totem
+    bx(g, BW + .8, .14, BD + .8, 0x3a3f46, 0, 0, 0, { ns: 1 }); bx(g, BW, .12, BD, 0xe7e5e0, 0, .12, 0, { ns: 1 });
+    bx(g, 14, .1, 5, 0xdcd8d0, 0, 0, BD / 2 + 2.9, { ns: 1 }); for (let i = 0; i < 6; i++) bx(g, .1, .012, 4.6, 0xc9c4bb, -6 + i * 2.4, .1, BD / 2 + 2.9, { ns: 1 });
+    for (const s of [-1, 1]) { bx(g, 2.6, .45, .7, 0x8a8d93, s * 5.6, .1, BD / 2 + 4.3); bx(g, 2.6, .07, .7, 0xc8a27a, s * 5.6, .55, BD / 2 + 4.3, { ns: 1 }); }
+    bx(g, 1.1, 2.6, .3, 0x1d1f22, 8.6, .1, BD / 2 + 4.4);
+    planeT(textTex([['UFFICI', 30, 800, 38, null, '#f47b20'], [`${OD.CL.length} clienti`, 28, 700, 86, null, '#fff'], [`${OD.FR.length} fornitori`, 28, 700, 124, null, '#fff']], { bg: '#1d1f22', w: 200, h: 170, round: 10 }), .95, .8, g, 8.6, 1.9, BD / 2 + 4.56);
+    // ---- interni (si vedono quando l'edificio si apre)
+    const inner = grp(g, 0, 0, 0); inner.visible = false;
+    const f0 = grp(inner, 0, .24, 0), f1 = grp(inner, 0, .24 + FH, 0);
+    const rooms = [], people = [], maxP = Q && Q.tier === 0 ? 4 : Q && Q.tier === 1 ? 8 : 14;
+    const glassI = new T.MeshLambertMaterial({ color: 0xc9dceb, transparent: true, opacity: .26, depthWrite: false }); OWN.push(glassI);
+    const floorG = (fg, lvl) => {
+      const B = new Batch(fg);
+      if (lvl) { bx(fg, BW, .22, BD, 0xdcdad5, 0, -.22, 0); bx(fg, BW + .02, .06, BD + .02, 0xf47b20, 0, -.08, 0, { ns: 1 }); }
+      bx(fg, BW - .3, .02, BD - .3, lvl ? 0xf3f1ec : 0xefece6, 0, .0, 0, { ns: 1 });
+      bx(fg, BW - .4, .012, 2.4, 0xdedad2, 0, .02, -.3, { ns: 1 });
+      // ali: clienti a sinistra, fornitori a destra
+      for (const [x0, t, c] of [[-9, 'CLIENTI', 'rgba(244,123,32,.55)'], [9, 'FORNITORI', 'rgba(47,109,180,.5)']]) { const tx = textTex([[t, 70, 800, 60, null, c]], { w: 512, h: 120 }); const p = planeT(tx, 5.2, 1.2, fg, x0, .04, -.3, {}); p.rotation.x = -Math.PI / 2; }
+      // uffici: 3 per fila, 2 file per ala
+      const RS = [[-13, -3.95, 4.7], [-9, -3.95, 4.7], [-5, -3.95, 4.7], [-13, 3.65, 5.3], [-9, 3.65, 5.3], [-5, 3.65, 5.3]];
+      for (const kd of ['cli', 'for']) RS.forEach(([x1, z, d], i) => {
+        const x = kd === 'cli' ? x1 : -x1, w = 4, list = kd === 'cli' ? OD.CL : OD.FR, idx = lvl * 6 + i, e = list[idx] || null, code = (kd === 'cli' ? 'C' : 'F') + lvl + '-' + String(i + 1).padStart(2, '0'), st = e ? OST[e.st] : OST.none;
+        B.add('rfl', G.box, mat(0xffffff), m4(x, .035, z, w - .14, .02, d - .14), st[1]);
+        B.add('rst', G.box, mat(0xffffff), m4(x, .058, z + (z < 0 ? d / 2 - .16 : -d / 2 + .16), w - .3, .01, .12), st[0]);
+        // pareti in vetro con profili scuri
+        for (const sz of [-1, 1]) { B.add('gw', G.box, glassI, m4(x, 1.4, z + sz * d / 2, w, 2.7, .05)); B.add('gr', G.box, mat(0x2b2f35), m4(x, 2.76, z + sz * d / 2, w, .06, .08)); }
+        for (const sx of [-1, 1]) { if (sx > 0 && !((kd === 'cli' && x1 === -5) || (kd === 'for' && x === 13))) continue; B.add('gw', G.box, glassI, m4(x + sx * w / 2, 1.4, z, .05, 2.7, d)); B.add('gr', G.box, mat(0x2b2f35), m4(x + sx * w / 2, 2.76, z, .08, .06, d)); B.add('gp', G.box, mat(0x2b2f35), m4(x + sx * w / 2, 1.4, z + d / 2 - .04, .07, 2.8, .07)); B.add('gp', G.box, mat(0x2b2f35), m4(x + sx * w / 2, 1.4, z - d / 2 + .04, .07, 2.8, .07)); }
+        const cz = z < 0 ? z + d / 2 : z - d / 2; B.add('door', G.box, mat(0x2b2f35), m4(x + w / 2 - .7, 1.1, cz, .05, 2.2, .1)); B.add('door', G.box, mat(0x2b2f35), m4(x + w / 2 - 1.65, 1.1, cz, .05, 2.2, .1));
+        // arredo: scrivania, sedia, monitor, armadio, pianta, tavolino
+        const dz = z < 0 ? z - d / 2 + 1.0 : z + d / 2 - 1.0, fz = z < 0 ? 1 : -1;
+        B.add('desk', G.box, mat(0xfafafa), m4(x - .3, .76, dz, 1.8, .05, .8)); for (const sx of [-.82, .82]) B.add('dleg', G.box, mat(0x8e959e), m4(x - .3 + sx, .38, dz, .05, .74, .7));
+        B.add('mon', G.box, mat(0x1d1f22), m4(x - .3, 1.08, dz - fz * .25, .62, .38, .03)); B.add('scr', G.box, new T.MeshBasicMaterial({ color: 0x9fc9e8 }), m4(x - .3, 1.08, dz - fz * .23, .56, .32, .01)); B.add('mst', G.box, mat(0x1d1f22), m4(x - .3, .86, dz - fz * .25, .05, .2, .05));
+        const hasP = e && people.length < maxP;
+        if (!hasP) B.add('chs', G.box, mat(0xffffff), m4(x - .3, .5, dz + fz * .55, .5, .08, .5), e ? e.col : 0x9aa0a8); if (!hasP) B.add('chb', G.box, mat(0xffffff), m4(x - .3, .82, dz + fz * .78, .5, .55, .07), e ? e.col : 0x9aa0a8); if (!hasP) B.add('chl', G.cyl, mat(0x2b2f35), m4(x - .3, .25, dz + fz * .55, .06, .46, .06));
+        B.add('cab', G.box, mat(0xeceae6), m4(x - w / 2 + .35, .6, z, .5, 1.2, 1.6)); B.add('cabs', G.box, mat(0xffffff), m4(x - w / 2 + .61, .6, z, .02, 1.1, 1.5), e ? e.col : 0xd8d6d1);
+        B.add('pot', G.cyl, mat(0xc9c4bb), m4(x + w / 2 - .45, .3, z - fz * (d / 2 - .5), .38, .6, .38)); B.add('leaf', G.sph, mat(0x5e9e4a), m4(x + w / 2 - .45, 1.0, z - fz * (d / 2 - .5), .7, .9, .7));
+        B.add('tab', G.cyl, mat(0xfafafa), m4(x + .9, .72, z - fz * .5, .9, .04, .9)); B.add('tabl', G.cyl, mat(0x8e959e), m4(x + .9, .36, z - fz * .5, .06, .7, .06));
+        for (const a of [0, 2.1, 4.2]) B.add('stool', G.cyl, mat(0xffffff), m4(x + .9 + Math.sin(a) * .7, .45, z - fz * .5 + Math.cos(a) * .7, .36, .08, .36), e ? mixC(e.col, 0xffffff, .3) : 0xd8d6d1);
+        // cartello sopra l'ufficio
+        const sg = planeT(roomSign(e, code), 3.5, .77, fg, x, 3.12, z + d / 2 + .06, {}); sg.renderOrder = 2;
+        if (hasP) { const p = person(fg, x - .3, dz + fz * .62, kd === 'cli' ? 0xf47b20 : 0x2f6db4, null, { mode: 'work' }); p.position.y = 0; p.rotation.y = fz > 0 ? Math.PI : 0; movers.push({ o: p, t: 'bob', ph: idx }); people.push(p); }
+        const hb = new T.Mesh(G.box, M.hit); hb.scale.set(w, 3.4, d); hb.position.set(x, 1.6, z); hb.userData.k = e ? { t: 'ofr', kd, id: e.id } : { t: 'zone', z: 'uffe' }; fg.add(hb); pick.push(hb);
+        rooms.push({ kd, e, code, x, z, w, d, lvl, fg });
+        if (e) e.room = code;
+      });
+      // centro: hall al piano terra, sala riunioni al primo piano
+      if (!lvl) {
+        B.add('rug', G.box, mat(0xd9cfc0), m4(0, .03, 2.2, 5.2, .015, 3.6));
+        B.add('rec', G.box, mat(0xfafafa), m4(0, .55, -1.2, 3.4, 1.1, .7)); B.add('recf', G.box, mat(0xf47b20), m4(0, .5, -.84, 3.4, .9, .04)); B.add('rect', G.box, mat(0x2b2f35), m4(0, 1.12, -1.2, 3.6, .05, .9));
+        B.add('mon', G.box, mat(0x1d1f22), m4(.7, 1.35, -1.4, .55, .34, .03)); B.add('scr', G.box, new T.MeshBasicMaterial({ color: 0x9fc9e8 }), m4(.7, 1.35, -1.38, .5, .28, .01));
+        bx(f0, 5.4, 2.8, .25, 0x1d1f22, 0, 0, -5.9); planeT(textTex([[C.orgName().slice(0, 28), 46, 800, 70, null, '#fff'], ['Benvenuti', 26, 600, 128, null, '#f47b20']], { w: 768, h: 180 }), 5, 1.17, f0, 0, 1.75, -5.76);
+        for (const s of [-1, 1]) { B.add('sofa', G.box, mat(0x3f4a5a), m4(s * 1.6, .3, 3.6, 1.8, .45, .8)); B.add('sofb', G.box, mat(0x3f4a5a), m4(s * 1.6, .65, 3.95 * 1, 1.8, .5, .2)); B.add('pot', G.cyl, mat(0xc9c4bb), m4(s * 2.6, .35, -4.6, .5, .7, .5)); B.add('leaf', G.sph, mat(0x5e9e4a), m4(s * 2.6, 1.3, -4.6, 1.0, 1.5, 1.0)); }
+        B.add('ctab', G.cyl, mat(0xfafafa), m4(0, .25, 2.6, 1.1, .05, 1.1));
+        for (let i = -1; i <= 1; i++) { B.add('turn', G.box, mat(0x8e959e), m4(i * 1.1, .5, 1.1, .18, 1.0, .9)); B.add('gw', G.box, glassI, m4(i * 1.1 + .38, .65, 1.1, .55, .55, .03)); }
+        for (let k = 0; k < 10; k++) B.add('step', G.box, mat(0xd8d6d1), m4(2.35, (k + 1) * .15, -1.4 - k * .32, 1.0, (k + 1) * .3, .32));
+        B.add('lift', G.box, glassI, m4(-2.35, 1.5, -4.4, 1.3, 3.0, 1.3)); B.add('liftc', G.box, mat(0xc5cad1), m4(-2.35, .6, -4.4, 1.1, 1.2, 1.1));
+        const rp = person(f0, -.3, -1.75, 0x39a85a, null, { mode: 'work' }); rp.position.y = 0; movers.push({ o: rp, t: 'bob', ph: 7 });
+      } else {
+        for (const sz of [-1, 1]) B.add('gw', G.box, glassI, m4(0, 1.4, sz * 4.2, 5.6, 2.7, .05)); for (const sx of [-1, 1]) B.add('gw', G.box, glassI, m4(sx * 2.8, 1.4, 0, .05, 2.7, 8.4));
+        B.add('mtab', G.box, mat(0xfafafa), m4(0, .74, 0, 1.4, .06, 5)); B.add('mtl', G.box, mat(0x2b2f35), m4(0, .37, 0, .5, .72, 4));
+        for (let i = 0; i < 4; i++) for (const s of [-1, 1]) B.add('mch', G.box, mat(0xffffff), m4(s * 1.05, .5, -1.8 + i * 1.2, .45, .08, .45), s < 0 ? 0xf47b20 : 0x2f6db4);
+        const OPN = OD.CL.reduce((s, e) => s + e.open, 0), OPF = OD.FR.reduce((s, e) => s + e.open, 0);
+        bx(f1, .1, 1.5, 2.6, 0x1d1f22, -2.6, .9, 0); const sc = planeT(textTex([['SALA RIUNIONI', 26, 800, 36, null, '#f47b20'], [`Da incassare ${C.eur0(OPN)}`, 28, 700, 84, null, '#fff'], [`Da pagare ${C.eur0(OPF)}`, 28, 700, 126, null, '#fff']], { bg: '#1d1f22', w: 400, h: 170, round: 10 }), 2.4, 1.02, f1, -2.53, 1.65, 0, { ry: Math.PI / 2 });
+        sc.renderOrder = 2;
+      }
+      const ims = B.flush(); Object.values(ims).forEach(im => { im.castShadow = false; });
+    };
+    floorG(f0, 0); floorG(f1, 1);
+    const anc = [[f0, -9, 'Clienti', 'piano terra'], [f0, 9, 'Fornitori', 'piano terra'], [f1, -9, 'Clienti', '1° piano'], [f1, 9, 'Fornitori', '1° piano']].map(([fg, x, t2, s2]) => { const a = new T.Object3D(); a.position.set(x, 3.9, -6.3); fg.add(a); return { a, t: t2, s: s2, kd: x < 0 ? 'cli' : 'for' }; });
+    // ---- facciata in vetro, fasce, pensilina, insegna (svaniscono quando si apre)
+    const fac = grp(g, 0, 0, 0), FB = new Batch(fac), H2 = FH * 2 + .1;
+    for (const [w, d, x, z] of [[BW, .16, 0, BD / 2], [BW, .16, 0, -BD / 2], [.16, BD, BW / 2, 0], [.16, BD, -BW / 2, 0]]) mesh(G.box, glassF, x, .24 + H2 / 2, z, fac, { s: [w, H2, d] });
+    for (let x = -BW / 2; x <= BW / 2 + .01; x += 2.5) for (const z of [BD / 2 + .1, -BD / 2 - .1]) FB.add('mul', G.box, frameF, m4(x, .24 + H2 / 2, z, .14, H2, .12));
+    for (let z = -BD / 2; z <= BD / 2 + .01; z += 2.6) for (const x of [BW / 2 + .1, -BW / 2 - .1]) FB.add('mul', G.box, frameF, m4(x, .24 + H2 / 2, z, .12, H2, .14));
+    for (const y of [.24 + FH, .24 + H2]) { FB.add('band', G.box, frameF, m4(0, y, BD / 2 + .12, BW + .3, .42, .12)); FB.add('band', G.box, frameF, m4(0, y, -BD / 2 - .12, BW + .3, .42, .12)); FB.add('band', G.box, frameF, m4(BW / 2 + .12, y, 0, .12, .42, BD + .3)); FB.add('band', G.box, frameF, m4(-BW / 2 - .12, y, 0, .12, .42, BD + .3)); }
+    FB.add('acc', G.box, orF, m4(-BW / 2 + 1.2, .24 + H2 / 2, BD / 2 + .2, .5, H2 + .4, .2)); FB.add('acc', G.box, orF, m4(0, .24 + H2 + .36, BD / 2 + .2, BW + .3, .14, .16));
+    FB.add('door', G.box, darkF, m4(0, 1.45, BD / 2 + .14, 3.2, 2.5, .08)); FB.add('door', G.box, glassF, m4(0, 1.4, BD / 2 + .2, 2.9, 2.3, .04));
+    FB.add('can', G.box, frameF, m4(0, 3.25, BD / 2 + 1.6, 7, .22, 3.2)); for (const s of [-1, 1]) FB.add('canp', G.box, darkF, m4(s * 3.2, 1.6, BD / 2 + 3, .14, 3.1, .14));
+    FB.flush();
+    const sgn = planeT(textTex([[C.orgName().slice(0, 30), 60, 800, 64, null, '#16181b']], { w: 1024, h: 128 }), 10, 1.25, fac, 3.2, .24 + FH + .6, BD / 2 + .24, {}); sgn.material.transparent = true; FM.push(sgn.material); sgn.material.userData.o0 = 1;
+    const sgn2 = planeT(textTex([['UFFICI · CLIENTI E FORNITORI', 40, 800, 56, null, '#ffffff']], { bg: '#f47b20', w: 768, h: 110, round: 10 }), 5.4, .78, fac, 0, 3.25, BD / 2 + 3.22, {}); sgn2.material.transparent = true; FM.push(sgn2.material); sgn2.material.userData.o0 = 1;
+    // ---- tetto: solaio, parapetto, pannelli, impianti, lucernario
+    const roof = grp(g, 0, 0, 0), RB = new Batch(roof), yR = .24 + H2;
+    RB.add('rs', G.box, roofF, m4(0, yR + .2, 0, BW + .4, .4, BD + .4));
+    for (const [w, d, x, z] of [[BW + .4, .2, 0, BD / 2 + .1], [BW + .4, .2, 0, -BD / 2 - .1], [.2, BD + .4, BW / 2 + .1, 0], [.2, BD + .4, -BW / 2 - .1, 0]]) RB.add('par', G.box, frameF, m4(x, yR + .6, z, w, .5, d));
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) RB.add('pv', G.box, pvF, m4(-12 + i * 3.2, yR + .75, -3.6 + j * 3, 2.8, .1, 1.7, 0, .18));
+    for (let i = 0; i < 3; i++) { RB.add('hv', G.box, frameF, m4(7 + i * 2.6, yR + .9, -3, 2, 1, 1.6)); RB.add('hvf', G.cyl, darkF, m4(7 + i * 2.6, yR + 1.42, -3, .9, .05, .9)); }
+    RB.add('sky', G.box, glassF, m4(4, yR + .55, 2.6, 6, .3, 2.4)); RB.add('skyf', G.box, frameF, m4(4, yR + .45, 2.6, 6.3, .2, 2.7));
+    RB.flush();
+    // contatto per il clic sull'edificio chiuso
+    const hb = new T.Mesh(G.box, M.hit); hb.scale.set(BW, H2 + .8, BD); hb.position.set(0, .24 + H2 / 2, 0); hb.userData.k = { t: 'zone', z: 'uffe' }; g.add(hb); pick.push(hb);
+    [fac, roof].forEach(G2 => G2.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } }));
+    OFF = { g, inner, f0, f1, fac, roof, FM, rooms, OD, anc, u: OFF ? OFF.u : 0, want: OFF ? OFF.want : 0, FH, BD, BW, br: null, foc: null };
+    offApply();
+  }
+  function offApply() {
+    const O = OFF; if (!O) return; const u = O.u, e = u * u * (3 - 2 * u), fade = Math.max(0, 1 - e * 1.7);
+    O.inner.visible = u > .01; O.fac.visible = fade > .01; O.roof.visible = u < .98;
+    O.FM.forEach(m => { m.opacity = m.userData.o0 * fade; m.depthWrite = fade > .95; });
+    O.roof.position.y = e * 7.5;
+    O.f1.position.set(0, .24 + O.FH + e * 6.4, -e * 9.5);
+  }
+  function offTick(t, dt) {
+    const O = OFF; if (!O) return; const target = O.want ? 1 : 0;
+    if (Math.abs(O.u - target) > .001) { O.u += (target - O.u) * Math.min(1, dt * 2.4); if (Math.abs(O.u - target) < .004) O.u = target; offApply(); }
+    if (O.foc) { O.foc.u = Math.min(1, O.foc.u + dt / .8); const s = 1 + (1 - easeOut(O.foc.u)) * .25 + Math.sin(t * 3) * .01; O.foc.br.grp.scale.set(s, s, s); O.foc.br.im.material.opacity = Math.min(1, O.foc.u * 2); O.foc.br.fill.material.opacity = .06 + Math.sin(t * 3) * .03; const p = offRoomW(O.foc.r, true); O.foc.br.grp.position.copy(p); }
+  }
+  // posizione di un ufficio a edificio aperto (o attuale)
+  function offRoomW(r, cur) { const O = OFF, e = cur ? (O.u * O.u * (3 - 2 * O.u)) : 1, y = r.lvl ? .24 + O.FH + e * 6.4 : .24, z = r.lvl ? -e * 9.5 : 0; return new T.Vector3(O.g.position.x + r.x, y + 1.45, O.g.position.z + r.z + z); }
+  function offFocus(kd, id) {
+    offUnfocus(); const O = OFF; if (!O) return null; const r = O.rooms.find(q => q.e && q.kd === kd && q.e.id === String(id)); if (!r) return null;
+    const br = brackets(kd === 'cli' ? 0xf47b20 : 0x2f6db4, 1); br.set(r.w + .3, 3.2, r.d + .3); br.grp.visible = true; br.grp.position.copy(offRoomW(r, true)); O.foc = { r, br, u: 0 }; return r;
+  }
+  function offUnfocus() { const O = OFF; if (O && O.foc) { WH && WH.remove(O.foc.br.grp); O.foc = null; } }
+  function offView(kd, id) {
+    const r = offFocus(kd, id); if (r) { const p = offRoomW(r, false); fly({ tx: p.x, ty: p.y - .6, tz: p.z, dist: 22, az: -0.32, pol: .95 }); return; }
+    const O = OFF; if (O) fly({ tx: O.g.position.x, ty: 4.5, tz: O.g.position.z - 4, dist: 84, az: -0.3, pol: .9 });
+  }
+  // pannelli
+  const offRow = e => { const st = OST[e.st]; return `<button type="button" class="m3-row" data-ofr="${e.kd}:${esc(e.id)}"><i class="m3-av" style="--c:${hexC(e.col)}">${esc(initials(e.name))}</i><span class="tx"><b>${esc(e.name)}</b><small>${esc([e.room, e.city || e.cat, e.last ? 'ultimo ' + C.dIt(e.last) : ''].filter(Boolean).join(' · '))}</small></span>${e.st === 'late' ? `<span class="m3-chip r"><i></i>${C.eur0(e.late)}</span>` : e.st === 'open' ? `<span class="m3-chip a"><i></i>${C.eur0(e.open)}</span>` : e.tot ? `<span class="m3-chip n">${C.eur0(e.tot)}</span>` : ''}</button>`; };
+  function offPanel(Pn) {
+    const O = OFF; if (!O) return ''; const { CL, FR } = O.OD;
+    if (Pn.t === 'ofr') {
+      const e = offFind(Pn.kd, Pn.id); if (!e) return '';
+      const cli = e.kd === 'cli', o = e.o || {}, st = OST[e.st], mx = Math.max(1, ...e.ser);
+      const MS = ['G', 'F', 'M', 'A', 'M', 'G', 'L', 'A', 'S', 'O', 'N', 'D'];
+      const kv = [[cli ? 'P. IVA' : 'P. IVA', o.piva], ['Città', e.city], [cli ? 'Pagamento' : 'Categoria', cli ? o.pagamento : (o.categoria || e.cat)], ['Referente', o.referente], ['Telefono', o.tel && `<a href="tel:${esc(String(o.tel).replace(/\s/g, ''))}">${esc(o.tel)}</a>`, 1], ['Email', o.email && `<a href="mailto:${esc(o.email)}">${esc(o.email)}</a>`, 1]].filter(r => r[1]);
+      const docRow = f => { const late = !isPaid(f) && f.scadenza && String(f.scadenza) < C.today(); return `<div class="m3-row"><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('pdf')}</i><span class="tx"><b>Fattura ${esc(f.numero || '—')}</b><small>${esc([C.dIt(f.data), f.scadenza && !isPaid(f) ? 'scade ' + C.dIt(f.scadenza) : ''].filter(Boolean).join(' · '))}</small></span><span class="m3-chip ${isPaid(f) ? 'g' : late ? 'r' : 'a'}"><i></i>${C.eur0(C.num(f.totale))}</span></div>`; };
+      const extra = cli ? (e.ddt.length ? `<div class="m3-h4">DDT <em>${e.ddt.length}</em></div><div class="m3-rows">${e.ddt.slice(0, 6).map(x => { const i = trucks.findIndex(t2 => t2.d === x); return `<button type="button" class="m3-row" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('truck')}</i><span class="tx"><b>DDT ${esc(C.dnum(x.d))}</b><small>${esc([C.dIt(x.d.data), x.R.length + ' righe', C.num(x.d.colli) ? N(C.num(x.d.colli)) + ' colli' : ''].filter(Boolean).join(' · '))}</small></span>${x.d.fattura ? '<span class="m3-chip g"><i></i>Fatturato</span>' : '<span class="m3-chip a"><i></i>Da fatturare</span>'}</button>`; }).join('')}</div>` : '')
+        : (e.rcv.length ? `<div class="m3-h4">Arrivi in 30 giorni <em>${e.rcv.length}</em></div><div class="m3-rows">${e.rcv.slice(0, 5).map(r => rcvRow(r)).join('')}</div>` : '') + (e.arts.length ? `<div class="m3-h4">Articoli forniti <em>${e.arts.length}</em></div><div class="m3-rows">${e.arts.slice().sort((a, b) => b.g - a.g).slice(0, 6).map(x => { const p2 = P.byArt.get(x.id); return `<button type="button" class="m3-row" ${p2 ? `data-art3="${esc(x.id)}"` : ''}><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('box')}</i><span class="tx"><b>${esc(x.a.descrizione)}</b><small>${esc([x.a.codice, N(x.g) + ' ' + (x.a.um || 'pz')].filter(Boolean).join(' · '))}</small></span>${p2 ? `<span class="m3-loc">${esc(p2.code)}</span>` : ''}</button>`; }).join('')}</div>` : '');
+      return head(`<span class="m3-av big" style="--c:${hexC(e.col)}">${esc(initials(e.name))}</span>`, '', cli ? 'Cliente' + (e.room ? ' · ufficio ' + e.room : '') : 'Fornitore' + (e.room ? ' · ufficio ' + e.room : ''), esc(e.name), esc([e.city, cli ? '' : e.cat].filter(Boolean).join(' · ')), 1) + `<div class="m3-pb">
+        <div class="m3-chips"><span class="m3-chip ${e.st === 'late' ? 'r' : e.st === 'open' ? 'a' : 'g'}"><i></i>${esc(stTxt(e) || 'Nessun documento')}</span>${e.docs.length ? `<span class="m3-chip n">${e.docs.length} fatture</span>` : ''}</div>
+        <div class="m3-grid">${stat(cli ? 'Fatturato 12 mesi' : 'Acquisti 12 mesi', e.tot ? C.eur0(e.tot) : '—', '', 'imponibile')}${stat(cli ? 'Da incassare' : 'Da pagare', e.open ? C.eur0(e.open) : '—', '', e.nOpen ? `${e.nOpen} ${e.nOpen === 1 ? 'fattura' : 'fatture'}` : 'niente in sospeso')}
+        ${stat('Scaduto', e.late ? C.eur0(e.late) : '—', '', e.nLate ? `${e.nLate} ${e.nLate === 1 ? 'fattura' : 'fatture'}` : 'tutto nei termini')}${cli ? stat('DDT', e.ddt.length, '', `${N(e.pz)} pezzi spediti`) : stat('Articoli forniti', e.arts.length, '', `${e.rcv.length} arrivi in 30 gg`)}</div>
+        <div class="m3-h4">${cli ? 'Fatturato' : 'Acquisti'} · ultimi 12 mesi</div>
+        <div class="m3-b14 m3-b12">${e.ser.map((v, i) => { const m = O.OD.months[i]; return `<div title="${esc(m)}: ${esc(C.eur0(v))}"><i style="--h:${(v / mx * 100).toFixed(1)}%;--k:${i}"${i === 11 ? ' class="c"' : ''}></i><small>${MS[Number(m.slice(5)) - 1]}</small></div>`; }).join('')}</div>
+        <div class="m3-acts">${cli ? (canW() ? `<button type="button" class="m3-go" data-gx="ddt-new">${ic('plus')}Nuovo DDT</button>` : '') + `<button type="button" class="m3-go ghost" data-m3="gocli">${ic('users')}Apri Clienti</button>` : (canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('plus')}Nuovo carico</button>` : '') + `<button type="button" class="m3-go ghost" data-m3="gofor">${ic('factory')}Apri Fornitori</button>`}</div>
+        ${kv.length ? `<div class="m3-h4">Anagrafica</div><div class="m3-kv">${kv.map(([k, v, raw]) => `<div><span>${k}</span><b>${raw ? v : esc(v)}</b></div>`).join('')}</div>` : ''}
+        ${e.docs.length ? `<div class="m3-h4">Fatture <em>${e.docs.length}</em></div><div class="m3-rows">${e.docs.slice(0, 8).map(docRow).join('')}</div>` : ''}
+        ${extra}</div>`;
+    }
+    const L2 = OFT === 'cli' ? CL : FR, oC = CL.reduce((s, e) => s + e.open, 0), lC = CL.reduce((s, e) => s + e.late, 0), oF = FR.reduce((s, e) => s + e.open, 0), lF = FR.reduce((s, e) => s + e.late, 0);
+    return head(ic('office'), '', 'Edificio', 'Uffici', esc(C.orgName()) + ' · clienti e fornitori', 1) + `<div class="m3-pb">
+      <div class="m3-grid">${stat('Clienti', CL.length, '', `${CL.filter(e => e.tot || e.ddt.length).length} attivi nell'anno`)}${stat('Da incassare', oC ? C.eur0(oC) : '—', '', lC ? `${C.eur0(lC)} scaduti` : 'niente di scaduto')}
+      ${stat('Fornitori', FR.length, '', `${FR.filter(e => e.tot || e.rcv.length).length} attivi`)}${stat('Da pagare', oF ? C.eur0(oF) : '—', '', lF ? `${C.eur0(lF)} scaduti` : 'niente di scaduto')}</div>
+      <div class="m3-seg2"><button type="button" data-oft="cli" class="${OFT === 'cli' ? 'on' : ''}">${ic('users')}Clienti <em>${CL.length}</em></button><button type="button" data-oft="for" class="${OFT === 'for' ? 'on' : ''}">${ic('factory')}Fornitori <em>${FR.length}</em></button></div>
+      <div class="m3-leg"><span><i style="background:#2a8a4a"></i>In regola</span><span><i style="background:#d98a1c"></i>${OFT === 'cli' ? 'Da incassare' : 'Da pagare'}</span><span><i style="background:#d9452f"></i>Scaduto</span></div>
+      <div class="m3-rows">${L2.slice(0, 60).map(offRow).join('') || `<div class="m3-empty">Nessun ${OFT === 'cli' ? 'cliente' : 'fornitore'} in anagrafica</div>`}</div></div>`;
+  }
+
   /* ---------------- ricevimento merci (v276): banchine fornitori, corsie di sosta, accettazione ---------------- */
   const hashS = s => { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
   const dAgoN = d => { const a = new Date(String(d).slice(0, 10) + 'T12:00:00'), b = new Date(C.today() + 'T12:00:00'); return Math.round((b - a) / 864e5); };
@@ -1757,7 +1958,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       if (m.t !== 'fork' && m.o && m.o.userData && m.o.userData.rig) rigTick(m.o, t, dt);
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
-    focusTick(t, dt); ricTick(t, dt);
+    focusTick(t, dt); ricTick(t, dt); offTick(t, dt);
   }
 
   /* ---------------- interfaccia ---------------- */
@@ -1865,11 +2066,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
         ${stat('DDT del mese', D.ddtM.length, '', `${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli`)}${stat('Da fatturare', D.ddt.filter(x => !x.d.fattura).length, '', 'DDT senza fattura', D.ddt.length ? D.ddt.filter(x => x.d.fattura).length / D.ddt.length : 0)}</div>
         <button type="button" class="m3-go" data-gx="ddt-new">${ic('plus')}Nuovo DDT</button>
         <div class="m3-h4">Spedizioni <em>${D.ddt.length}</em></div><div class="m3-rows">${D.ddt.slice(0, 20).map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" class="m3-row" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('truck')}</i><span class="tx"><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc([C.dIt(x.d.data), C.num(x.d.colli) ? N(C.num(x.d.colli)) + ' colli' : '', x.R.length + ' righe'].filter(Boolean).join(' · '))}</small></span>${x.d.fattura ? '<span class="m3-chip g"><i></i>Fatturato</span>' : '<span class="m3-chip a"><i></i>Da fatturare</span>'}</button>`; }).join('') || '<div class="m3-empty">Nessun DDT</div>'}</div></div>`;
-    } else if (Pn.t === 'zone' && (Pn.z === 'uffe' || Pn.z === 'uff')) {
-      const V = (C.fv ? C.fv() : []), da = V.filter(f => f.stato !== 'pagata');
-      h = head(ic('office'), '', 'Edificio', 'Uffici', esc(C.orgName()) + ' · clienti e documenti', 1) + `<div class="m3-pb"><div class="m3-grid">
-        ${stat('Clienti', D.cli.length, '', 'in anagrafica')}${stat('Fatture da incassare', da.length, '', C.eur0(da.reduce((s, f) => s + C.num(f.totale), 0)), V.length ? 1 - da.length / V.length : 1)}</div>
-        <div class="m3-h4">Clienti serviti <em>${new Set(D.ddt.map(x => x.d.cliente)).size}</em></div><div class="m3-rows">${[...new Map(D.ddt.map(x => [x.d.cliente, x])).values()].slice(0, 12).map(x => `<div class="m3-row"><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('users')}</i><span class="tx"><b>${esc(x.cliN)}</b><small>${esc([x.citta, 'ultimo DDT ' + C.dIt(x.d.data)].filter(Boolean).join(' · '))}</small></span></div>`).join('') || '<div class="m3-empty">Nessun cliente servito</div>'}</div></div>`;
+    } else if (Pn.t === 'ofr' || (Pn.t === 'zone' && (Pn.z === 'uffe' || Pn.z === 'uff'))) {
+      h = offPanel(Pn); if (!h) return panel({ t: 'zone', z: 'uffe' });
     } else if (Pn.t === 'zone') {
       const z = L.items.find(i => i.id === Pn.id) || {}, Z2 = ZONE[Pn.z] || ZONE.free;
       h = head(ic(Z2[3]), '', 'Zona', esc(z.name || Z2[0]), `${N(z.w || 0)} × ${N(z.d || 0)} m · ${N((z.w || 0) * (z.d || 0))} m²`, 1) + `<div class="m3-pb">${canEdit() ? `<button type="button" class="m3-go ghost" data-m3="edrack" data-id="${esc(z.id || '')}">${ic('pencil')}Modifica la zona</button>` : ''}</div>`;
@@ -1901,14 +2099,15 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const nv = P.racks.reduce((s, r) => s + r.bays * r.lv, 0);
     const sub = { flotta: D.gas ? `${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L` : '', all: `${pc(D.disp, D.nArt)} % · ${N(D.tot)} pezzi`, ric: `${D.rcv.length} arrivi · 30 gg`, stk: `${N(P.byArt.size)}/${N(nv)} ubicazioni`, pre: `${D.ddtM.length} DDT · mese`, cq: `${D.ret90.length} rettifiche · 90 gg`, spe: `${D.ddt.filter(x => !x.d.fattura).length} da fatturare`, uffe: `${D.cli.length} clienti` }[z] || '';
     $('.m3-zt small').textContent = sub;
-    $$('.m3-fs button[data-fgo]').forEach(b => b.classList.toggle('on', b.dataset.fgo === z && b.dataset.on === '1'));
+    $$('.m3-fs button[data-fgo]').forEach(b => b.classList.toggle('on', b.dataset.fgo.split(':')[0] === z && b.dataset.on === '1' && (!b.dataset.fgo.includes(':') || b.dataset.fgo.endsWith(':' + OFT))));
   }
   function select(k, noFly) {
     if (EDIT) return;
-    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
+    sel = k; stopTour(k && k._tour); if (hiMesh) hiMesh.visible = false; if (!k || !(k.t === 'rack' && k.art)) { unfocus(); hoverArt(null); } if (!k || k.t !== 'ricl') ricUnfocus(); hoverRic(null); if (OFF) OFF.want = !!(k && (k.t === 'ofr' || (k.t === 'zone' && (k.z === 'uffe' || k.z === 'uff')))); if (!k || k.t !== 'ofr') offUnfocus(); if (!k || k.t !== 'rack' || k.art) { xrayOff(RX); RX = []; }
     if (!k) { root.classList.add('np'); root.classList.remove('pn'); zoneChip('all'); return; }
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
+    else if (k.t === 'ofr') { zoneChip('uffe'); OFT = k.kd; if (!noFly) offView(k.kd, k.id); else offFocus(k.kd, k.id); }
     else if (k.t === 'ricl') { zoneChip('ric'); if (!k.key) return select({ t: 'zone', z: 'ric', id: k.id }, noFly); if (!noFly) ricView(k.key); else ricFocus(k.key); }
     else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x - 2, ty: 1.5, tz: F.st.z, dist: 40, az: -0.85, pol: 1.02 }); } }
     else if (k.t === 'veh') { zoneChip('flotta'); const f = fleetVeh.find(x => x.v.p === k.p); if (f && !noFly) { const p2 = new T.Vector3(); f.o.getWorldPosition(p2); fly({ tx: p2.x, ty: 1, tz: p2.z, dist: 21, az: f.o.rotation.y + Math.PI / 2 - .7, pol: .86 }); } }
@@ -1921,7 +2120,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     $('.m3-kpis').innerHTML = `<div class="m3-kpi m3-card" data-m3="zall"><i>${ic('box')}</i><div><span>Pezzi in magazzino</span><b>${N(D.tot)}<em>${pc(D.disp, D.nArt)} %</em></b><small>${D.nArt} articoli · ${C.eur0(D.val)}</small></div></div>
       <div class="m3-kpi m3-card" data-m3="zspe"><i>${ic('truck')}</i><div><span>Spedizioni del mese</span><b>${D.ddtM.length}<em>${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli</em></b><small>${D.ddt.filter(x => !x.d.fattura).length} DDT da fatturare</small></div></div>` + (D.gas ? `<div class="m3-kpi m3-card" data-m3="zgas"><i>${ic('fuel')}</i><div><span>Gasolio del mese</span><b>${N(Math.round(D.gas.lM))}<em>litri</em></b><small>${D.gas.nM} rifornimenti · ${D.gas.V.length} mezzi</small></div></div>` : '');
     const n = D.low.length + D.out.length + D.trf.length, b = $('.m3-bell em'); b.hidden = !n; b.textContent = n > 99 ? '99+' : n;
-    const st = [['fornitori', 'Fornitori', 'factory', 'ric', 0], ['ric', 'Ricevimento', 'dock', 'ric', 1], ['stk', 'Scaffalature', 'rack', 'stk', 1], ['pre', 'Preparazione', 'hand', 'pre', 1], ['cq', 'Controllo', 'shield', 'cq', 1], ['spe', 'Spedizione', 'truck', 'spe', 1], ['mez', 'Mezzi', 'fuel', 'flotta', 1], ['cli', 'Clienti', 'users', 'uffe', 0]].filter(s => s[3] === 'uffe' || zoneTarget(s[3]));
+    const st = [['fornitori', 'Fornitori', 'factory', 'uffe:for', 1], ['ric', 'Ricevimento', 'dock', 'ric', 1], ['stk', 'Scaffalature', 'rack', 'stk', 1], ['pre', 'Preparazione', 'hand', 'pre', 1], ['cq', 'Controllo', 'shield', 'cq', 1], ['spe', 'Spedizione', 'truck', 'spe', 1], ['mez', 'Mezzi', 'fuel', 'flotta', 1], ['cli', 'Clienti', 'users', 'uffe:cli', 1]].filter(s => s[3].startsWith('uffe') || zoneTarget(s[3]));
     $('.m3-flow').innerHTML = `<div class="m3-fh">${ic('flow')}Flusso del magazzino<em>fornitore → cliente · in tempo reale</em></div><div class="m3-fs">${st.map(([k, l, icn, z, on], i) => `${i ? '<b class="sep"></b>' : ''}<button type="button" data-fgo="${z}" data-on="${on}" class="${k === 'cq' && D.out.length || k === 'stk' && D.low.length ? 'w' : ''}"><i>${ic(icn)}</i>${l}</button>`).join('')}</div>`;
     table(table.k || 'cor');
     $('.m3-menu[data-menu="zones"]').innerHTML = zoneKinds().map(z => `<button type="button" data-zsel="${z}"><span class="zc">${ZN(z)[1]}</span>${ZN(z)[0]}</button>`).join('');
@@ -1954,6 +2153,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
       + Rr.map(r => `<button type="button" data-rack3="${esc(r.id)}"><i>${esc(r.code)}</i><span><b>Scaffale ${esc(r.code)} · ${esc(r.cat || KIND[r.k].n)}</b><small>${rackArts(r).length} articoli · ${r.bays * r.lv} vani</small></span></button>`).join('')
       + Dd.map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i>DDT</i><span><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc(C.dIt(x.d.data))}</small></span></button>`; }).join('')
       + (D.gas ? D.gas.V.filter(v => (v.p + ' ' + plFmt(v.p) + ' ' + v.name + ' ' + v.drv.join(' ')).toLowerCase().includes(s)).slice(0, 4).map(v => `<button type="button" data-veh3="${esc(v.p)}"><i>${ic('van', ' style="width:16px;height:16px"')}</i><span><b>${esc(plFmt(v.p))}${v.name ? ' · ' + esc(v.name) : ''}</b><small>${N(Math.round(v.lM))} L nel mese${v.drv.length ? ' · ' + esc(v.drv.join(', ')) : ''}</small></span></button>`).join('') : '')
+      + (OFF ? [...OFF.OD.CL, ...OFF.OD.FR].filter(e => (e.name + ' ' + e.city + ' ' + ((e.o && e.o.piva) || '')).toLowerCase().includes(s)).slice(0, 5).map(e => `<button type="button" data-ofr="${e.kd}:${esc(e.id)}"><i>${e.kd === 'cli' ? 'CLI' : 'FOR'}</i><span><b>${esc(e.name)}</b><small>${esc([e.kd === 'cli' ? 'cliente' : 'fornitore', e.room ? 'ufficio ' + e.room : '', stTxt(e)].filter(Boolean).join(' · '))}</small></span></button>`).join('') : '')
       + zs.map(z => `<button type="button" data-zsel="${z}"><i>${ZN(z)[1]}</i><span><b>${ZN(z)[0]}</b><small>reparto</small></span></button>`).join('');
     res.innerHTML = h || '<p>Nessun risultato</p>'; res.classList.add('on');
   }
@@ -2121,8 +2321,8 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
   function doPick(p) {
     if (!ray.r) ray.r = new T.Raycaster();
     const rc = R.domElement.getBoundingClientRect(), v = new T.Vector2((p.x - rc.left) / rc.width * 2 - 1, -(p.y - rc.top) / rc.height * 2 + 1);
-    ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, ricl: 1, truck: 1, veh: 1, rack: 2, dock: 3, belt: 3, desk: 3, fuel: 3, wall: 4, zone: 5 };
-    const hit2 = H.slice(0, 8).filter(h2 => h2.object.userData.k).sort((a, b) => (PR[a.object.userData.k.t] - PR[b.object.userData.k.t]) || a.distance - b.distance)[0];
+    ray.r.setFromCamera(v, cam); const H = ray.r.intersectObjects(pick, false), PR = { art: 0, ofr: 1, ricl: 1, truck: 1, veh: 1, rack: 2, dock: 3, belt: 3, desk: 3, fuel: 3, wall: 4, zone: 5 };
+    const hit2 = H.slice(0, 12).filter(h2 => h2.object.userData.k && !(h2.object.userData.k.t === 'ofr' && (!OFF || OFF.u < .5))).sort((a, b) => (PR[a.object.userData.k.t] - PR[b.object.userData.k.t]) || a.distance - b.distance)[0];
     const rk2 = hit2 && hit2.object.userData.k && hit2.object.userData.k.t === 'ricl' ? (hit2.object.userData.k.key || (hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId]) || null) : null;
     if (p.hover) { R.domElement.classList.toggle('hov', !!hit2 || !!EDIT); const kk = hit2 && hit2.object.userData.k; if (matchMedia('(hover:hover)').matches) hoverRic(rk2, p.x, p.y); if (!(kk && kk.t === 'ricl')) hoverArt(kk && kk.t === 'art' && matchMedia('(hover:hover)').matches ? hit2.object.userData.ids && hit2.object.userData.ids[hit2.instanceId] : null, p.x, p.y); return; }
     if (EDIT || !hit2) return;
@@ -2145,6 +2345,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     if (a === 'home') { if (EDIT) return fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.15, az: -0.15, pol: .42 }); select({ t: 'zone', z: 'all' }); return; }
     if (a === 'play') { if (tourOn) stopTour(); else startTour(); return; }
     if (a === 'pclose') { if (EDIT) { EDIT.sel = null; edPanel(); } else if (t.closest('.m3-co')) { unfocus(); if (sel && sel.art) sel = { t: 'rack', id: sel.id }; } else select(null); return; }
+    if (a === 'gocli' || a === 'gofor') { const f = a === 'gocli' ? C.goCli : C.goForn; close(); setTimeout(() => { if (f) f(); else location.hash = a === 'gocli' ? '#clienti' : '#fornitori'; }, 350); return; }
     if (a === 'verify') return verify();
     if (a === 'aim') { if (sel) select(sel); return; }
     if (a === 'edit') return enterEdit();
@@ -2174,8 +2375,10 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     const lc = t.closest('[data-lcell]'); if (lc && sel && sel.t === 'loc') { const [bb, ll] = lc.dataset.lcell.split('|').map(Number); return panel({ t: 'loc', art: sel.art, r: sel.r, b: bb, l: ll }); }
     const lo = t.closest('[data-loc3]'); if (lo) { e.stopPropagation(); if (!canEdit()) return toast('Solo il titolare può cambiare le ubicazioni'); const p2 = P.byArt.get(lo.dataset.loc3); return panel({ t: 'loc', art: lo.dataset.loc3, r: p2 && p2.rk.id }); }
     const zs = t.closest('[data-zsel]'); if (zs) { $('.m3-res').classList.remove('on'); $$('.m3-menu.on').forEach(m => m.classList.remove('on')); select({ t: 'zone', z: zs.dataset.zsel }); return; }
-    const fg = t.closest('[data-fgo]'); if (fg) { select({ t: 'zone', z: fg.dataset.fgo }); return; }
+    const fg = t.closest('[data-fgo]'); if (fg) { const [z, tb] = fg.dataset.fgo.split(':'); if (tb) OFT = tb; select({ t: 'zone', z }); return; }
     const sh = t.closest('[data-shot]'); if (sh) { stopTour(); const k = sh.dataset.shot, z = zoneTarget('stk'); ({ all: () => select({ t: 'zone', z: 'all' }), top: () => fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.2, az: 0, pol: .12 }), stk: () => { const r = P.racks.find(x => x.k === 'pallet') || P.racks[0]; if (r) { const g = rackG(r.id); g.updateMatrixWorld(); const p2 = g.localToWorld(new T.Vector3(-rackLen(r) / 2 - 3, 0, rackDep(r) / 2 + 1.7)); fly({ tx: p2.x + 6, ty: 2.5, tz: p2.z, dist: 12, az: r.r * Math.PI / 2 - 1.3, pol: 1.3 }); } }, spe: () => flyT(zoneTarget('spe')), pre: () => flyT(zoneTarget('pre')), low: () => fly({ tx: 0, tz: 4, dist: Math.max(L.W, L.D) * 1.6, az: -0.75, pol: 1.22 }) })[k](); return; }
+    const ofr = t.closest('[data-ofr]'); if (ofr) { $('.m3-res').classList.remove('on'); const [kd, ...r2] = ofr.dataset.ofr.split(':'); select({ t: 'ofr', kd, id: r2.join(':') }); return; }
+    const oft = t.closest('[data-oft]'); if (oft) { OFT = oft.dataset.oft; panel(sel); return; }
     const rv = t.closest('[data-rcv3]'); if (rv) { $('.m3-res').classList.remove('on'); const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); select({ t: 'ricl', key: rv.dataset.rcv3, id: z && z.id }); return; }
     const tb = t.closest('[data-tab3]'); if (tb) { table(tb.dataset.tab3); return; }
     const rw = t.closest('[data-rack3]'); if (rw) { $('.m3-res').classList.remove('on'); select({ t: 'rack', id: rw.dataset.rack3 }); return; }
@@ -2242,7 +2445,7 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
     Object.values(M).forEach(m => m.dispose && m.dispose()); Object.keys(M).forEach(k => delete M[k]);
     Object.values(TX).forEach(t => t && t.dispose && t.dispose()); Object.keys(TX).forEach(k => delete TX[k]);
     if (R) { R.dispose(); R.forceContextLoss && R.forceContextLoss(); }
-    R = scene = ENV = WH = null; pick = []; labels = []; movers = []; trucks = []; hiMesh = selHelper = null;
+    R = scene = ENV = WH = null; OFF = null; pick = []; labels = []; movers = []; trucks = []; hiMesh = selHelper = null;
   }
   // qualità per dispositivo: telefono / tablet / computer (scende da sola se il 3D si ferma per memoria)
   let Q = null, SUN = null, lostN = 0, lostT0 = 0, GLT = 0;

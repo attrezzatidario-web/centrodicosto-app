@@ -9163,7 +9163,7 @@
   /* v271: Magazzino 3D (magazzino3d.js): plastico isometrico collegato ai dati del magazzino */
   async function mag3d() {
     if (mag3d.busy) return; mag3d.busy = 1;
-    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=281'); }
+    try { await loadThree(); if (!window.CDC_MG3D) await loadLib('magazzino3d.js?v=282'); }
     catch { mag3d.busy = 0; return toast('Vista 3D non disponibile: controlla la connessione e riprova'); }
     mag3d.busy = 0;
     window.CDC_MG3D.open({
@@ -9173,7 +9173,8 @@
       cfg, write, isOwner: () => isOwnerU(), // v272: disposizione e ubicazioni in Config «mg3d:<magazzino>»
       // v273: parco mezzi e distributore di gasolio (stessi dati della sezione Gasolio)
       gasOn: () => modOn('gasolio') && !!secPerm('gasolio'), gasW: () => secPerm('gasolio') === 'w', gas: () => gasRows(), gasMezzi, gasNomi, gasRent, gasPrice, gasDrv, plate, plateFmt, gMul: () => (typeof gMul === 'function' ? gMul() : 1),
-      gasAdd: () => { const b = document.getElementById('ga-add'); if (b) b.click(); }, goGas: () => { location.hash = '#gasolio'; }
+      gasAdd: () => { const b = document.getElementById('ga-add'); if (b) b.click(); }, goGas: () => { location.hash = '#gasolio'; },
+      forn: () => FOR(), fatF: () => faRows(), fornKey, goCli: () => { location.hash = '#clienti'; }, goForn: () => { location.hash = '#fornitori'; }
     });
   }
   // v147: movimenti dell'articolo dentro la sua scheda (carichi, scarichi, inventari)
