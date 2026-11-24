@@ -1,4 +1,4 @@
-/* Magazzino 3D (v288) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v289) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen(), pickLoc(ctx, idArticolo, {toast, onSave}), locOf(ctx, id) }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -352,9 +352,27 @@ button.m3-loc:hover{border-color:${OR};color:${OR}}
 .m3-b12{grid-template-columns:repeat(12,1fr)!important}
 .m3-acts{display:flex;gap:8px;flex-wrap:wrap}.m3-acts .m3-go{flex:1 1 140px;margin:0}
 
+/* v289: corriere GLS */
+.m3-gl{display:grid;place-items:center;width:100%;height:100%;font-weight:900;font-size:17px;color:#16181b;background:#f2c418;border-radius:inherit}
+.m3-gch{display:flex;gap:6px;overflow-x:auto;margin:0 0 12px;scrollbar-width:none}.m3-gch::-webkit-scrollbar{display:none}
+.m3-gch button{all:unset;flex:none;cursor:pointer;padding:6px 11px;border-radius:999px;background:#f5f4f2;font-size:12px;font-weight:700;color:#5b5e63;transition:background .2s,color .2s}.m3-gch button.on{background:#16181b;color:#fff}
+.m3-ghero{display:grid;grid-template-columns:minmax(0,1fr) 168px;gap:8px;align-items:center;padding:12px 12px 8px 14px;border-radius:16px;background:linear-gradient(160deg,#fffbea,#fdf3cf);margin-bottom:10px;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
+.m3-ghero span{font-size:11.5px;color:#8a6d00;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.m3-ghero b{display:block;font-size:26px;font-weight:800;margin:4px 0 6px;letter-spacing:-.01em}.m3-ghero em{font-style:normal;font-size:12px;color:#6b6e73;line-height:1.45}
+.m3-ghero em i{font-style:normal;font-weight:700}.m3-ghero em i.up{color:#c2410c}.m3-ghero em i.dn{color:#2a8a4a}
+.m3 .m3-ghero svg.m3-itm{width:100%!important;height:auto!important;max-height:none!important;overflow:visible;stroke:none;fill:none;display:block}.m3-itm .d{fill:rgba(120,95,10,.32)}.m3-itm .a{fill:none;stroke:#e0b100;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:.75;animation:m3arc 1.1s cubic-bezier(.3,.7,.2,1) forwards;animation-delay:calc(var(--k)*45ms + 150ms)}
+.m3-itm .p{fill:#f2c418;stroke:#fff;stroke-width:.8;transform-box:fill-box;transform-origin:center;animation:m3pop .5s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(var(--k)*45ms + 700ms)}
+.m3-itm .o{fill:#f47b20;stroke:#fff;stroke-width:1.2}.m3-itm .o2{fill:rgba(244,123,32,.25);transform-box:fill-box;transform-origin:center;animation:m3pul 1.8s ease-out infinite}.m3-itm text{font:700 8px Inter,system-ui,sans-serif;fill:#3a3f46}
+@keyframes m3arc{to{stroke-dashoffset:0}}@keyframes m3pop{from{transform:scale(0)}}@keyframes m3pul{from{transform:scale(.6);opacity:1}to{transform:scale(1.8);opacity:0}}
+.m3-gsp{display:flex;gap:3px;height:12px;border-radius:7px;overflow:hidden;margin:2px 0 10px}.m3-gsp i{display:block;transform-origin:left;animation:m3w .9s cubic-bezier(.2,.8,.2,1) both}.m3-gsp.t{height:9px}
+.m3-gsp .c0,.m3-gct .c0{background:#f2c418}.m3-gsp .c1,.m3-gct .c1{background:#7fb6d6}.m3-gsp .k0,.m3-gk0{background:#f2c418}.m3-gsp .k1,.m3-gk1{background:#f47b20}.m3-gsp .k2,.m3-gk2{background:#9aa0a8}
+.m3-gct{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}.m3-gct>div{background:#f8f7f5;border-radius:13px;padding:10px 11px;display:flex;flex-direction:column;gap:3px}
+.m3-gct span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#6b6e73;font-weight:600}.m3-gct span i{width:9px;height:9px;border-radius:3px;display:block}.m3-gct b{font-size:16px}.m3-gct b em{font-style:normal;font-size:11px;color:#9a9ca1;margin-left:6px;font-weight:600}.m3-gct small{font-size:11px;color:#8a8d93}
+.m3-gsr .m3-pi{font-size:10px;font-weight:800}.m3-gsv{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none}.m3-gsv b{font-size:13px}.m3-gsv em{font-style:normal;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:6px}.m3-gsv em.g{background:#e7f5ea;color:#2a8a4a}.m3-gsv em.a{background:#fff3df;color:#b26b00}
+.m3-rd{font-style:normal;color:#9a9ca1}
 /* v287: amministrazione */
 .m3-dl.g{color:#2a8a4a}.m3-dl.r{color:#d9452f}
-.m3-amm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 12px}
+.m3-amm button{min-width:0}
+.m3-amm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin:2px 0 12px}
 .m3-amm button{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:center;padding:11px 12px;border-radius:14px;background:#f8f7f5;cursor:pointer;transition:background .2s,transform .2s;animation:m3in .45s cubic-bezier(.2,.8,.2,1) both}
 .m3-amm button:hover{background:#f1efeb;transform:translateY(-1px)}
 .m3-amm i{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 14%,#fff);color:var(--c)}
@@ -921,7 +939,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     P = place();
     L.items.filter(i => i.t === 'zone').forEach(buildZone);
     L.items.filter(i => i.t !== 'zone').forEach(it => ({ rack: buildRack, dock: buildDock, wall: buildWall, belt: buildBelt, desk: buildDesk })[it.t](it));
-    buildRoadTrucks(); buildPeople(); buildFleet();
+    buildRoadTrucks(); buildPeople(); buildFleet(); buildGls();
     if (EDIT) { const v = []; for (let x = -hw; x <= hw + .01; x += 1) v.push(x, .53, -hd, x, .53, hd); for (let z = -hd; z <= hd + .01; z += 1) v.push(-hw, .53, z, hw, .53, z); const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(v, 3)); const gm = new T.LineBasicMaterial({ color: 0xcdbfb0, transparent: true, opacity: .45 }); WH.add(new T.LineSegments(gg, gm)); OWN.push(gg, gm); }
     hiMesh = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0xf47b20, transparent: true, opacity: .35, depthWrite: false, depthTest: false })); hiMesh.renderOrder = 10; hiMesh.visible = false; WH.add(hiMesh); OWN.push(hiMesh.material);
     const eg = new T.LineSegments(new T.EdgesGeometry(G.box), new T.LineBasicMaterial({ color: 0xf47b20, depthTest: false })); eg.renderOrder = 11; hiMesh.add(eg); OWN.push(eg.geometry, eg.material);
@@ -1113,6 +1131,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const sub = { ric: `${D.rcv.length} arrivi in 30 gg`, pre: `${D.ddtM.length} DDT nel mese`, cq: `${D.ret90.length} rettifiche`, spe: `${trucks.filter(t => !t.road && t.d).length} in banchina`, terra: 'stoccaggio a terra', uff: 'ufficio', free: '' };
     L.items.filter(i => i.t === 'zone').forEach(z => add([z.x, 4.5, z.z], `${esc(z.name || ZONE[z.k][0])}${sub[z.k] ? ` <em>${sub[z.k]}</em>` : ''}`, '', { t: 'zone', z: z.k, id: z.id }, 340));
     add([L.W / 4, 10.4, L.D / 2 + 13], `Uffici <em>${OFF ? OFF.OD.CL.length : D.cli.length} clienti · ${OFF ? OFF.OD.FR.length : 0} fornitori</em>`, 'wh', { t: 'zone', z: 'uffe' }, 260).offClosed = true;
+    if (GLS3) add([GLS3.wp.x, 4.4, GLS3.wp.z], `Corriere GLS <em>${GLS3.X.n ? GLS3.X.n + ' sped. · ' + gEu(GLS3.X.T) : 'nessuna spedizione'}</em>`, '', { t: 'gls' }, 220);
     if (OFF && OFF.acL) OFF.acL.forEach(A => { const L3 = add([0, 0, 0], `${A.t} <em>${A.s}</em>`, 'sm', A.k, 140, A.a); L3.dy = 0; L3.offOnly = true; });
     if (OFF) OFF.anc.forEach(A => { const L3 = add([0, 0, 0], `${A.t} <em>${A.s}</em>`, 'sm', { t: 'zone', z: 'uffe' }, 140, A.a); L3.dy = 0; L3.offOnly = true; });
     if (D.gas) { const F = FL(); add([F.cx, 3, (F.z0 + F.st.z) / 2 - 4], `Parco mezzi <em>${D.gas.V.length} mezzi · ${N(Math.round(D.gas.lM))} L nel mese</em>`, '', { t: 'zone', z: 'flotta' }, 340); add([F.st.x, 7.4, F.st.z], `Distributore <em>${D.gas.price ? D.gas.price.toFixed(3).replace('.', ',') + ' €/L' : 'gasolio'}</em>`, '', { t: 'fuel' }, 260);
@@ -2051,6 +2070,207 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       <div class="m3-acts">${goBtn('incassi', 'Incassi', 'down')}${goBtn('fatture', 'Fatture fornitori', 'pdf', 1)}${goBtn('analisi', 'Analisi', 'chart', 1)}<button type="button" class="m3-go ghost" data-acc="doc">${ic('pdf')}Archivio documenti</button></div></div>`;
   }
 
+  /* ---------------- v289: corriere GLS nella zona Spedizioni (postazione 3D, videowall, pannello completo) ---------------- */
+  let GLS3 = null, GLSM = '';
+  const glsOk = () => !!(C && C.gls && (!C.glsOn || C.glsOn()));
+  const gN = v => C.num(v), gK = () => (C.gMul ? C.gMul() : 1);
+  const gEu = v => C.eur0(gN(v) * gK());
+  const MESL = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'], MESF = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  const mLab = m => m === 'tutto' ? 'Tutto il periodo' : MESF[Number(m.slice(5)) - 1].replace(/^./, c => c.toUpperCase()) + ' ' + m.slice(0, 4);
+  const geoG = r => { try { if (C.glsGeo) return C.glsGeo(r); } catch {} const G2 = window.GLS_GEO; if (!G2) return null; const c = G2.CITY[String(r.citta || '').toUpperCase().trim() + '|' + String(r.prov || '').toUpperCase().trim()], p = G2.PROV[String(r.prov || '').toUpperCase().trim()]; return c ? { lat: c[0], lon: c[1] } : p ? { lat: p[0], lon: p[1] } : null; };
+  const regG = r => { try { if (C.glsReg) return C.glsReg(r); } catch {} return r.regione || 'Altro'; };
+  function glsData(mSel) {
+    const all = C.gls() || [], months = [...new Set(all.map(r => r.mese).filter(Boolean))].sort();
+    const m = mSel && (mSel === 'tutto' || months.includes(mSel)) ? mSel : months[months.length - 1] || '';
+    const rows = m === 'tutto' ? all : all.filter(r => r.mese === m), sum = (a, f) => a.reduce((s, r) => s + gN(r[f]), 0), tot = a => sum(a, 'totale');
+    const prevK = m && m !== 'tutto' ? months[months.indexOf(m) - 1] : null, prev = prevK ? all.filter(r => r.mese === prevK) : null;
+    const T = tot(rows), n = rows.length, colli = sum(rows, 'colli'), kr = sum(rows, 'kgReali'), kt = sum(rows, 'kgTass');
+    const gg = rows.filter(r => r.gg !== '' && r.gg != null).map(r => gN(r.gg)), ggAvg = gg.length ? gg.reduce((a, b) => a + b, 0) / gg.length : 0;
+    const by = (f) => { const M2 = new Map(); rows.forEach(r => { const k = f(r); if (!M2.has(k)) M2.set(k, []); M2.get(k).push(r); }); return M2; };
+    const dest = [...by(r => r.citta + '|' + r.prov)].map(([k, v]) => ({ k, c: v[0].citta, p: v[0].prov, v, t: tot(v), n: v.length, geo: geoG(v[0]) })).sort((a, b) => b.t - a.t);
+    const reg = [...by(regG)].map(([k, v]) => ({ k, t: tot(v), n: v.length })).sort((a, b) => b.t - a.t);
+    const con = ['C1', 'C2'].map(c => { const v = rows.filter(r => r.contratto === c); return { c, n: v.length, t: tot(v), colli: sum(v, 'colli'), kt: sum(v, 'kgTass') }; });
+    const comp = [['Nolo', sum(rows, 'nolo')], ['Carburante', sum(rows, 'fuel')], ['Supplementi', sum(rows, 'suppl')]];
+    const ser = months.slice(-12).map(k => ({ k, t: tot(all.filter(r => r.mese === k)), n: all.filter(r => r.mese === k).length }));
+    let chk = []; try { chk = C.glsChecks ? C.glsChecks(rows) : []; } catch { chk = []; }
+    const fatt = (() => { try { const c = C.cfg && C.cfg('glsFatt'); return c && typeof c === 'object' ? c : {}; } catch { return {}; } })();
+    const cdc = [...by(r => r.cdc || '—')].map(([k, v]) => ({ k, nome: v[0].cdcNome || '', t: tot(v), n: v.length, rd: v[0].riaddebito || '' })).sort((a, b) => b.t - a.t);
+    const last = rows.slice().sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.nsped).localeCompare(String(a.nsped)));
+    return { all, months, m, rows, T, n, colli, kr, kt, prevT: prev ? tot(prev) : 0, prevK, ggAvg, in24: gg.length ? gg.filter(x => x <= 1).length / gg.length : 0, in48: gg.length ? gg.filter(x => x <= 2).length / gg.length : 0, nGg: gg.length,
+      dest, reg, con, comp, ser, chk, fatt, cdc, last, vol: kr ? (kt / kr - 1) * 100 : 0, nLoc: dest.length, nReg: reg.length };
+  }
+  const strip = s => String(s || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+  // proiezione dell'Italia (lon 6.5–18.7, lat 36.5–47.2)
+  const itP = (lat, lon, x0, y0, w, h) => { const sx = (lon - 6.5) / 12.2, sy = (47.2 - lat) / 10.7; return [x0 + sx * w, y0 + sy * h]; };
+  const ROMA = [41.902, 12.496];
+  function glsScreen(S, page, u) {
+    const g = S.cv.getContext('2d'), w = S.cv.width, h = S.cv.height, X = S.X, F = 'Inter, system-ui, sans-serif';
+    g.fillStyle = '#0f1216'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#171b21'; g.fillRect(0, 0, w, 66);
+    g.fillStyle = '#f2c418'; g.beginPath(); g.roundRect(24, 18, 30, 30, 7); g.fill(); g.fillStyle = '#0f1216'; g.font = `900 17px ${F}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('C', 39, 34);
+    g.textAlign = 'left'; g.font = `800 25px ${F}`; g.fillStyle = '#fff'; g.fillText('CORRIERE · GLS', 66, 34);
+    g.font = `600 20px ${F}`; g.fillStyle = 'rgba(255,255,255,.6)'; g.fillText([X.m ? mLab(X.m) : 'Nessun mese caricato', 'Andamento e contratti', 'Consegne e controlli'][page], 290, 35);
+    g.textAlign = 'right'; g.fillStyle = (Math.floor(u * 6) % 2) ? '#5df08a' : '#2e7d4a'; g.beginPath(); g.arc(w - 112, 34, 7, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.75)'; g.font = `700 19px ${F}`; g.fillText('LIVE', w - 28, 35);
+    g.fillStyle = '#f2c418'; g.fillRect(0, 64, w * u, 3);
+    for (let i = 0; i < 3; i++) { g.fillStyle = i === page ? '#f2c418' : 'rgba(255,255,255,.18)'; g.fillRect(w / 2 - 54 + i * 40, h - 14, 32, 5); }
+    const kp = (x, y, l, v, c, s) => { g.textAlign = 'left'; g.font = `600 17px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText(l, x, y); g.font = `800 38px ${F}`; g.fillStyle = c || '#fff'; g.fillText(v, x, y + 38); if (s) { g.font = `600 15px ${F}`; g.fillStyle = 'rgba(255,255,255,.42)'; g.fillText(s, x, y + 68); } };
+    if (!X.n) { g.textAlign = 'center'; g.font = `700 30px ${F}`; g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('Nessuna spedizione caricata', w / 2, h / 2 - 10); g.font = `600 19px ${F}`; g.fillStyle = 'rgba(255,255,255,.45)'; g.fillText('Importa il resoconto del mese nella sezione GLS', w / 2, h / 2 + 26); S.tex.needsUpdate = true; return; }
+    if (page === 0) {
+      const mx0 = 40, my0 = 86, mw = 380, mh = 440, G2 = window.GLS_GEO;
+      if (G2) Object.values(G2.PROV).forEach(p => { const [x, y] = itP(p[0], p[1], mx0, my0, mw, mh); g.fillStyle = 'rgba(255,255,255,.16)'; g.beginPath(); g.arc(x, y, 3.2, 0, 7); g.fill(); });
+      const [ox, oy] = itP(ROMA[0], ROMA[1], mx0, my0, mw, mh), mxT = Math.max(1, ...X.dest.map(d => d.t)), D2 = X.dest.filter(d => d.geo).slice(0, 18);
+      D2.forEach((d, i) => { const [x, y] = itP(d.geo.lat, d.geo.lon, mx0, my0, mw, mh), k = Math.min(1, Math.max(0, u * 2.2 - i * .06)), L2 = Math.hypot(x - ox, y - oy); if (L2 < 4) return;
+        const cx = (ox + x) / 2 - (y - oy) / L2 * Math.min(60, L2 * .3), cy = (oy + y) / 2 + (x - ox) / L2 * Math.min(60, L2 * .3);
+        g.strokeStyle = `rgba(242,196,24,${.25 + .5 * Math.sqrt(d.t / mxT)})`; g.lineWidth = 1.2 + 2.4 * Math.sqrt(d.t / mxT); g.beginPath(); g.moveTo(ox, oy); const N2 = 24; for (let j = 1; j <= N2 * k; j++) { const s = j / N2, a = (1 - s) * (1 - s), b = 2 * (1 - s) * s, c = s * s; g.lineTo(a * ox + b * cx + c * x, a * oy + b * cy + c * y); } g.stroke();
+        if (k > .02 && k < 1) { const s = k, a = (1 - s) * (1 - s), b = 2 * (1 - s) * s, c = s * s; g.fillStyle = '#fff'; g.beginPath(); g.arc(a * ox + b * cx + c * x, a * oy + b * cy + c * y, 3.5, 0, 7); g.fill(); } });
+      D2.forEach((d, i) => { const [x, y] = itP(d.geo.lat, d.geo.lon, mx0, my0, mw, mh), r = 4 + 12 * Math.sqrt(d.t / mxT), k = Math.min(1, Math.max(0, u * 2.2 - i * .06 - .3) * 3); if (k <= 0) return; g.fillStyle = 'rgba(242,196,24,.25)'; g.beginPath(); g.arc(x, y, r * k + 4, 0, 7); g.fill(); g.fillStyle = '#f2c418'; g.beginPath(); g.arc(x, y, r * k, 0, 7); g.fill();
+        if (i < 5) { g.font = `700 14px ${F}`; g.fillStyle = '#fff'; g.textAlign = 'left'; g.fillText(String(d.c).slice(0, 14), x + r + 6, y + 5); } });
+      const pr = 8 + Math.sin(u * 40) * 2; g.fillStyle = 'rgba(244,123,32,.3)'; g.beginPath(); g.arc(ox, oy, pr + 7, 0, 7); g.fill(); g.fillStyle = '#f47b20'; g.beginPath(); g.arc(ox, oy, 8, 0, 7); g.fill(); g.fillStyle = '#fff'; g.font = `800 15px ${F}`; g.textAlign = 'right'; g.fillText('ROMA', ox - 14, oy + 5);
+      const d0 = X.prevT ? (X.T / X.prevT - 1) * 100 : null;
+      kp(500, 100, 'Costo spedizioni', gEu(X.T), '#f2c418', d0 == null ? (C.ivaLbl ? C.ivaLbl() : '') : `${d0 >= 0 ? '▲' : '▼'} ${Math.abs(d0).toFixed(0)}% sul mese prima`);
+      kp(500, 214, 'Spedizioni', N(X.n), '#fff', `${N(X.colli)} colli · ${X.nLoc} località`);
+      kp(760, 214, 'Medio spedizione', gEu(X.T / Math.max(1, X.n)), '#fff', `${(X.T * gK() / Math.max(1, X.kt)).toFixed(2).replace('.', ',')} €/kg tass.`);
+      kp(500, 328, 'Peso tassabile', N(Math.round(X.kt)) + ' kg', '#fff', `${X.vol >= 0 ? '+' : ''}${X.vol.toFixed(0)}% sul reale`);
+      kp(760, 328, 'Consegna media', X.nGg ? X.ggAvg.toFixed(1).replace('.', ',') + ' gg' : '—', '#5df08a', X.nGg ? `${Math.round(X.in48 * 100)}% entro 48 ore` : 'giorni non registrati');
+      g.textAlign = 'left'; g.font = `700 16px ${F}`; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText('Destinazioni principali', 500, 456);
+      X.dest.slice(0, 3).forEach((d, i) => { g.font = `700 17px ${F}`; g.fillStyle = '#fff'; g.fillText(`${i + 1}. ${String(d.c).slice(0, 18)} (${d.p})`, 500, 486 + i * 26); g.textAlign = 'right'; g.fillStyle = '#f2c418'; g.fillText(gEu(d.t), w - 40, 486 + i * 26); g.textAlign = 'left'; });
+    } else if (page === 1) {
+      const S2 = X.ser, mx = Math.max(1, ...S2.map(s => s.t)), x0 = 40, x1 = 620, y1 = h - 70, y0 = 110, bw = (x1 - x0) / Math.max(1, S2.length);
+      g.textAlign = 'left'; g.font = `700 17px ${F}`; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText('Costo per mese', x0, 96);
+      S2.forEach((s, i) => { const k = Math.min(1, Math.max(0, u * 3 - i * .08)), hh = (y1 - y0) * s.t / mx * k; g.fillStyle = s.k === X.m ? '#f2c418' : '#5b4a14'; g.beginPath(); g.roundRect(x0 + i * bw + bw * .18, y1 - hh, bw * .64, hh, 5); g.fill();
+        g.fillStyle = 'rgba(255,255,255,.45)'; g.font = `600 14px ${F}`; g.textAlign = 'center'; g.fillText(MESL[Number(s.k.slice(5)) - 1], x0 + i * bw + bw / 2, y1 + 22); });
+      const cT = X.con.reduce((s, c) => s + c.t, 0) || 1; let cx = 680; g.textAlign = 'left'; g.font = `700 17px ${F}`; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText('Contratti', 680, 96);
+      X.con.forEach((c, i) => { const ww = (w - 720) * c.t / cT * Math.min(1, u * 3); g.fillStyle = i ? '#7fb6d6' : '#f2c418'; g.fillRect(cx, 112, ww, 18); cx += ww; });
+      X.con.forEach((c, i) => { const y = 170 + i * 120; g.fillStyle = i ? '#7fb6d6' : '#f2c418'; g.fillRect(680, y - 4, 6, 92); kp(700, y, i ? 'C2 · pesante e pedane' : 'C1 · pacchi', gEu(c.t), '#fff', `${c.n} sped. · ${N(c.colli)} colli · ${c.kt ? (c.t * gK() / c.kt).toFixed(2).replace('.', ',') : '—'} €/kg`); });
+      const ct = X.comp.reduce((s, c) => s + c[1], 0) || 1; let px = 680; g.fillStyle = 'rgba(255,255,255,.55)'; g.font = `700 16px ${F}`; g.fillText('Composizione del costo', 680, 432);
+      X.comp.forEach((c, i) => { const ww = (w - 720) * c[1] / ct; g.fillStyle = ['#f2c418', '#f47b20', '#9aa0a8'][i]; g.fillRect(px, 446, ww, 14); px += ww; });
+      g.font = `600 15px ${F}`; X.comp.forEach((c, i) => { g.fillStyle = ['#f2c418', '#f47b20', '#9aa0a8'][i]; g.fillText(`${c[0]} ${Math.round(c[1] / ct * 100)}%`, 680 + i * 120, 488); });
+    } else {
+      kp(40, 100, 'Entro 24 ore', X.nGg ? Math.round(X.in24 * 100) + '%' : '—', '#5df08a', `${X.nGg} consegne registrate`);
+      kp(260, 100, 'Entro 48 ore', X.nGg ? Math.round(X.in48 * 100) + '%' : '—', '#5df08a', `media ${X.nGg ? X.ggAvg.toFixed(1).replace('.', ',') : '—'} giorni`);
+      const fm = X.m && X.m !== 'tutto' ? X.fatt[X.m] : null;
+      kp(480, 100, 'Fattura del mese', X.m === 'tutto' ? '—' : fm ? 'Emessa' : 'Da emettere', fm ? '#5df08a' : '#ff9a6b', 'riaddebito ai centri di costo');
+      g.textAlign = 'left'; g.font = `700 17px ${F}`; g.fillStyle = 'rgba(255,255,255,.55)'; g.fillText(X.chk.length ? `Da controllare · ${X.chk.length}` : 'Controlli', 40, 230);
+      if (!X.chk.length) { g.font = `700 24px ${F}`; g.fillStyle = '#5df08a'; g.fillText('✓ Nessuna anomalia nel periodo', 40, 276); }
+      X.chk.slice(0, 4).forEach((c, i) => { const y = 248 + i * 66, k = Math.min(1, Math.max(0, u * 4 - i * .3)); g.globalAlpha = k; g.fillStyle = '#171b21'; g.beginPath(); g.roundRect(40, y, w - 80, 56, 10); g.fill(); g.fillStyle = c.t === 'warn' ? '#ff9a6b' : '#7fb6d6'; g.fillRect(40, y, 6, 56);
+        g.font = `700 19px ${F}`; g.fillStyle = '#fff'; g.fillText(strip(c.h).slice(0, 48), 60, y + 24); g.font = `600 14px ${F}`; g.fillStyle = 'rgba(255,255,255,.5)'; g.fillText(strip(c.d).slice(0, 92), 60, y + 45); g.textAlign = 'right'; g.font = `800 19px ${F}`; g.fillStyle = c.t === 'warn' ? '#ff9a6b' : '#7fb6d6'; g.fillText(strip(c.v).slice(0, 20), w - 56, y + 34); g.textAlign = 'left'; g.globalAlpha = 1; });
+    }
+    S.tex.needsUpdate = true;
+  }
+  function buildGls() {
+    GLS3 = null; if (!glsOk()) return;
+    const z = L.items.find(i => i.t === 'zone' && i.k === 'spe'); if (!z) return;
+    const b = box2(z), zw = b.x1 - b.x0, zd = b.z1 - b.z0, alongZ = zd >= zw, W2 = Math.min(9.6, (alongZ ? zw : zd) - .6), DEP = 6.4;
+    if (W2 < 5 || (alongZ ? zd : zw) < DEP + 4) return;
+    if (!window.GLS_GEO && C.glsLoadGeo && !buildGls.ld) { buildGls.ld = 1; Promise.resolve(C.glsLoadGeo()).then(() => { if (GLS3) GLS3.X = glsData(GLSM); }).catch(() => {}); }
+    const X = glsData(GLSM), g = new T.Group(); WH.add(g);
+    if (alongZ) { g.position.set((b.x0 + b.x1) / 2, .5, b.z1 - .25); } else { g.position.set(b.x1 - .25, .5, (b.z0 + b.z1) / 2); g.rotation.y = -Math.PI / 2; }
+    const B = new Batch(g), hw2 = W2 / 2, lite = Q && Q.tier === 0;
+    // pavimento della postazione: area gialla con bordo e scritta
+    B.add('gfl', G.box, mat(0xffffff), m4(0, .012, -DEP / 2, W2, .01, DEP), 0xfbf1cf);
+    for (const [x, zz, sx, sz] of [[0, -DEP + .05, W2, .1], [0, -.05, W2, .1], [-hw2 + .05, -DEP / 2, .1, DEP], [hw2 - .05, -DEP / 2, .1, DEP]]) B.add('gbd', G.box, mat(0xf2c418), m4(x, .022, zz, sx, .012, sz));
+    // videowall su due piedi, rivolto verso il centro del magazzino
+    const vw = Math.min(W2 - 1.2, 5.4), vh = vw * .54;
+    bxS(g, vw + .24, vh + .24, .14, 0x1b1d20, 0, 1.15, -DEP + .3); for (const s of [-1, 1]) { bxS(g, .12, 1.2, .12, 0x3a3f46, s * vw * .36, 0, -DEP + .3); bxS(g, .5, .05, .5, 0x3a3f46, s * vw * .36, 0, -DEP + .3, { ns: 1 }); }
+    const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 552; const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4; OWN.push(tex);
+    const sm = new T.MeshBasicMaterial({ map: tex }); OWN.push(sm); const scr = new T.Mesh(G.plane, sm); scr.scale.set(vw, vh, 1); scr.position.set(0, 1.27 + vh / 2, -DEP + .3 + .08); g.add(scr);
+    // banco del corriere con stampante etichette, monitor, lettore; operatore
+    const cx = -hw2 + 1.6, cz = -3.5;
+    bxS(g, 2.6, .95, .8, 0xf4f5f6, cx, 0, cz); bxS(g, 2.7, .05, .9, 0x2b2f35, cx, .95, cz); bxS(g, 2.6, .9, .03, 0xf2c418, cx, .03, cz + .415, { ns: 1 });
+    bxS(g, .42, .3, .36, 0xe9eaec, cx + .7, 1.0, cz); bxS(g, .3, .015, .1, 0x2b3440, cx + .7, 1.3, cz + .12, { ns: 1 });
+    const lab = new T.Mesh(G.box, mat(0xffffff)); lab.scale.set(.22, .004, .16); lab.position.set(cx + .7, 1.21, cz + .2); g.add(lab);
+    bxS(g, .6, .38, .03, 0x1d1f22, cx - .5, 1.2, cz - .22); B.add('gms', G.box, new T.MeshBasicMaterial({ color: 0xfff3b8 }), m4(cx - .5, 1.39, cz - .2, .54, .32, .01)); bxS(g, .05, .2, .05, 0x1d1f22, cx - .5, 1.0, cz - .22);
+    if (!lite) { const p = person(g, cx, cz - .75, 0xf2c418, null, { mode: 'scan' }); p.position.y = 0; movers.push({ o: p, t: 'bob', ph: 31 }); }
+    // bilancia a pavimento con collo e display che conta i kg
+    const sx = cx + 2.2, sz2 = cz + .1; bxS(g, 1.0, .08, 1.0, 0x8e959e, sx, 0, sz2); bxS(g, .96, .012, .96, 0xc5cad1, sx, .08, sz2, { ns: 1 }); bxS(g, .06, 1.1, .06, 0x3a3f46, sx + .55, 0, sz2 - .45);
+    const kcv = document.createElement('canvas'); kcv.width = 128; kcv.height = 56; const ktx = new T.CanvasTexture(kcv); ktx.colorSpace = T.SRGBColorSpace; OWN.push(ktx); const km = new T.MeshBasicMaterial({ map: ktx }); OWN.push(km);
+    bxS(g, .34, .2, .1, 0x1d1f22, sx + .55, 1.1, sz2 - .45); const kd = new T.Mesh(G.plane, km); kd.scale.set(.3, .13, 1); kd.position.set(sx + .55, 1.2, sz2 - .395); g.add(kd);
+    const sbox = new T.Group(); sbox.position.set(sx, .095, sz2); g.add(sbox); const sbm = new T.Mesh(G.box, M.carton || mat(0xe2b27a)); sbm.scale.set(.6, .42, .5); sbm.position.y = .21; sbox.add(sbm); const sbl = new T.Mesh(G.box, mat(0xffffff)); sbl.scale.set(.22, .005, .16); sbl.position.set(.08, .4225, .05); sbox.add(sbl);
+    // rulliera verso le gabbie
+    const rx0 = cx + 2.9, rx1 = hw2 - .7, rz = -1.9, rl = rx1 - rx0;
+    if (rl > 1.4) { for (const s of [-1, 1]) bxS(g, rl, .08, .06, 0x8e959e, (rx0 + rx1) / 2, .62, rz + s * .32); for (let x = rx0 + .1; x < rx1; x += .16) B.add('grl', G.box, mat(0xc5cad1), m4(x, .69, rz, .05, .05, .6)); for (const x of [rx0 + .2, rx1 - .2]) for (const s of [-1, 1]) bxS(g, .05, .62, .05, 0x3a3f46, x, 0, rz + s * .3); }
+    const parcels = []; if (rl > 1.4) for (let i = 0; i < (lite ? 2 : 4); i++) { const pg = new T.Group(); g.add(pg); const m1 = new T.Mesh(G.box, M.carton || mat(0xe2b27a)); const s = .32 + (i % 3) * .07; m1.scale.set(s, s * .7, s * .85); m1.position.y = s * .35; pg.add(m1); const l2 = new T.Mesh(G.box, mat(0xffffff)); l2.scale.set(s * .45, .005, s * .35); l2.position.set(0, s * .7 + .003, 0); pg.add(l2); parcels.push({ g: pg, ph: i / (lite ? 2 : 4) }); }
+    // gabbie dei contratti: C1 pacchi, C2 pedane
+    const c1 = X.con[0], c2 = X.con[1], cg = (x, lbl, col, n, ped) => {
+      const w = 1.2, d = .9, h = 1.7, zc = -.75; bxS(g, w, .06, d, 0x8e959e, x, .12, zc); for (const [wx, wz] of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]) B.add('gcu', G.box, mat(0x9aa0a8), m4(x + wx, .12 + h / 2, zc + wz, .035, h, .035));
+      for (let y = .4; y < h; y += .32) { B.add('gcw', G.box, mat(0xb9bec5), m4(x, .12 + y, zc - d / 2, w, .012, .012)); B.add('gcw', G.box, mat(0xb9bec5), m4(x - w / 2, .12 + y, zc, .012, .012, d)); B.add('gcw', G.box, mat(0xb9bec5), m4(x + w / 2, .12 + y, zc, .012, .012, d)); }
+      for (const wx of [-.4, 0, .4]) B.add('gcw', G.box, mat(0xb9bec5), m4(x + wx, .12 + h / 2, zc - d / 2, .012, h, .012));
+      for (const [wx, wz] of [[-.45, -.35], [.45, -.35], [-.45, .35], [.45, .35]]) B.add('gwh', G.cyl, mat(0x2b2f35), m4(x + wx, .06, zc + wz, .1, .08, .1));
+      if (ped) { const k = Math.min(1, n / 25); if (n) { B.add('gpl', G.box, mat(0xc9a273), m4(x, .22, zc, 1.0, .12, .8)); const hh = .3 + 1.0 * k; B.add('gpk', G.box, mat(0xd9b07a), m4(x, .28 + hh / 2, zc, .92, hh, .72)); B.add('gpf', G.box, new T.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: .35 }), m4(x, .28 + hh / 2, zc, .95, hh + .02, .75)); } }
+      else { const nb = Math.min(18, Math.ceil(n / 4)); for (let i = 0; i < nb; i++) { const cx2 = x - .36 + (i % 3) * .36, cy = .18 + Math.floor(i / 6) * .3, cz2 = zc - .22 + (Math.floor(i / 3) % 2) * .44; B.add('gbx', G.box, mat(0xffffff), m4(cx2, cy + .14, cz2, .32, .28, .38), mixC(0xe2b27a, 0xffffff, (i % 3) * .08)); } }
+      const t = textTex([[lbl, 28, 800, 38, null, '#16181b'], [`${n} spedizioni nel mese`, 20, 600, 74, null, '#5b5e63']], { bg: hexC(col), w: 320, h: 100, round: 10 }); const pl = planeT(t, 1.2, .38, g, x, 2.15, zc + d / 2 + .02, {}); pl.renderOrder = 2;
+      bxS(g, 1.24, .42, .03, 0x1d1f22, x, 1.93, zc + d / 2 - .02, { ns: 1 });
+    };
+    const gx1 = hw2 - 2.1, gx2 = hw2 - .8; cg(gx1 - .35, 'C1 · Pacchi', 0xf2c418, c1.n, 0); cg(gx2 + .05 > hw2 - .6 ? gx2 - .1 : gx2, 'C2 · Pedane', 0x7fb6d6, c2.n, 1);
+    // scatole vuote, nastro, insegna sospesa
+    B.add('gst', G.box, mat(0xd9b07a), m4(-hw2 + .5, .3, -1.0, .6, .6, .6)); B.add('gst', G.box, mat(0xe2b27a), m4(-hw2 + .5, .85, -1.0, .5, .5, .5)); B.add('gst', G.box, mat(0xd9b07a), m4(-hw2 + 1.15, .25, -.9, .5, .5, .55));
+    const sg = textTex([['CORRIERE', 44, 900, 50, null, '#16181b'], ['GLS · ritiri e spedizioni', 24, 700, 96, null, '#16181b']], { bg: '#f2c418', w: 512, h: 128, round: 12 });
+    const sgp = planeT(sg, 2.4, .6, g, cx, 3.25, cz - .1, {}); sgp.renderOrder = 2; for (const s of [-1, 1]) bxS(g, .02, .9, .02, 0x3a3f46, cx + s * 1.0, 3.55, cz - .1, { ns: 1 });
+    B.flush();
+    floorText(g, 'CORRIERE', Math.min(W2 * .6, 4.2), hw2 - 2.4, -DEP + 1.6, 0, 'rgba(180,140,0,.4)');
+    const hb = new T.Mesh(G.box, M.hit); hb.scale.set(W2, 3.2, DEP); hb.position.set(0, 1.6, -DEP / 2); hb.userData.k = { t: 'gls' }; g.add(hb); pick.push(hb);
+    const wp = new T.Vector3(0, 0, -DEP / 2); g.localToWorld(wp);
+    GLS3 = { g, X, cv, tex, kcv, ktx, sbox, lab, parcels, rx0, rx1, rz, last: -1, wp, ry: g.rotation.y };
+    glsScreen(GLS3, 0, 0);
+  }
+  function glsTick(t, dt) {
+    const S = GLS3; if (!S) return;
+    const per = 9, page = Math.floor(t / per) % 3, u = (t % per) / per, q = Math.floor(t * 7);
+    if (q !== S.last) { S.last = q; glsScreen(S, page, u);
+      const cyc = (t % 6) / 6, on = cyc > .15 && cyc < .85, kg = on ? 4.2 + Math.sin(Math.floor(t / 6) * 7.3) * 2.6 : 0, g2 = S.kcv.getContext('2d'); g2.fillStyle = '#0f1a14'; g2.fillRect(0, 0, 128, 56); g2.fillStyle = on ? '#5df08a' : '#2e5a3c'; g2.font = '700 30px ui-monospace, Menlo, monospace'; g2.textAlign = 'right'; g2.textBaseline = 'middle'; g2.fillText(on ? (Math.min(1, (cyc - .15) / .2) * kg).toFixed(2) : '0.00', 100, 30); g2.font = '700 14px Inter, sans-serif'; g2.fillText('kg', 124, 34); S.ktx.needsUpdate = true; }
+    const cyc = (t % 6) / 6; S.sbox.visible = cyc > .12 && cyc < .9; S.sbox.position.y = .095 + (cyc < .15 ? (1 - (cyc - .12) / .03) * .3 : 0);
+    const lc = (t % 4.5) / 4.5; S.lab.position.z = -3.3 + Math.min(1, lc / .5) * .14; S.lab.visible = lc < .9;
+    S.parcels.forEach(p => { const f = ((t / 7) + p.ph) % 1; p.g.position.set(S.rx0 + .2 + (S.rx1 - S.rx0 - .4) * f, .72, S.rz); p.g.visible = f > .02 && f < .97; p.g.rotation.y = Math.sin(f * 9 + p.ph * 6) * .05; });
+  }
+  // pannello
+  function glsMapSvg(X) {
+    const G2 = window.GLS_GEO, w = 220, h = 250, P2 = (la, lo) => itP(la, lo, 6, 6, w - 12, h - 12), [ox, oy] = P2(ROMA[0], ROMA[1]), mx = Math.max(1, ...X.dest.map(d => d.t));
+    const dots = G2 ? Object.values(G2.PROV).map(p => { const [x, y] = P2(p[0], p[1]); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.1" class="d"/>`; }).join('') : '';
+    const D2 = X.dest.filter(d => d.geo).slice(0, 24);
+    const arcs = D2.map((d, i) => { const [x, y] = P2(d.geo.lat, d.geo.lon), L2 = Math.hypot(x - ox, y - oy); if (L2 < 3) return ''; const b = Math.min(26, L2 * .3), cx = (ox + x) / 2 - (y - oy) / L2 * b, cy = (oy + y) / 2 + (x - ox) / L2 * b; return `<path d="M${ox.toFixed(1)} ${oy.toFixed(1)}Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" pathLength="1" class="a" style="--k:${i};stroke-width:${(.6 + 1.8 * Math.sqrt(d.t / mx)).toFixed(2)}"/>`; }).join('');
+    const pins = D2.map((d, i) => { const [x, y] = P2(d.geo.lat, d.geo.lon), r = 2 + 6 * Math.sqrt(d.t / mx); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" class="p" style="--k:${i}"><title>${esc(d.c)} (${esc(d.p)}) · ${esc(gEu(d.t))} · ${d.n} sped.</title></circle>`; }).join('');
+    return `<svg viewBox="0 0 ${w} ${h}" class="m3-itm">${dots}${arcs}${pins}<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="9" class="o2"/><circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4.5" class="o"/><text x="${(ox - 8).toFixed(1)}" y="${(oy + 3).toFixed(1)}" text-anchor="end">Roma</text></svg>`;
+  }
+  function glsPanel(Pn) {
+    if (!glsOk()) return '';
+    const X = glsData(Pn.m || GLSM), q = String(Pn.q || '').trim().toLowerCase(), mx = Math.max(1, ...X.ser.map(s => s.t));
+    if (X.m && X.m !== GLSM && !Pn.m) GLSM = X.m;
+    const chips = [...X.months.slice(-6).reverse(), ...(X.months.length > 1 ? ['tutto'] : [])].map(m => `<button type="button" data-gls="${m}" class="${m === X.m ? 'on' : ''}">${m === 'tutto' ? 'Tutto' : MESL[Number(m.slice(5)) - 1] + ' ' + m.slice(2, 4)}</button>`).join('');
+    const hd = head(`<span class="m3-gl">C</span>`, '', 'Spedizioni · corriere', 'Corriere GLS', X.n ? `${esc(mLab(X.m))} · ${X.n} spedizioni · ${C.ivaLbl ? esc(C.ivaLbl()) : ''}` : 'nessuna spedizione caricata', 1);
+    if (!X.n) return hd + `<div class="m3-pb"><div class="m3-empty">Importa il resoconto del mese nella sezione GLS: qui compaiono costi, destinazioni, contratti e controlli.</div><div class="m3-acts">${goBtn('gls', 'Apri la sezione GLS', 'truck')}</div></div>`;
+    const d0 = X.prevT ? (X.T / X.prevT - 1) * 100 : null, cT = X.con.reduce((s, c) => s + c.t, 0) || 1, ct = X.comp.reduce((s, c) => s + c[1], 0) || 1, mR = Math.max(1, ...X.reg.map(r => r.t)), mD = Math.max(1, ...X.dest.map(r => r.t));
+    const L2 = q ? X.rows.filter(r => `${r.destinatario} ${r.citta} ${r.prov} ${r.nsped} ${r.rif}`.toLowerCase().includes(q)) : X.last;
+    const fm = X.m !== 'tutto' ? X.fatt[X.m] : null;
+    const shipRow = r => `<div class="m3-row m3-gsr"><i class="m3-pi m3-dt" style="--c:${r.contratto === 'C2' ? '#2f6db4' : '#b58a00'}">${esc(r.contratto || '—')}</i><span class="tx"><b>${esc(r.destinatario || '—')}</b><small>${esc([C.dIt(r.data), `${r.citta} (${r.prov})`, `${gN(r.colli)} colli · ${N(gN(r.kgTass))} kg`, r.nsped].filter(Boolean).join(' · '))}</small></span><span class="m3-gsv"><b>${esc(gEu(r.totale))}</b>${r.gg === '' || r.gg == null ? '<em class="a">consegna ?</em>' : `<em class="${gN(r.gg) <= 2 ? 'g' : 'a'}">${gN(r.gg)} gg</em>`}</span></div>`;
+    return hd + `<div class="m3-pb">
+      <div class="m3-gch">${chips}</div>
+      <div class="m3-ghero"><div><span>Costo spedizioni</span><b>${esc(gEu(X.T))}</b><em>${d0 == null ? `${X.nLoc} località · ${X.nReg} regioni` : `<i class="${d0 > 0 ? 'up' : 'dn'}">${d0 > 0 ? '▲' : '▼'} ${Math.abs(d0).toFixed(0)}%</i> sul mese prima · ${X.nLoc} località`}</em></div>${glsMapSvg(X)}</div>
+      <div class="m3-grid">${stat('Spedizioni', N(X.n), '', `${N(X.colli)} colli · ${(X.colli / X.n).toFixed(1).replace('.', ',')} per sped.`)}${stat('Medio spedizione', esc(gEu(X.T / X.n)), '', `${esc(gEu(X.T / Math.max(1, X.colli)))} a collo`)}
+      ${stat('Peso tassabile', N(Math.round(X.kt)), 'kg', `${X.vol >= 0 ? '+' : ''}${X.vol.toFixed(0)}% sul reale · ${(X.T * gK() / Math.max(1, X.kt)).toFixed(2).replace('.', ',')} €/kg`)}${stat('Consegna media', X.nGg ? X.ggAvg.toFixed(1).replace('.', ',') : '—', X.nGg ? 'gg' : '', X.nGg ? `${Math.round(X.in24 * 100)}% in 24 h · ${Math.round(X.in48 * 100)}% in 48 h` : 'giorni non registrati', X.nGg ? X.in48 : null)}</div>
+      ${X.m !== 'tutto' ? `<div class="m3-chips"><span class="m3-chip ${fm ? 'g' : 'a'}"><i></i>${fm ? 'Fattura del mese emessa' : 'Fattura del mese da emettere'}</span>${X.chk.length ? `<span class="m3-chip r"><i></i>${X.chk.length} da controllare</span>` : '<span class="m3-chip g"><i></i>nessuna anomalia</span>'}</div>` : ''}
+      <div class="m3-h4">Contratti</div>
+      <div class="m3-gsp">${X.con.map((c, i) => `<i class="c${i}" style="flex:${Math.max(c.t, cT * .03)}"></i>`).join('')}</div>
+      <div class="m3-gct">${X.con.map((c, i) => `<div><span><i class="c${i}"></i>${i ? 'C2 · pesante e pedane' : 'C1 · pacchi'}</span><b>${esc(gEu(c.t))}<em>${Math.round(c.t / cT * 100)}%</em></b><small>${c.n} sped. · ${N(c.colli)} colli · ${c.kt ? (c.t * gK() / c.kt).toFixed(2).replace('.', ',') + ' €/kg' : '—'}</small></div>`).join('')}</div>
+      <div class="m3-h4">Composizione del costo</div>
+      <div class="m3-gsp t">${X.comp.map((c, i) => `<i class="k${i}" style="flex:${Math.max(c[1], ct * .02)}"></i>`).join('')}</div>
+      <div class="m3-leg">${X.comp.map((c, i) => `<span><i class="m3-gk${i}"></i>${c[0]} ${Math.round(c[1] / ct * 100)}% · ${esc(gEu(c[1]))}</span>`).join('')}</div>
+      ${X.ser.length > 1 ? `<div class="m3-h4">Andamento mensile</div><div class="m3-b14 m3-b12" style="grid-template-columns:repeat(${X.ser.length},1fr)">${X.ser.map((s, i) => `<div title="${esc(mLab(s.k))}: ${esc(gEu(s.t))} · ${s.n} sped." data-gls="${s.k}" style="cursor:pointer"><i style="--h:${(s.t / mx * 100).toFixed(1)}%;--k:${i}"${s.k === X.m ? ' class="c"' : ''}></i><small>${MESL[Number(s.k.slice(5)) - 1].slice(0, 1).toUpperCase()}</small></div>`).join('')}</div>` : ''}
+      <div class="m3-h4">Destinazioni principali <em>${X.nLoc}</em></div>
+      <div class="m3-hb">${X.dest.slice(0, 8).map((d, i) => `<div style="--k:${i}"><span><b>${i + 1}. ${esc(d.c)} (${esc(d.p)})</b><small>${d.n} sped. · ${esc(gEu(d.t))}</small></span><u><i style="--w:${(d.t / mD * 100).toFixed(1)}%;--c:#e0b100"></i></u></div>`).join('')}</div>
+      <div class="m3-h4">Regioni <em>${X.nReg}</em></div>
+      <div class="m3-hb">${X.reg.slice(0, 6).map((r, i) => `<div style="--k:${i}"><span><b>${esc(r.k)}</b><small>${r.n} sped. · ${Math.round(r.t / Math.max(1, X.T) * 100)}% · ${esc(gEu(r.t))}</small></span><u><i style="--w:${(r.t / mR * 100).toFixed(1)}%;--c:#2f6db4"></i></u></div>`).join('')}</div>
+      ${X.chk.length ? `<div class="m3-h4">Anomalie e possibili risparmi <em>${X.chk.length}</em></div><div class="m3-rows">${X.chk.map(c => `<div class="m3-row m3-gan ${c.t}"><i class="m3-pi m3-dt" style="--c:${c.t === 'warn' ? '#d98a1c' : '#2f6db4'}">${ic('alert')}</i><span class="tx"><b>${esc(strip(c.h))}</b><small>${esc(strip(c.d))}</small></span><span class="m3-chip ${c.t === 'warn' ? 'a' : 'n'}">${esc(strip(c.v))}</span></div>`).join('')}</div>` : ''}
+      <div class="m3-h4">Centri di costo <em>${X.cdc.length}</em></div>
+      <div class="m3-kv">${X.cdc.slice(0, 8).map(c => `<div><span>${esc(c.k)} ${esc(c.nome)}${c.rd ? ` · <i class="m3-rd">${esc(c.rd)}</i>` : ''}</span><b>${esc(gEu(c.t))}</b></div>`).join('')}</div>
+      <div class="m3-h4">${q ? `Ricerca «${esc(Pn.q)}»` : 'Ultime spedizioni'} <em>${L2.length}</em></div>
+      <div class="m3-rows">${L2.slice(0, 30).map(shipRow).join('') || '<div class="m3-empty">Nessuna spedizione</div>'}</div>
+      <div class="m3-acts">${goBtn('gls', 'Apri la sezione GLS', 'truck')}<button type="button" class="m3-go ghost" data-m3="zspe">${ic('dock')}Banchine e camion</button></div></div>`;
+  }
+  function glsCard() {
+    if (!glsOk()) return ''; const X = glsData(GLSM);
+    return `<div class="m3-amm" style="grid-template-columns:minmax(0,1fr)"><button type="button" data-gls=""><i style="--c:#b58a00"><b style="font-weight:900">C</b></i><span><b>Corriere GLS</b><small>${X.n ? `${esc(mLab(X.m))} · ${X.n} spedizioni · ${esc(gEu(X.T))}${X.chk.length ? ' · ' + X.chk.length + ' da controllare' : ''}` : 'nessuna spedizione caricata'}</small></span></button></div>`;
+  }
+
   /* ---------------- ricevimento merci (v276): banchine fornitori, corsie di sosta, accettazione ---------------- */
   const hashS = s => { let h = 0; s = String(s || ''); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
   const dAgoN = d => { const a = new Date(String(d).slice(0, 10) + 'T12:00:00'), b = new Date(C.today() + 'T12:00:00'); return Math.round((b - a) / 864e5); };
@@ -2437,7 +2657,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       if (m.t !== 'fork' && m.o && m.o.userData && m.o.userData.rig) rigTick(m.o, t, dt);
     });
     if (hiMesh && hiMesh.visible) hiMesh.material.opacity = .25 + Math.sin(t * 4) * .12;
-    focusTick(t, dt); ricTick(t, dt); offTick(t, dt); canoTick(dt);
+    focusTick(t, dt); ricTick(t, dt); offTick(t, dt); canoTick(dt); glsTick(t, dt);
   }
 
   /* ---------------- interfaccia ---------------- */
@@ -2541,10 +2761,12 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         ${canW() ? `<button type="button" class="m3-go" data-gx="mov-new">${ic('check')}Rettifica di inventario</button>` : ''}
         <div class="m3-h4">Ultime rettifiche <em>${D.ret.length}</em></div><div class="m3-rows">${D.ret.slice(0, 16).map(mvRow).join('') || '<div class="m3-empty">Nessuna rettifica di inventario</div>'}</div></div>`;
     } else if (Pn.t === 'zone' && Pn.z === 'spe') {
-      h = head(ic('truck'), '', 'Zona', 'Spedizioni', 'Banchine · carico camion · consegne ai clienti', 1) + `<div class="m3-pb"><div class="m3-grid">
+      h = head(ic('truck'), '', 'Zona', 'Spedizioni', 'Banchine · carico camion · corriere · consegne ai clienti', 1) + `<div class="m3-pb">${glsCard()}<div class="m3-grid">
         ${stat('DDT del mese', D.ddtM.length, '', `${N(D.ddtM.reduce((s, x) => s + C.num(x.d.colli), 0))} colli`)}${stat('Da fatturare', D.ddt.filter(x => !x.d.fattura).length, '', 'DDT senza fattura', D.ddt.length ? D.ddt.filter(x => x.d.fattura).length / D.ddt.length : 0)}</div>
         <button type="button" class="m3-go" data-gx="ddt-new">${ic('plus')}Nuovo DDT</button>
         <div class="m3-h4">Spedizioni <em>${D.ddt.length}</em></div><div class="m3-rows">${D.ddt.slice(0, 20).map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" class="m3-row" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i class="m3-pi" style="width:30px;height:30px;border-radius:9px">${ic('truck')}</i><span class="tx"><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc([C.dIt(x.d.data), C.num(x.d.colli) ? N(C.num(x.d.colli)) + ' colli' : '', x.R.length + ' righe'].filter(Boolean).join(' · '))}</small></span>${x.d.fattura ? '<span class="m3-chip g"><i></i>Fatturato</span>' : '<span class="m3-chip a"><i></i>Da fatturare</span>'}</button>`; }).join('') || '<div class="m3-empty">Nessun DDT</div>'}</div></div>`;
+    } else if (Pn.t === 'gls') {
+      h = glsPanel(Pn); if (!h) return panel({ t: 'zone', z: 'spe' });
     } else if (Pn.t === 'acc') {
       h = accPanel(Pn); if (!h) return panel({ t: 'zone', z: 'uffe' });
     } else if (Pn.t === 'ofr' || (Pn.t === 'zone' && (Pn.z === 'uffe' || Pn.z === 'uff'))) {
@@ -2589,6 +2811,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     if (k.t === 'zone') { zoneChip(['ric', 'stk', 'pre', 'cq', 'spe', 'uffe', 'all', 'flotta'].includes(k.z) ? k.z : 'all'); if (!noFly) { const z = k.id && L.items.find(i => i.id === k.id); if (z && !['ric', 'pre', 'cq', 'spe'].includes(k.z)) flyT({ x: z.x, z: z.z, dist: Math.max(z.w, z.d) * 1.6 + 26, az: -0.6, pol: .92 }); else flyT(zoneTarget(k.z === 'uff' ? 'uffe' : k.z)); } }
     else if (k.t === 'rack') { zoneChip('stk'); const it = rackOf(k.id); if (it) { if (k.art) { const p2 = P.byArt.get(k.art); if (p2 && p2.rk === it) { hoverArt(null); focusCell(it, p2.b, p2.l, k.art); if (!noFly) rackView(it, cellLocal(it, p2.b, p2.l)); xrayFor(); } } else { if (!noFly) rackView(it); scanRack(it); xrayRack(it); } } }
     else if (k.t === 'ofr') { zoneChip('uffe'); OFT = k.kd; if (!noFly) offView(k.kd, k.id); else offFocus(k.kd, k.id); }
+    else if (k.t === 'gls') { zoneChip('spe'); if (k.m) { GLSM = k.m; if (GLS3) GLS3.X = glsData(GLSM); } if (!noFly && GLS3) fly({ tx: GLS3.wp.x, ty: 1.2, tz: GLS3.wp.z, dist: 25, az: GLS3.ry - 0.35, pol: .86 }); }
     else if (k.t === 'acc') { zoneChip('uffe'); const id = k.id === 'doc' ? 'doc' : 'cont'; if (!noFly) offView('acc', id); else offFocus('acc', id); }
     else if (k.t === 'ricl') { zoneChip('ric'); if (!k.key) return select({ t: 'zone', z: 'ric', id: k.id }, noFly); if (!noFly) ricView(k.key); else ricFocus(k.key); }
     else if (k.t === 'fuel') { zoneChip('flotta'); if (!noFly) { const F = FL(); fly({ tx: F.st.x + .5, ty: 1.4, tz: F.st.z + 1, dist: 30, az: -0.55, pol: 1.0 }); } }
@@ -2636,6 +2859,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       + Dd.map(x => { const i = trucks.findIndex(t => t.d === x); return `<button type="button" ${i >= 0 ? `data-trk3="${i}"` : `data-gx="ddt-pdf" data-id="${esc(x.d.id)}"`}><i>DDT</i><span><b>DDT ${esc(C.dnum(x.d))} · ${esc(x.cliN)}</b><small>${esc(C.dIt(x.d.data))}</small></span></button>`; }).join('')
       + (D.gas ? D.gas.V.filter(v => (v.p + ' ' + plFmt(v.p) + ' ' + v.name + ' ' + v.drv.join(' ')).toLowerCase().includes(s)).slice(0, 4).map(v => `<button type="button" data-veh3="${esc(v.p)}"><i>${ic('van', ' style="width:16px;height:16px"')}</i><span><b>${esc(plFmt(v.p))}${v.name ? ' · ' + esc(v.name) : ''}</b><small>${N(Math.round(v.lM))} L nel mese${v.drv.length ? ' · ' + esc(v.drv.join(', ')) : ''}</small></span></button>`).join('') : '')
       + (OFF ? [...OFF.OD.CL, ...OFF.OD.FR].filter(e => (e.name + ' ' + e.city + ' ' + ((e.o && e.o.piva) || '')).toLowerCase().includes(s)).slice(0, 5).map(e => `<button type="button" data-ofr="${e.kd}:${esc(e.id)}"><i>${e.kd === 'cli' ? 'CLI' : 'FOR'}</i><span><b>${esc(e.name)}</b><small>${esc([e.kd === 'cli' ? 'cliente' : 'fornitore', e.room ? 'ufficio ' + e.room : '', stTxt(e)].filter(Boolean).join(' · '))}</small></span></button>`).join('') : '')
+      + (glsOk() ? (() => { const all = C.gls() || [], kw = 'gls corriere spedizioni spedizione pacchi'.includes(s) || s.includes('gls') || s.includes('corrier'); const hits = s.length > 2 ? all.filter(r => `${r.destinatario} ${r.citta} ${r.nsped} ${r.rif}`.toLowerCase().includes(s)).slice(0, 4) : []; return (kw ? `<button type="button" data-gls=""><i>GLS</i><span><b>Corriere GLS</b><small>costi, destinazioni, contratti e controlli</small></span></button>` : '') + hits.map(r => `<button type="button" data-gls="${esc(r.mese || '')}" data-glsq="${esc(r.nsped || r.destinatario || '')}"><i>GLS</i><span><b>${esc(r.destinatario || '—')} · ${esc(r.citta || '')}</b><small>${esc([r.nsped, C.dIt(r.data), gEu(r.totale)].filter(Boolean).join(' · '))}</small></span></button>`).join(''); })() : '')
       + (ACC ? [['cont', 'Contabilità', 'conto economico · iva · scadenze', 'contabilita contabilità iva scadenze scadenzario utile ricavi costi bilancio conto economico amministrazione'], ['doc', 'Archivio documenti', `${ACC.X.tot} documenti`, 'archivio documenti fatture ddt righe costo amministrazione']].filter(r => r[3].includes(s) || r[1].toLowerCase().includes(s)).map(r => `<button type="button" data-acc="${r[0]}"><i>AMM</i><span><b>${r[1]}</b><small>${esc(r[2])}</small></span></button>`).join('') : '')
       + zs.map(z => `<button type="button" data-zsel="${z}"><i>${ZN(z)[1]}</i><span><b>${ZN(z)[0]}</b><small>reparto</small></span></button>`).join('');
     res.innerHTML = h || '<p>Nessun risultato</p>'; res.classList.add('on');
@@ -3052,6 +3276,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const fg = t.closest('[data-fgo]'); if (fg) { const [z, tb] = fg.dataset.fgo.split(':'); if (tb) OFT = tb; select({ t: 'zone', z }); return; }
     const sh = t.closest('[data-shot]'); if (sh) { stopTour(); const k = sh.dataset.shot, z = zoneTarget('stk'); ({ all: () => select({ t: 'zone', z: 'all' }), top: () => fly({ tx: 0, tz: 0, dist: Math.max(L.W, L.D) * 2.2, az: 0, pol: .12 }), stk: () => { const r = P.racks.find(x => x.k === 'pallet') || P.racks[0]; if (r) { const g = rackG(r.id); g.updateMatrixWorld(); const p2 = g.localToWorld(new T.Vector3(-rackLen(r) / 2 - 3, 0, rackDep(r) / 2 + 1.7)); fly({ tx: p2.x + 6, ty: 2.5, tz: p2.z, dist: 12, az: r.r * Math.PI / 2 - 1.3, pol: 1.3 }); } }, spe: () => flyT(zoneTarget('spe')), pre: () => flyT(zoneTarget('pre')), low: () => fly({ tx: 0, tz: 4, dist: Math.max(L.W, L.D) * 1.6, az: -0.75, pol: 1.22 }) })[k](); return; }
     const ofr = t.closest('[data-ofr]'); if (ofr) { $('.m3-res').classList.remove('on'); const [kd, ...r2] = ofr.dataset.ofr.split(':'); select({ t: 'ofr', kd, id: r2.join(':') }); return; }
+    const glb = t.closest('[data-gls]'); if (glb) { $('.m3-res').classList.remove('on'); select({ t: 'gls', m: glb.dataset.gls || GLSM, q: glb.dataset.glsq || '' }, !!(sel && sel.t === 'gls') && !glb.dataset.glsq); return; }
     const acb = t.closest('[data-acc]'); if (acb) { $('.m3-res').classList.remove('on'); const [id, ty] = acb.dataset.acc.split(':'); select({ t: 'acc', id, ty: ty || '' }, !!(sel && sel.t === 'acc' && sel.id === id)); return; }
     const oft = t.closest('[data-oft]'); if (oft) { OFT = oft.dataset.oft; panel(sel); return; }
     const rv = t.closest('[data-rcv3]'); if (rv) { $('.m3-res').classList.remove('on'); const z = L.items.find(i => i.t === 'zone' && i.k === 'ric'); select({ t: 'ricl', key: rv.dataset.rcv3, id: z && z.id }); return; }
