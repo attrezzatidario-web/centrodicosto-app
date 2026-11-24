@@ -1,4 +1,4 @@
-/* Magazzino 3D (v285) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
+/* Magazzino 3D (v286) — magazzino 3D interattivo collegato ai dati reali, con editor della disposizione.
    Caricato con loadLib da app.js (mag3d) dopo three.js. Espone window.CDC_MG3D = { open(ctx), refresh(), close(), isOpen() }.
    Disposizione salvata in Config «mg3d:<magazzino>» = { v, W, D, items:[…], loc:{ idArticolo: { r, b, l } } }.
    items: rack (portapallet / ripiani), zone, dock (banchina), wall (muro), belt (nastro), desk (bancone).
@@ -602,7 +602,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
 
   /* ---------------- materiali e texture ---------------- */
   const G = {}, M = {}, TX = {}, OWN = [];
-  function mat(c, o) { const k = c + (o ? JSON.stringify(o) : ''); return M[k] || (M[k] = new T.MeshLambertMaterial({ color: c, ...(o || {}) })); }
+  function mat(c, o) { const k = c + (o ? JSON.stringify(o) : ''); if (M[k]) return M[k]; const m = M[k] = new T.MeshLambertMaterial({ color: c, ...(o || {}) }); if (!o) m.__sh = 1; return m; }
   function cvTex(w, h, fn, rep) { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 8; if (rep) { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; }
   const rr = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
   function textures() {
@@ -643,6 +643,40 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   }
   function mesh(geo, material, x, y, z, p, o) { const m = new T.Mesh(geo, material); m.position.set(x, y, z); if (o && o.s) m.scale.set(...o.s); if (o && o.ry) m.rotation.y = o.ry; if (o && o.rx) m.rotation.x = o.rx; if (o && o.rz) m.rotation.z = o.rz; m.castShadow = !(o && o.ns); m.receiveShadow = true; p.add(m); return m; }
   const bx = (p, w, h, d, c, x, y, z, o) => mesh(G.box, typeof c === 'object' ? c : mat(c), x, y + h / 2, z, p, { ...(o || {}), s: [w, h, d] });
+  // v286: le chiamate «a perdere» (risultato non usato) segnano la mesh come statica; mergeStatic le fonde per gruppo e materiale (molte meno chiamate di disegno)
+  const bxS = (...a) => { const m = bx(...a); m.__s = 1; return m; };
+  const meshS = (...a) => { const m = mesh(...a); m.__s = 1; return m; };
+  function mergeStatic(root) {
+    const pk = new Set(pick), groups = [], v = new T.Vector3(), nm = new T.Matrix3();
+    root.traverse(o => { if (!o.isMesh) groups.push(o); });
+    for (const p of groups) {
+      const bk = new Map();
+      for (const c of p.children) {
+        if (!c.__s || !c.isMesh || c.isInstancedMesh || c.children.length || !c.visible || Array.isArray(c.material) || pk.has(c) || Object.keys(c.userData).length) continue;
+        const g = c.geometry; if (!g.attributes.position || !g.attributes.normal || g.attributes.position.isInterleavedBufferAttribute) continue;
+        const mt = c.material, vc = mt.__sh && mt.isMeshLambertMaterial && !mt.map && !mt.transparent && mt.side === T.FrontSide;
+        const k = (vc ? 'VC' : mt.uuid + '|' + (g.attributes.uv ? 1 : 0)) + '|' + c.castShadow + '|' + c.receiveShadow + '|' + c.renderOrder;
+        let a = bk.get(k); if (!a) bk.set(k, a = []); a.push(c);
+      }
+      for (const a of bk.values()) {
+        if (a.length < 2) continue;
+        let nv = 0, ni = 0; for (const c of a) { const g = c.geometry; nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+        const vc = a[0].material.__sh && !a[0].material.map && !a[0].material.transparent && a[0].material.side === T.FrontSide && a.every(c => c.material.__sh), C3 = vc ? new Float32Array(nv * 3) : null;
+        if (!vc && a.some(c => c.material !== a[0].material)) continue;
+        const hasUv = !vc && !!a[0].geometry.attributes.uv, P3 = new Float32Array(nv * 3), N3 = new Float32Array(nv * 3), U2 = hasUv ? new Float32Array(nv * 2) : null, I = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+        let vo = 0, io = 0;
+        for (const c of a) {
+          c.updateMatrix(); const mm = c.matrix, g = c.geometry, pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv, flip = mm.determinant() < 0; nm.getNormalMatrix(mm);
+          for (let i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i).applyMatrix4(mm); P3[(vo + i) * 3] = v.x; P3[(vo + i) * 3 + 1] = v.y; P3[(vo + i) * 3 + 2] = v.z; v.fromBufferAttribute(na, i).applyMatrix3(nm).normalize(); N3[(vo + i) * 3] = v.x; N3[(vo + i) * 3 + 1] = v.y; N3[(vo + i) * 3 + 2] = v.z; if (U2) { U2[(vo + i) * 2] = ua.getX(i); U2[(vo + i) * 2 + 1] = ua.getY(i); } if (C3) { const cc = c.material.color; C3[(vo + i) * 3] = cc.r; C3[(vo + i) * 3 + 1] = cc.g; C3[(vo + i) * 3 + 2] = cc.b; } }
+          const cnt = g.index ? g.index.count : pa.count;
+          for (let i = 0; i < cnt; i += 3) { const i0 = g.index ? g.index.getX(i) : i, i1 = g.index ? g.index.getX(i + 1) : i + 1, i2 = g.index ? g.index.getX(i + 2) : i + 2; I[io++] = vo + i0; I[io++] = vo + (flip ? i2 : i1); I[io++] = vo + (flip ? i1 : i2); }
+          vo += pa.count; p.remove(c);
+        }
+        const bg = new T.BufferGeometry(); bg.setAttribute('position', new T.BufferAttribute(P3, 3)); bg.setAttribute('normal', new T.BufferAttribute(N3, 3)); if (U2) bg.setAttribute('uv', new T.BufferAttribute(U2, 2)); if (C3) bg.setAttribute('color', new T.BufferAttribute(C3, 3)); bg.setIndex(new T.BufferAttribute(I, 1)); bg.computeBoundingSphere(); bg.computeBoundingBox(); OWN.push(bg);
+        const m = new T.Mesh(bg, vc ? (M.__vc || (M.__vc = new T.MeshLambertMaterial({ vertexColors: true }))) : a[0].material); m.castShadow = a[0].castShadow; m.receiveShadow = a[0].receiveShadow; m.renderOrder = a[0].renderOrder; m.__mg = 1; p.add(m);
+      }
+    }
+  }
   function textTex(lines, o) {
     o = o || {}; const W = o.w || 512, H = o.h || 128;
     const t = cvTex(W, H, g => { if (o.bg) { g.fillStyle = o.bg; if (o.round) { g.beginPath(); g.roundRect(0, 0, W, H, o.round); g.fill(); } else g.fillRect(0, 0, W, H); } g.fillStyle = o.color || '#fff'; g.textAlign = o.align || 'center'; g.textBaseline = 'middle'; lines.forEach(([t2, size, wgt, y, x, col]) => { g.font = `${wgt || 700} ${size}px Inter, system-ui, sans-serif`; if (col) g.fillStyle = col; g.fillText(t2, x != null ? x : W / 2, y != null ? y : H / 2); }); });
@@ -677,25 +711,25 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const gnd = new T.Mesh(new T.PlaneGeometry(1600, 1600), new T.MeshLambertMaterial({ map: TX.grass })); gnd.rotation.x = -Math.PI / 2; gnd.receiveShadow = true; P2.add(gnd); OWN.push(gnd.geometry, gnd.material);
     [[-190, -170, 130, 0xb3dc80], [40, -250, 160, 0xa9d775], [250, -130, 120, 0x9ccf68], [-280, 60, 130, 0xb0da7c], [-130, 210, 100, 0x94c95f], [230, 190, 110, 0xa4d36f]].forEach(([x, z, r, c]) => { const h = mesh(G.sph, mat(c), x, -r * .06, z, P2, { s: [r * 2, r * .44, r * 2], ns: 1 }); h.castShadow = false; });
     // piazzale esterno, strade
-    bx(P2, W + 26, .12, Dd + 20, 0xe7e6e2, 2, 0, 2, { ns: 1 });
+    bxS(P2, W + 26, .12, Dd + 20, 0xe7e6e2, 2, 0, 2, { ns: 1 });
     const yardW = 30, rz = hd + 31;
     const yard = mesh(G.box, new T.MeshLambertMaterial({ color: 0x575c64 }), hw + yardW / 2 + .5, .08, 0, P2, { s: [yardW, .16, Dd + 18], ns: 1 }); OWN.push(yard.material);
-    bx(P2, 11, .15, rz - 5.7 - hd - 9, 0x575c64, hw + 18, 0, (hd + 9 + rz - 5.7) / 2, { ns: 1 });
+    bxS(P2, 11, .15, rz - 5.7 - hd - 9, 0x575c64, hw + 18, 0, (hd + 9 + rz - 5.7) / 2, { ns: 1 });
     const road = mesh(G.box, new T.MeshLambertMaterial({ map: TX.road }), 0, .07, rz, P2, { s: [1600, .14, 11], ns: 1 }); OWN.push(road.material);
     const B2 = new Batch(P2), dsh = (x, z, w, d) => B2.add('dash', G.box, mat(0xf4f4f2), m4(x, .16, z, w, .04, d));
     for (let x = -360; x < 360; x += 9) dsh(x, rz, 4, .3);
-    for (let x = -800; x < 800; x += 800) { bx(P2, 1600, .1, .45, 0xe9e7df, 0, 0, rz - 5.8, { ns: 1 }); bx(P2, 1600, .1, .45, 0xe9e7df, 0, 0, rz + 5.8, { ns: 1 }); break; }
+    for (let x = -800; x < 800; x += 800) { bxS(P2, 1600, .1, .45, 0xe9e7df, 0, 0, rz - 5.8, { ns: 1 }); bxS(P2, 1600, .1, .45, 0xe9e7df, 0, 0, rz + 5.8, { ns: 1 }); break; }
     // linee del piazzale camion
     for (let i = 0; i < 7; i++) dsh(hw + 20, -hd + 2 + i * (Dd - 4) / 6, 12, .22);
     // sfera arancione all'ingresso
-    const orb = mesh(G.sph, mat(0xf47b20), 0, 3.6, hd + 10, P2, { s: [4.4, 4.4, 4.4] }); bx(P2, 4, .8, 4, 0x2b2f35, 0, 0, hd + 10); movers.push({ o: orb, t: 'float', y: 3.6 });
+    const orb = mesh(G.sph, mat(0xf47b20), 0, 3.6, hd + 10, P2, { s: [4.4, 4.4, 4.4] }); bxS(P2, 4, .8, 4, 0x2b2f35, 0, 0, hd + 10); movers.push({ o: orb, t: 'float', y: 3.6 });
     // alberi
     const free = (x, z) => !(x > -hw - 42 && x < hw + yardW + 6 && z > -hd - 14 && z < hd + 24) && !(z > rz - 9 && z < rz + 9) && !(x > hw + 10 && x < hw + 26 && z > hd && z < rz);
     let n = 0; while (n < 680) { const near = rr() < .38, x = (rr() - .5) * (near ? W + 160 : 620), z = (rr() - .5) * (near ? Dd + 140 : 480) - (near ? 5 : 30); if (!free(x, z)) continue; n++; const s = .55 + rr() * .6;
       if (rr() < .22) B2.add('pine', G.pine, mat(0x4f9a43), m4(x, 0, z, s, s * 1.15, s)); else { B2.add('tree', G.tree, mat(0xffffff), m4(x, 2.6 * s + 1.1, z, s, s, s), [0x7cbf4f, 0x8cc95a, 0x6fb347, 0x98cf62][Math.floor(rr() * 4)]); B2.add('trunk', G.trunk, mat(0x8a6a4f), m4(x, 0, z, s, s, s)); } }
     for (let i = 0; i < 28; i++) B2.add('bush', G.tree, mat(0x86c457), m4(-hw + 2 + i * (W - 4) / 27, .7, hd + 3.2 + (i % 2) * .6, .5, .42, .5));
     buildOutdoor(P2, hw, hd, rz, yardW);
-    B2.flush();
+    B2.flush(); mergeStatic(ENV);
   }
 
   /* ---------------- esterni (v285): prato, giardino con laghetto e fontana, recinzione, cancello, bandiere, insegna, lampioni, traffico, cielo ---------------- */
@@ -715,22 +749,22 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   // automobile generica (stesso profilo delle auto aziendali, colore libero, senza livrea)
   function plainCar(par, color) {
     const P = VP.car, g = new T.Group(); par.add(g); const bev = .09, glass = M.glass || (M.glass = new T.MeshLambertMaterial({ color: 0x2c3e55 }));
-    mesh(vgeo('vb_car', P.body, P.w - 2 * bev, bev), mat(color), 0, 0, 0, g); mesh(vgeo('vg_car', P.side, P.w + .06, 0), glass, 0, 0, 0, g, { ns: 1 });
-    P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) mesh(G.cyl, mat(0x15171a), wx, r, s * (P.w / 2 - .12), g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2, ns: 1 }); });
-    for (const s of [-1, 1]) { mesh(G.box, mat(0xfff3d1), 2.33, .7, s * (P.w / 2 - .3), g, { s: [.05, .13, .3], ns: 1 }); mesh(G.box, mat(0xd8322a), -2.36, .82, s * (P.w / 2 - .14), g, { s: [.05, .2, .16], ns: 1 }); }
+    meshS(vgeo('vb_car', P.body, P.w - 2 * bev, bev), mat(color), 0, 0, 0, g); meshS(vgeo('vg_car', P.side, P.w + .06, 0), glass, 0, 0, 0, g, { ns: 1 });
+    P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) meshS(G.cyl, mat(0x15171a), wx, r, s * (P.w / 2 - .12), g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2, ns: 1 }); });
+    for (const s of [-1, 1]) { meshS(G.box, mat(0xfff3d1), 2.33, .7, s * (P.w / 2 - .3), g, { s: [.05, .13, .3], ns: 1 }); meshS(G.box, mat(0xd8322a), -2.36, .82, s * (P.w / 2 - .14), g, { s: [.05, .2, .16], ns: 1 }); }
     return g;
   }
   function bench(par, x, z, ry) {
     const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = ry; par.add(g);
-    for (let i = 0; i < 3; i++) bx(g, 1.8, .05, .14, 0xb98756, 0, .46, -.2 + i * .17, { ns: 1 });
-    for (let i = 0; i < 2; i++) bx(g, 1.8, .12, .04, 0xb98756, 0, .62 + i * .17, -.34, { ns: 1, rx: -.12 });
-    for (const sx of [-.75, .75]) { bx(g, .06, .46, .5, 0x2b2f35, sx, 0, -.05); bx(g, .06, .4, .05, 0x2b2f35, sx, .5, -.33, { ns: 1 }); }
+    for (let i = 0; i < 3; i++) bxS(g, 1.8, .05, .14, 0xb98756, 0, .46, -.2 + i * .17, { ns: 1 });
+    for (let i = 0; i < 2; i++) bxS(g, 1.8, .12, .04, 0xb98756, 0, .62 + i * .17, -.34, { ns: 1, rx: -.12 });
+    for (const sx of [-.75, .75]) { bxS(g, .06, .46, .5, 0x2b2f35, sx, 0, -.05); bxS(g, .06, .4, .05, 0x2b2f35, sx, .5, -.33, { ns: 1 }); }
     return g;
   }
   function ornTree(par, x, z, s, col) {
     const g = new T.Group(); g.position.set(x, 0, z); par.add(g);
-    mesh(G.trunk, mat(0x7a5a40), 0, 0, 0, g, { s: [s * .8, s, s * .8] });
-    mesh(G.tree, mat(col), 0, 2.6 * s + .9, 0, g, { s: [s * .82, s * .9, s * .82] }); mesh(G.tree, mat(mixC(col, 0xffffff, .12)), .5 * s, 2.9 * s + 1.4, .3 * s, g, { s: [s * .5, s * .5, s * .5] });
+    meshS(G.trunk, mat(0x7a5a40), 0, 0, 0, g, { s: [s * .8, s, s * .8] });
+    meshS(G.tree, mat(col), 0, 2.6 * s + .9, 0, g, { s: [s * .82, s * .9, s * .82] }); meshS(G.tree, mat(mixC(col, 0xffffff, .12)), .5 * s, 2.9 * s + 1.4, .3 * s, g, { s: [s * .5, s * .5, s * .5] });
     movers.push({ o: g, t: 'sway', ph: rr() * 6, a: .018 + rr() * .012 }); return g;
   }
   function buildOutdoor(P2, hw, hd, rz, yardW) {
@@ -741,51 +775,51 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const gaps = [[-hw - 25.3, -hw - 15.7], [ox - 7.2, ox + 7.2], [gx0 - 5.7, gx0 + 5.7]], segs = []; let x0 = -420;
     gaps.sort((a, b) => a[0] - b[0]).forEach(([a, b]) => { segs.push([x0, a]); x0 = b; }); segs.push([x0, 420]);
     const pvM = new T.MeshLambertMaterial({ map: paveTex() }); OWN.push(pvM);
-    segs.forEach(([a, b]) => { if (b - a < .5) return; const w = b - a, m2 = pvM.clone(); m2.map = paveTex().clone(); m2.map.needsUpdate = true; m2.map.repeat.set(w / 2.4, 1); OWN.push(m2, m2.map); mesh(G.box, m2, (a + b) / 2, .1, zW, P2, { s: [w, .2, 2.2], ns: 1 }).receiveShadow = true; bx(P2, w, .24, .22, 0xbdb9b0, (a + b) / 2, 0, zW + 1.2, { ns: 1 }); });
+    segs.forEach(([a, b]) => { if (b - a < .5) return; const w = b - a, m2 = pvM.clone(); m2.map = paveTex().clone(); m2.map.needsUpdate = true; m2.map.repeat.set(w / 2.4, 1); OWN.push(m2, m2.map); meshS(G.box, m2, (a + b) / 2, .1, zW, P2, { s: [w, .2, 2.2], ns: 1 }).receiveShadow = true; bxS(P2, w, .24, .22, 0xbdb9b0, (a + b) / 2, 0, zW + 1.2, { ns: 1 }); });
     // vialetto pedonale fino agli uffici e cancello pedonale
-    bx(P2, 2.6, .14, zW - 1.1 - (hd + 24.9), 0xd9d5cc, ox, 0, (zW - 1.1 + hd + 24.9) / 2, { ns: 1 });
+    bxS(P2, 2.6, .14, zW - 1.1 - (hd + 24.9), 0xd9d5cc, ox, 0, (zW - 1.1 + hd + 24.9) / 2, { ns: 1 });
     // ---- giardino con laghetto e fontana (al posto del parcheggio)
     const pcx = -hw * .45, pcz = hd + 16.9;
-    bx(P2, 13.2, .16, 11, 0xe4dccb, pcx, 0, pcz, { ns: 1 });
-    mesh(G.cyl, mat(0xbfb9ad), pcx, .32, pcz, P2, { s: [9.0, .32, 9.0] });
+    bxS(P2, 13.2, .16, 11, 0xe4dccb, pcx, 0, pcz, { ns: 1 });
+    meshS(G.cyl, mat(0xbfb9ad), pcx, .32, pcz, P2, { s: [9.0, .32, 9.0] });
     const wm = new T.MeshLambertMaterial({ map: waterTex(), transparent: true, opacity: .94 }); OWN.push(wm); const wtr = mesh(G.cyl, wm, pcx, .42, pcz, P2, { s: [8.2, .2, 8.2], ns: 1 }); wtr.receiveShadow = true;
     const rim = new T.Mesh(new T.TorusGeometry(4.2, .26, 8, 48), mat(0xd9d4c8)); OWN.push(rim.geometry); rim.rotation.x = Math.PI / 2; rim.position.set(pcx, .52, pcz); rim.castShadow = true; P2.add(rim);
     movers.push({ t: 'tex', tx: wm.map, sx: .012, sy: .007 });
     // fontana: vasca centrale e getti d'acqua animati
-    mesh(G.cyl, mat(0xd9d4c8), pcx, .75, pcz, P2, { s: [1.1, .9, 1.1] }); mesh(G.cyl, mat(0xd9d4c8), pcx, 1.25, pcz, P2, { s: [2.3, .18, 2.3] }); mesh(G.cyl, new T.MeshLambertMaterial({ color: 0x6cc0e0 }), pcx, 1.33, pcz, P2, { s: [2.0, .04, 2.0], ns: 1 });
+    meshS(G.cyl, mat(0xd9d4c8), pcx, .75, pcz, P2, { s: [1.1, .9, 1.1] }); meshS(G.cyl, mat(0xd9d4c8), pcx, 1.25, pcz, P2, { s: [2.3, .18, 2.3] }); meshS(G.cyl, new T.MeshLambertMaterial({ color: 0x6cc0e0 }), pcx, 1.33, pcz, P2, { s: [2.0, .04, 2.0], ns: 1 });
     { const nD = lite ? 36 : 84, dm = new T.MeshLambertMaterial({ color: 0xe3f5ff, transparent: true, opacity: .85 }); OWN.push(dm); const im = new T.InstancedMesh(G.sph, dm, nD); im.frustumCulled = false; P2.add(im);
       const rings = [0, 1, 2].map(i => { const m2 = new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .4, depthWrite: false }); OWN.push(m2); const r = new T.Mesh(new T.TorusGeometry(1, .035, 4, 40), m2); OWN.push(r.geometry); r.rotation.x = Math.PI / 2; r.position.set(pcx, .54, pcz); P2.add(r); return r; });
       movers.push({ t: 'ftn', im, n: nD, cx: pcx, cz: pcz, rings }); }
     // panchine, aiuole fiorite, alberi ornamentali, lampioncini
     [[0, -5.0, 0], [0, 5.0, Math.PI], [-5.6, 0, Math.PI / 2], [5.6, 0, -Math.PI / 2]].forEach(([dx, dz, ry]) => bench(P2, pcx + dx, pcz + dz, ry));
     const FC = [0xf06292, 0xffffff, 0xffd54f, 0xba68c8, 0xff8a65, 0x64b5f6];
-    [[-6.3, -4.4], [6.3, -4.4], [-6.3, 4.4], [6.3, 4.4], [-8.5, 0], [8.5, 0]].forEach(([dx, dz], k) => { const fx = pcx + dx, fz = pcz + dz; mesh(G.cyl, mat(0xbfb9ad), fx, .14, fz, P2, { s: [2.25, .28, 2.25], ns: 1 }); mesh(G.cyl, mat(0x6b4a33), fx, .3, fz, P2, { s: [2.0, .06, 2.0], ns: 1 });
+    [[-6.3, -4.4], [6.3, -4.4], [-6.3, 4.4], [6.3, 4.4], [-8.5, 0], [8.5, 0]].forEach(([dx, dz], k) => { const fx = pcx + dx, fz = pcz + dz; meshS(G.cyl, mat(0xbfb9ad), fx, .14, fz, P2, { s: [2.25, .28, 2.25], ns: 1 }); meshS(G.cyl, mat(0x6b4a33), fx, .3, fz, P2, { s: [2.0, .06, 2.0], ns: 1 });
       for (let i = 0; i < (lite ? 10 : 22); i++) { const a = rr() * Math.PI * 2, r = rr() * .85; B.add('flw', G.sph, mat(0xffffff), m4(fx + Math.cos(a) * r, .42 + rr() * .12, fz + Math.sin(a) * r, .2, .16, .2), FC[(i + k) % FC.length]); B.add('flwl', G.sph, mat(0x5e9e4a), m4(fx + Math.cos(a + .4) * r * .9, .34, fz + Math.sin(a + .4) * r * .9, .24, .14, .24)); } });
     [[-10.5, -4.6], [-10.5, 4.4], [10.5, -4.6], [10.5, 4.4], [13.6, 0]].forEach(([dx, dz], i) => ornTree(P2, pcx + dx, pcz + dz, .78 + (i % 3) * .1, [0x7cbf4f, 0xf3a6c0, 0x6fb347, 0x98cf62, 0xe9b3c9][i]));
     for (const [dx, dz] of [[-6.6, -5.5], [6.6, -5.5], [-6.6, 5.5], [6.6, 5.5]]) { B.add('bol', G.cyl, mat(0x2b2f35), m4(pcx + dx, .5, pcz + dz, .16, .9, .16)); B.add('bolL', G.cyl, new T.MeshBasicMaterial({ color: 0xfff2cc }), m4(pcx + dx, 1.0, pcz + dz, .18, .12, .18)); }
     // siepi basse lungo il prato
-    for (const [x, z, w, d] of [[-hw - 7, zW - 1.9, 6, .7], [ox - 11.5, zW - 1.9, 6.5, .7], [ox + 11.5, zW - 1.9, 6.5, .7], [hw - 1, zW - 1.9, 8, .7]]) { bx(P2, w, .9, d, 0x5f9e45, x, 0, z); bx(P2, w - .2, .12, d - .2, 0x6fb24f, x, .9, z, { ns: 1 }); }
+    for (const [x, z, w, d] of [[-hw - 7, zW - 1.9, 6, .7], [ox - 11.5, zW - 1.9, 6.5, .7], [ox + 11.5, zW - 1.9, 6.5, .7], [hw - 1, zW - 1.9, 8, .7]]) { bxS(P2, w, .9, d, 0x5f9e45, x, 0, z); bxS(P2, w - .2, .12, d - .2, 0x6fb24f, x, .9, z, { ns: 1 }); }
     // ---- bandiere al vento (Italia, Europa, azienda)
     [['it', 1.2], ['eu', 3.5], ['co', 5.8]].forEach(([k, x], i) => {
-      const fx = x, fz = hd + 21; bx(P2, .9, .3, .9, 0xcfcac0, fx, 0, fz); mesh(G.cyl, mat(0xf2f3f5), fx, 4.75, fz, P2, { s: [.13, 9, .13] }); mesh(G.sph, mat(0xd9b24a), fx, 9.3, fz, P2, { s: [.22, .22, .22], ns: 1 });
+      const fx = x, fz = hd + 21; bxS(P2, .9, .3, .9, 0xcfcac0, fx, 0, fz); meshS(G.cyl, mat(0xf2f3f5), fx, 4.75, fz, P2, { s: [.13, 9, .13] }); meshS(G.sph, mat(0xd9b24a), fx, 9.3, fz, P2, { s: [.22, .22, .22], ns: 1 });
       const geo = new T.PlaneGeometry(2.6, 1.7, 16, 8).translate(1.3, 0, 0); OWN.push(geo); const fm = new T.MeshLambertMaterial({ map: flagTex(k), side: T.DoubleSide }); OWN.push(fm);
       const fl = new T.Mesh(geo, fm); fl.position.set(fx + .07, 8.25, fz); fl.rotation.y = -.25; fl.castShadow = true; P2.add(fl);
       movers.push({ t: 'flag', geo, base: Float32Array.from(geo.attributes.position.array), ph: i * 1.7, n: 0 }); });
     // ---- insegna monolitica all'ingresso merci
-    { const mx = hw + 8.5, mz = hd + 21.2; bx(P2, 3.2, .35, 1.6, 0xcfcac0, mx, 0, mz); bx(P2, 2.2, 5.6, .7, 0x1d1f22, mx, .35, mz); bx(P2, .25, 5.6, .74, 0xf47b20, mx - .99, .35, mz, { ns: 1 });
-      const t2 = textTex([[String(C.orgName() || '').toUpperCase().slice(0, 18), 38, 800, 52, null, '#ffffff'], ['INGRESSO MERCI', 26, 700, 110, null, '#f47b20'], ['Accettazione · Spedizioni', 22, 600, 150, null, 'rgba(255,255,255,.75)']], { w: 360, h: 190 });
-      planeT(t2, 1.85, .98, P2, mx + .1, 4.6, mz + .365); planeT(t2, 1.85, .98, P2, mx + .1, 4.6, mz - .365, { ry: Math.PI });
-      for (const s of [-1, 1]) { mesh(G.cyl, mat(0x6b4a33), mx + s * 2.3, .2, mz + .9, P2, { s: [1.1, .4, 1.1], ns: 1 }); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; B.add('flw', G.sph, mat(0xffffff), m4(mx + s * 2.3 + Math.cos(a) * .32, .5, mz + .9 + Math.sin(a) * .32, .18, .15, .18), FC[i % FC.length]); } } }
+    { const mx = hw + 8.5, mz = hd + 21.2; bxS(P2, 3.2, .35, 1.6, 0xcfcac0, mx, 0, mz); bxS(P2, 2.2, 5.6, .7, 0x1d1f22, mx, .35, mz); bxS(P2, .25, 5.78, .76, 0xf47b20, mx - 1.0, .35, mz, { ns: 1 });
+      const on = String(C.orgName() || '').toUpperCase().slice(0, 22), t2 = textTex([[on, Math.max(18, Math.min(34, Math.floor(640 / Math.max(1, on.length)))), 800, 52, null, '#ffffff'], ['INGRESSO MERCI', 26, 700, 110, null, '#f47b20'], ['Accettazione · Spedizioni', 22, 600, 150, null, 'rgba(255,255,255,.75)']], { w: 360, h: 190 });
+      planeT(t2, 1.85, .98, P2, mx + .1, 4.6, mz + .362); planeT(t2, 1.85, .98, P2, mx + .1, 4.6, mz - .362, { ry: Math.PI });
+      for (const s of [-1, 1]) { meshS(G.cyl, mat(0x6b4a33), mx + s * 2.3, .2, mz + .9, P2, { s: [1.1, .4, 1.1], ns: 1 }); for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; B.add('flw', G.sph, mat(0xffffff), m4(mx + s * 2.3 + Math.cos(a) * .32, .5, mz + .9 + Math.sin(a) * .32, .18, .15, .18), FC[i % FC.length]); } } }
     // ---- portineria e sbarra sull'accesso camion (si alza quando esce un'auto)
     const gz = hd + 20.5, gpx = gx0 + 5.9;
-    { const hx = gx0 + 8.6; bx(P2, 3.6, .3, 3.2, 0xcfcac0, hx, 0, gz); bx(P2, 3.2, 2.6, 2.8, 0xf4f5f6, hx, .3, gz); for (const s of [-1, 1]) { bx(P2, 2.6, 1.3, .04, 0x2c3e55, hx, 1.2, gz + s * 1.42, { ns: 1 }); bx(P2, .04, 1.3, 2.2, 0x2c3e55, hx + s * 1.62, 1.2, gz, { ns: 1 }); }
-      bx(P2, 4.2, .28, 3.8, 0xffffff, hx, 2.9, gz); bx(P2, 4.24, .12, 3.84, 0xf47b20, hx, 3.0, gz, { ns: 1 });
+    { const hx = gx0 + 8.6; bxS(P2, 3.6, .3, 3.2, 0xcfcac0, hx, 0, gz); bxS(P2, 3.2, 2.6, 2.8, 0xf4f5f6, hx, .3, gz); for (const s of [-1, 1]) { bxS(P2, 2.6, 1.3, .04, 0x2c3e55, hx, 1.2, gz + s * 1.42, { ns: 1 }); bxS(P2, .04, 1.3, 2.2, 0x2c3e55, hx + s * 1.62, 1.2, gz, { ns: 1 }); }
+      bxS(P2, 4.2, .28, 3.8, 0xffffff, hx, 2.9, gz); bxS(P2, 4.24, .12, 3.84, 0xf47b20, hx, 3.0, gz, { ns: 1 });
       planeT(textTex([['PORTINERIA', 34, 800, 44, null, '#16181b']], { bg: '#ffffff', w: 320, h: 80, round: 8 }), 1.6, .4, P2, hx, 2.62, gz + 1.48);
       const gp = person(P2, hx - .3, gz - .4, 0x2f6db4, null, { mode: 'work' }); gp.position.y = .3; gp.rotation.y = -Math.PI / 2; movers.push({ o: gp, t: 'bob', ph: 4 }); }
-    bx(P2, .4, 1.1, .4, 0xf2c418, gpx, 0, gz); bx(P2, .5, .3, .5, 0x1d1f22, gpx, 1.1, gz);
+    bxS(P2, .4, 1.1, .4, 0xf2c418, gpx, 0, gz); bxS(P2, .5, .3, .5, 0x1d1f22, gpx, 1.1, gz);
     const barTex = cvTex(256, 16, (g2, w, h) => { for (let i = 0; i < 8; i++) { g2.fillStyle = i % 2 ? '#ffffff' : '#d62b1f'; g2.fillRect(i * w / 8, 0, w / 8, h); } }); OWN.push(barTex);
-    const arm = new T.Group(); arm.position.set(gpx, 1.25, gz); P2.add(arm); const am = new T.MeshLambertMaterial({ map: barTex }); OWN.push(am); mesh(G.box, am, -5.4, 0, 0, arm, { s: [10.6, .12, .12] }); mesh(G.box, mat(0x2b2f35), .1, 0, 0, arm, { s: [.5, .22, .2] });
-    bx(P2, .3, 1.19, .3, 0xf2c418, gx0 - 5.6, 0, gz); bx(P2, 11, .02, .45, 0xf4f4f2, gx0, .15, gz - 1.6, { ns: 1 });
+    const arm = new T.Group(); arm.position.set(gpx, 1.25, gz); P2.add(arm); const am = new T.MeshLambertMaterial({ map: barTex }); OWN.push(am); meshS(G.box, am, -5.4, 0, 0, arm, { s: [10.6, .12, .12] }); meshS(G.box, mat(0x2b2f35), .1, 0, 0, arm, { s: [.5, .22, .2] });
+    bxS(P2, .3, 1.19, .3, 0xf2c418, gx0 - 5.6, 0, gz); bxS(P2, 11, .02, .45, 0xf4f4f2, gx0, .15, gz - 1.6, { ns: 1 });
     for (let i = 0; i < 5; i++) B.add('bump', G.box, mat(0xffffff), m4(gx0 - 4.4 + i * 2.2, .19, gz - 4.5, 2.2, .08, .6), i % 2 ? 0x1d1f22 : 0xf2c418);
     { const car = plainCar(P2, 0x3a4352), A = new T.Vector3(gx0 - 2.7, .16, hd - 2), Bp = new T.Vector3(gx0 - 2.7, .16, gz - 2.6);
       const C2 = new T.CatmullRomCurve3([Bp.clone(), new T.Vector3(gx0 - 2.7, .16, rz - 6.4), new T.Vector3(gx0 + .5, .155, rz - 3.2), new T.Vector3(gx0 + 8, .148, rz - 2.5), new T.Vector3(gx0 + 150, .148, rz - 2.5)]);
@@ -802,7 +836,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     for (let i = 0; i < 10; i++) B.add('zeb', G.box, mat(0xf6f6f4), m4(ox, .148, rz - 4.95 + i * 1.1, 3, .012, .55));
     for (const s of [-1, 1]) { const zz = rz + s * 7.6; B.add('sgp', G.cyl, mat(0x8e959e), m4(ox - 2.4 * s, 1.4, zz, .08, 2.8, .08)); const t3 = TX.ped || (TX.ped = cvTex(128, 128, (g2, w, h) => { g2.fillStyle = '#1f4fb4'; g2.fillRect(0, 0, w, h); g2.fillStyle = '#fff'; g2.beginPath(); g2.moveTo(w / 2, 14); g2.lineTo(w - 14, h - 18); g2.lineTo(14, h - 18); g2.closePath(); g2.fill(); g2.fillStyle = '#16181b'; for (let i = 0; i < 4; i++) g2.fillRect(28 + i * 19, h - 34, 11, 8); g2.beginPath(); g2.arc(64, 46, 6, 0, Math.PI * 2); g2.fill(); g2.lineWidth = 5; g2.strokeStyle = '#16181b'; g2.lineCap = 'round'; g2.beginPath(); g2.moveTo(64, 54); g2.lineTo(60, 74); g2.lineTo(52, 88); g2.moveTo(60, 74); g2.lineTo(70, 88); g2.moveTo(52, 64); g2.lineTo(72, 62); g2.stroke(); })); const pl = planeT(t3, .62, .62, P2, ox - 2.4 * s, 2.75, zz + .05 * s, s < 0 ? { ry: Math.PI } : {}); pl.renderOrder = 1; B.add('sgb', G.box, mat(0x2f6db4), m4(ox - 2.4 * s, 2.75, zz, .74, .74, .04)); }
     // ---- fermata dell'autobus
-    { const bxp = hw + 44, bzp = zW - .2; bx(P2, 4, .1, 1.5, 0x8e959e, bxp, 2.45, bzp - .2); bx(P2, 4, 2.3, .05, 0x9fc3da, bxp, .2, bzp - .85, { ns: 1 }); for (const s of [-1, 1]) bx(P2, .08, 2.35, 1.5, 0x4a4f57, bxp + s * 2, .2, bzp - .2); bx(P2, 3, .08, .4, 0xb98756, bxp, .62, bzp - .55, { ns: 1 });
+    { const bxp = hw + 44, bzp = zW - .2; bxS(P2, 4, .1, 1.5, 0x8e959e, bxp, 2.45, bzp - .2); bxS(P2, 4, 2.3, .05, 0x9fc3da, bxp, .2, bzp - .85, { ns: 1 }); for (const s of [-1, 1]) bxS(P2, .08, 2.35, 1.5, 0x4a4f57, bxp + s * 2, .2, bzp - .2); bxS(P2, 3, .08, .4, 0xb98756, bxp, .62, bzp - .55, { ns: 1 });
       B.add('sgp', G.cyl, mat(0x8e959e), m4(bxp + 2.7, 1.5, bzp + .5, .08, 3, .08)); planeT(textTex([['BUS', 52, 800, 62, null, '#ffffff']], { bg: '#1f4fb4', w: 160, h: 110, round: 10 }), .6, .41, P2, bxp + 2.7, 2.9, bzp + .56); }
     // ---- traffico sulla strada
     const cols = [0xd62b1f, 0xf4f5f6, 0x2f3540, 0x5b7fa6, 0xc9c6bf, 0x8a2b3a, 0x3c6e4f];
@@ -814,7 +848,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       movers.push({ o: g, t: 'cloud', sp: 1.6 + rr() * 1.4 }); }
     { const fl = new T.Group(); P2.add(fl); const bm = mat(0x2b2f35), birds = [];
       for (let i = 0; i < 7; i++) { const b = new T.Group(), off = i === 0 ? [0, 0] : [-(Math.ceil(i / 2)) * 2.2, (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 1.8]; b.position.set(off[0], (rr() - .5) * .8, off[1]); fl.add(b);
-        const wl = new T.Group(), wr = new T.Group(); b.add(wl, wr); mesh(G.box, bm, 0, 0, .55, wl, { s: [.35, .04, 1.1], ns: 1 }); mesh(G.box, bm, 0, 0, -.55, wr, { s: [.35, .04, 1.1], ns: 1 }); mesh(G.box, bm, 0, 0, 0, b, { s: [.7, .14, .18], ns: 1 }); birds.push({ wl, wr, ph: rr() * 6 }); }
+        const wl = new T.Group(), wr = new T.Group(); b.add(wl, wr); meshS(G.box, bm, 0, 0, .55, wl, { s: [.35, .04, 1.1], ns: 1 }); meshS(G.box, bm, 0, 0, -.55, wr, { s: [.35, .04, 1.1], ns: 1 }); meshS(G.box, bm, 0, 0, 0, b, { s: [.7, .14, .18], ns: 1 }); birds.push({ wl, wr, ph: rr() * 6 }); }
       movers.push({ t: 'birds', o: fl, birds, z: hd - 40 }); }
     B.flush();
   }
@@ -849,15 +883,15 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const W = L.W, Dd = L.D, hw = W / 2, hd = Dd / 2;
     buildOffice();
     // pavimento in cemento
-    bx(WH, W, .48, Dd, 0xe2ded7, 0, 0, 0);
+    bxS(WH, W, .48, Dd, 0xe2ded7, 0, 0, 0);
     const ct = TX.concrete.clone(); ct.needsUpdate = true; ct.wrapS = ct.wrapT = T.RepeatWrapping; ct.repeat.set(W / 6, Dd / 6); OWN.push(ct);
     const fm = new T.MeshLambertMaterial({ map: ct }); OWN.push(fm); const fl = new T.Mesh(G.plane, fm); fl.scale.set(W, Dd, 1); fl.rotation.x = -Math.PI / 2; fl.position.y = .505; fl.receiveShadow = true; WH.add(fl);
     // muri perimetrali a pannelli, con il bordo arancione
-    const wallSeg = (x, z, len, rot, h) => { const g = new T.Group(); g.position.set(x, .5, z); g.rotation.y = rot; WH.add(g); mesh(G.box, panelMat(len), 0, h / 2, 0, g, { s: [len, h, .3] }); bx(g, len + .04, .2, .36, 0xf47b20, 0, h, 0, { ns: 1 }); bx(g, len, .12, .34, 0xd8d6d1, 0, 0, 0, { ns: 1 }); };
+    const wallSeg = (x, z, len, rot, h) => { const g = new T.Group(); g.position.set(x, .5, z); g.rotation.y = rot; WH.add(g); meshS(G.box, panelMat(len), 0, h / 2, 0, g, { s: [len, h, .3] }); bxS(g, len + .04, .2, .36, 0xf47b20, 0, h, 0, { ns: 1 }); bxS(g, len, .12, .34, 0xd8d6d1, 0, 0, 0, { ns: 1 }); };
     wallSeg(0, -hd, W, 0, 3.4); wallSeg(-hw, 0, Dd, Math.PI / 2, 3.4); wallSeg(hw, 0, Dd, Math.PI / 2, 3.4);
     wallSeg(-hw * .55, hd, W * .45, 0, 1.4); wallSeg(hw * .5, hd, W * .5, 0, 1.4);
     // estintori e uscite di sicurezza
-    for (let i = 0; i < 4; i++) { const z = -hd + 6 + i * (Dd - 12) / 3; bx(WH, .25, .55, .25, 0xd62b1f, -hw + .35, .9, z); bx(WH, .05, .4, .5, 0x1f9a4b, -hw + .2, 2.9, z + 1.2, { ns: 1 }); }
+    for (let i = 0; i < 4; i++) { const z = -hd + 6 + i * (Dd - 12) / 3; bxS(WH, .25, .55, .25, 0xd62b1f, -hw + .35, .9, z); bxS(WH, .05, .4, .5, 0x1f9a4b, -hw + .2, 2.9, z + 1.2, { ns: 1 }); }
     pick = pickEnv.slice(); movers = envMovers.slice();
     trucks = [];
     P = place();
@@ -867,16 +901,16 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     if (EDIT) { const v = []; for (let x = -hw; x <= hw + .01; x += 1) v.push(x, .53, -hd, x, .53, hd); for (let z = -hd; z <= hd + .01; z += 1) v.push(-hw, .53, z, hw, .53, z); const gg = new T.BufferGeometry(); gg.setAttribute('position', new T.Float32BufferAttribute(v, 3)); const gm = new T.LineBasicMaterial({ color: 0xcdbfb0, transparent: true, opacity: .45 }); WH.add(new T.LineSegments(gg, gm)); OWN.push(gg, gm); }
     hiMesh = new T.Mesh(G.box, new T.MeshBasicMaterial({ color: 0xf47b20, transparent: true, opacity: .35, depthWrite: false, depthTest: false })); hiMesh.renderOrder = 10; hiMesh.visible = false; WH.add(hiMesh); OWN.push(hiMesh.material);
     const eg = new T.LineSegments(new T.EdgesGeometry(G.box), new T.LineBasicMaterial({ color: 0xf47b20, depthTest: false })); eg.renderOrder = 11; hiMesh.add(eg); OWN.push(eg.geometry, eg.material);
-    selHelper = null;
+    selHelper = null; mergeStatic(WH);
   }
   let hiMesh = null, selHelper = null, trucks = [];
 
   function buildZone(it) {
     const g = itemGroup(it), z = ZONE[it.k], w = it.r % 2 ? it.d : it.w, d = it.r % 2 ? it.w : it.d;
     g.rotation.y = 0; // le zone sono rettangoli allineati
-    bx(g, w - .1, .03, d - .1, z[1], 0, .51, 0, { ns: 1 });
+    bxS(g, w - .1, .03, d - .1, z[1], 0, .51, 0, { ns: 1 });
     const edge = it.k === 'cq' ? 0x63b37a : it.k === 'uff' ? 0x7d98b8 : 0xf3a868;
-    bx(g, w, .035, .14, edge, 0, .52, -d / 2 + .07, { ns: 1 }); bx(g, w, .035, .14, edge, 0, .52, d / 2 - .07, { ns: 1 }); bx(g, .14, .035, d, edge, -w / 2 + .07, .52, 0, { ns: 1 }); bx(g, .14, .035, d, edge, w / 2 - .07, .52, 0, { ns: 1 });
+    bxS(g, w, .035, .14, edge, 0, .52, -d / 2 + .07, { ns: 1 }); bxS(g, w, .035, .14, edge, 0, .52, d / 2 - .07, { ns: 1 }); bxS(g, .14, .035, d, edge, -w / 2 + .07, .52, 0, { ns: 1 }); bxS(g, .14, .035, d, edge, w / 2 - .07, .52, 0, { ns: 1 });
     const name = (it.name || z[0]).toUpperCase().slice(0, 22), fw = Math.min(w * .8, name.length * 1.35);
     if (it.k !== 'ric') floorText(g, name, Math.max(4, fw), 0, d / 2 - fw / 11 - 1, d > w * 1.6 ? Math.PI / 2 : 0, it.k === 'cq' ? 'rgba(60,150,80,.45)' : 'rgba(244,123,32,.48)');
     if (it.k !== 'ric' && d > w * 1.6) { const m = g.children[g.children.length - 1]; m.position.set(w / 2 - 1.6, .56, 0); }
@@ -946,19 +980,19 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     // cartelli di testata (codice dello scaffale e categoria)
     const sTex = textTex([[it.code, 150, 800, 112, null, '#ffffff'], [(it.cat || 'libero').toUpperCase().slice(0, 20), 34, 700, 214, null, 'rgba(255,255,255,.92)']], { bg: '#f47b20', w: 320, h: 256, round: 26 });
     for (const e of [-1, 1]) planeT(sTex, 1.1, .88, g, e * (len / 2 + .18), y0 + H + .62, 0, { ry: e * Math.PI / 2, ds: true });
-    for (const e of [-1, 1]) bx(g, .04, .5, .04, 0x2b2f35, e * (len / 2 + .18), y0 + H, 0, { ns: 1 });
+    for (const e of [-1, 1]) bxS(g, .04, .5, .04, 0x2b2f35, e * (len / 2 + .18), y0 + H, 0, { ns: 1 });
     hit(g, len, H, dep + .6, y0 + H / 2, { t: 'rack', id: it.id }, it);
   }
 
   function buildDock(it) {
     const g = itemGroup(it), B = new Batch(g);
-    bx(g, 4.4, 3.5, .18, 0x2b2f35, 0, .5, .1);
-    mesh(G.box, M.door, 0, .5 + 1.55, .22, g, { s: [3.5, 3.1, .04] });
-    for (const s of [-1, 1]) bx(g, .25, 3.3, .5, 0x1b1d20, s * 1.95, .5, .45);
-    bx(g, 4.15, .3, .5, 0x1b1d20, 0, 3.55, .45);
-    bx(g, 2.3, .08, 2.6, 0x9ba1a8, 0, .45, -1.3, { ns: 1 });
-    for (const s of [-1, 1]) bx(g, .35, .35, .3, 0x16181b, s * 1.25, .55, .35);
-    bx(g, .3, .55, .2, 0x2b2f35, 2.55, 2.4, .25); B.add('lt', G.sph, new T.MeshBasicMaterial({ color: 0xe8432a }), m4(2.55, 2.85, .37, .14, .14, .06)); B.add('lt2', G.sph, new T.MeshBasicMaterial({ color: 0x2cbf5d }), m4(2.55, 2.6, .37, .14, .14, .06));
+    bxS(g, 4.4, 3.5, .18, 0x2b2f35, 0, .5, .1);
+    meshS(G.box, M.door, 0, .5 + 1.55, .22, g, { s: [3.5, 3.1, .04] });
+    for (const s of [-1, 1]) bxS(g, .25, 3.3, .5, 0x1b1d20, s * 1.95, .5, .45);
+    bxS(g, 4.15, .3, .5, 0x1b1d20, 0, 3.55, .45);
+    bxS(g, 2.3, .08, 2.6, 0x9ba1a8, 0, .45, -1.3, { ns: 1 });
+    for (const s of [-1, 1]) bxS(g, .35, .35, .3, 0x16181b, s * 1.25, .55, .35);
+    bxS(g, .3, .55, .2, 0x2b2f35, 2.55, 2.4, .25); B.add('lt', G.sph, new T.MeshBasicMaterial({ color: 0xe8432a }), m4(2.55, 2.85, .37, .14, .14, .06)); B.add('lt2', G.sph, new T.MeshBasicMaterial({ color: 0x2cbf5d }), m4(2.55, 2.6, .37, .14, .14, .06));
     for (const s of [-1, 1]) B.add('yl', G.box, mat(0xf2c418), m4(s * 1.9, .175, 9, .14, .02, 16));
     B.add('bol', G.cyl, mat(0xf2c418), m4(-2.6, .2 + .55, 1.4, .22, 1.1, .22)); B.add('bol', G.cyl, mat(0xf2c418), m4(2.6, .2 + .55, 1.4, .22, 1.1, .22));
     B.flush();
@@ -966,8 +1000,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   }
   function buildWall(it) {
     const g = itemGroup(it), h = it.h || 2;
-    mesh(G.box, panelMat(it.len), 0, .5 + h / 2, 0, g, { s: [it.len, h, .25] });
-    bx(g, it.len + .02, .16, .3, 0xf47b20, 0, .5 + h, 0, { ns: 1 });
+    meshS(G.box, panelMat(it.len), 0, .5 + h / 2, 0, g, { s: [it.len, h, .25] });
+    bxS(g, it.len + .02, .16, .3, 0xf47b20, 0, .5 + h, 0, { ns: 1 });
     hit(g, it.len, h, .6, .5 + h / 2, { t: 'wall', id: it.id }, it);
   }
   function buildBelt(it) {
@@ -983,20 +1017,20 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     movers.push({ t: 'belt', im, n: nb, len, sp: .045 + 1.8 / len });
     // portale di controllo (se il nastro passa nella zona controllo)
     const cq = L.items.find(z => z.t === 'zone' && z.k === 'cq'), wp = new T.Vector3();
-    if (cq) { for (let x = -len / 2 + 1; x < len / 2 - 1; x += .5) { wp.set(x, 0, 0); g.updateMatrixWorld(); g.localToWorld(wp); const b2 = box2(cq); if (wp.x > b2.x0 + 2 && wp.x < b2.x1 - 2 && wp.z > b2.z0 && wp.z < b2.z1) { bx(g, .3, 2.4, .3, 0xfafafa, x, .5, -1); bx(g, .3, 2.4, .3, 0xfafafa, x, .5, 1); bx(g, 1.1, .7, 2.4, 0x2cbf5d, x, 2.9, 0); break; } } }
+    if (cq) { for (let x = -len / 2 + 1; x < len / 2 - 1; x += .5) { wp.set(x, 0, 0); g.updateMatrixWorld(); g.localToWorld(wp); const b2 = box2(cq); if (wp.x > b2.x0 + 2 && wp.x < b2.x1 - 2 && wp.z > b2.z0 && wp.z < b2.z1) { bxS(g, .3, 2.4, .3, 0xfafafa, x, .5, -1); bxS(g, .3, 2.4, .3, 0xfafafa, x, .5, 1); bxS(g, 1.1, .7, 2.4, 0x2cbf5d, x, 2.9, 0); break; } } }
     // braccio pallettizzatore in fondo
-    const arm = new T.Group(); arm.position.set(len / 2 + 1.3, .5, 0); g.add(arm); mesh(G.cyl, mat(0xe0e2e5), 0, .4, 0, arm, { s: [1.7, .8, 1.7] });
-    const a1 = new T.Group(); a1.position.y = .8; arm.add(a1); mesh(G.box, mat(0xf47b20), 0, 1.4, 0, a1, { s: [.5, 2.8, .5], rz: .35 }); mesh(G.box, mat(0xf47b20), -1.3, 2.7, 0, a1, { s: [2.2, .42, .42] });
+    const arm = new T.Group(); arm.position.set(len / 2 + 1.3, .5, 0); g.add(arm); meshS(G.cyl, mat(0xe0e2e5), 0, .4, 0, arm, { s: [1.7, .8, 1.7] });
+    const a1 = new T.Group(); a1.position.y = .8; arm.add(a1); meshS(G.box, mat(0xf47b20), 0, 1.4, 0, a1, { s: [.5, 2.8, .5], rz: .35 }); meshS(G.box, mat(0xf47b20), -1.3, 2.7, 0, a1, { s: [2.2, .42, .42] });
     movers.push({ o: a1, t: 'spin', sp: .6 });
     hit(g, len + 3, 1.6, 2, 1, { t: 'belt', id: it.id }, it);
   }
   function buildDesk(it) {
     const g = itemGroup(it);
-    bx(g, 3.2, .06, 1.4, 0xfafafa, 0, 1.4, 0); for (const sx of [-1.5, 1.5]) for (const sz of [-.6, .6]) bx(g, .06, .9, .06, 0x8e959e, sx, .5, sz);
-    bx(g, 3.1, .04, 1.3, 0xd8dbe0, 0, .75, 0, { ns: 1 });
-    bx(g, .6, .38, .04, 0x1d2025, -.9, 1.7, -.45); bx(g, .06, .25, .06, 0x2b2f35, -.9, 1.46, -.45);
-    bx(g, .35, .25, .3, 0xeeeeec, .9, 1.46, -.35); bx(g, .45, .3, .4, 0xe3b073, .25, 1.46, .1); bx(g, .4, .26, .36, 0xa9c98a, .3, 1.76, .1);
-    mesh(G.cyl, mat(0xf47b20), -.2, 1.5, .3, g, { s: [.16, .08, .16] });
+    bxS(g, 3.2, .06, 1.4, 0xfafafa, 0, 1.4, 0); for (const sx of [-1.5, 1.5]) for (const sz of [-.6, .6]) bxS(g, .06, .9, .06, 0x8e959e, sx, .5, sz);
+    bxS(g, 3.1, .04, 1.3, 0xd8dbe0, 0, .75, 0, { ns: 1 });
+    bxS(g, .6, .38, .04, 0x1d2025, -.9, 1.7, -.45); bxS(g, .06, .25, .06, 0x2b2f35, -.9, 1.46, -.45);
+    bxS(g, .35, .25, .3, 0xeeeeec, .9, 1.46, -.35); bxS(g, .45, .3, .4, 0xe3b073, .25, 1.46, .1); bxS(g, .4, .26, .36, 0xa9c98a, .3, 1.76, .1);
+    meshS(G.cyl, mat(0xf47b20), -.2, 1.5, .3, g, { s: [.16, .08, .16] });
     const p = person(g, 0, 1.0, 0x39a85a, null, { mode: 'work' }); p.rotation.y = Math.PI; movers.push({ o: p, t: 'bob', ph: it.x });
     hit(g, 3.4, 2, 2.6, 1, { t: 'desk', id: it.id }, it);
   }
@@ -1009,7 +1043,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     b(2.5, 2.9, 2.5, 0xffffff, 5.9, 2.25, 0); b(.08, 1.1, 2.2, 0x2b3440, 7.17, 3.05, 0); b(.6, 1.2, 2.3, 0xffffff, 6.9, 1.4, 0); b(.05, .5, 1.6, 0x2b2f35, 7.235, 1.3, 0);
     b(2.52, .45, 2.52, 0xf47b20, 5.9, 1.25, 0); for (const s of [-1, 1]) { b(.1, .55, .12, 0x1d1f22, 6.9, 3, s * 1.42); b(.5, .1, .7, 0x2b2f35, 4.6, .9, s * 1.1); }
     b(2.2, .25, 2.2, 0x2b2f35, 4.2, .9, 0);
-    [[-8, 1.05], [-6.9, 1.05], [-5.8, 1.05], [5.9, 1.05], [3.9, 1.05]].forEach(([wx, wz]) => { for (const s of [-1, 1]) { mesh(G.cyl, mat(0x1d1f22), wx, .58, s * wz, g, { s: [1.1, .38, 1.1], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xc5cad1), wx, .58, s * (wz + .2), g, { s: [.5, .02, .5], rx: Math.PI / 2, ns: 1 }); } });
+    [[-8, 1.05], [-6.9, 1.05], [-5.8, 1.05], [5.9, 1.05], [3.9, 1.05]].forEach(([wx, wz]) => { for (const s of [-1, 1]) { meshS(G.cyl, mat(0x1d1f22), wx, .58, s * wz, g, { s: [1.1, .38, 1.1], rx: Math.PI / 2 }); meshS(G.cyl, mat(0xc5cad1), wx, .58, s * (wz + .2), g, { s: [.5, .02, .5], rx: Math.PI / 2, ns: 1 }); } });
     const t = { g, d, road: 0 }; g.traverse(o => { if (o.isMesh) { o.userData.k = { t: 'truck', i: trucks.length }; pick.push(o); } }); p.add(g); trucks.push(t); return t;
   }
   function buildRoadTrucks() {
@@ -1190,13 +1224,13 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const glass = M.glass || (M.glass = new T.MeshLambertMaterial({ color: 0x2c3e55 })), dark = 0x22262b;
     const pt = plateTex(v.p); OWN.push(pt); const pm = new T.MeshBasicMaterial({ map: pt }); OWN.push(pm);
     const plateAt = (xx, y, rot, zz) => { const m = new T.Mesh(G.plane, pm); m.scale.set(.52, .115, 1); m.position.set(xx, y, zz || 0); m.rotation.y = rot; g.add(m); };
-    const wheel = (xx, zz, r) => { const s = Math.sign(zz); mesh(G.cyl, mat(0x15171a), xx, r, zz, g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xbfc4cb), xx, r, zz + s * .14, g, { s: [r * 1.2, .02, r * 1.2], rx: Math.PI / 2, ns: 1 }); mesh(G.cyl, mat(0x7d838b), xx, r, zz + s * .155, g, { s: [r * .42, .02, r * .42], rx: Math.PI / 2, ns: 1 }); };
+    const wheel = (xx, zz, r) => { const s = Math.sign(zz); meshS(G.cyl, mat(0x15171a), xx, r, zz, g, { s: [r * 2, .27, r * 2], rx: Math.PI / 2 }); meshS(G.cyl, mat(0xbfc4cb), xx, r, zz + s * .14, g, { s: [r * 1.2, .02, r * 1.2], rx: Math.PI / 2, ns: 1 }); meshS(G.cyl, mat(0x7d838b), xx, r, zz + s * .155, g, { s: [r * .42, .02, r * .42], rx: Math.PI / 2, ns: 1 }); };
     const shell = (kind, color, P, ox) => {
       const w = P.w, bev = kind === 'cab' ? .07 : .09, xs = P.body.map(q => q[0]), fx = Math.max(...xs) + bev + .015, rx2 = Math.min(...xs) - bev - .015; P.fx = fx; P.rx = rx2; const body = mesh(vgeo('vb_' + kind, P.body, w - 2 * bev, bev), mat(color), ox || 0, 0, 0, g);
-      mesh(vgeo('vg_' + kind, P.side, w + .06, 0), glass, ox || 0, 0, 0, g, { ns: 1 });
+      meshS(vgeo('vg_' + kind, P.side, w + .06, 0), glass, ox || 0, 0, 0, g, { ns: 1 });
       const wsl = (a, c) => { const dx = c[0] - a[0], dy = c[1] - a[1], ln = Math.hypot(dx, dy), nx = dy / ln, ny = -dx / ln, sgn = kind === 'cab' ? 1 : 1; const m = mesh(G.box, glass, (ox || 0) + (a[0] + c[0]) / 2 + nx * .115 * sgn, (a[1] + c[1]) / 2 + ny * .115 * sgn, 0, g, { s: [ln, .035, w - .16], rz: Math.atan2(dy, dx), ns: 1 }); return m; };
       wsl(P.ws[0], P.ws[1]); if (P.rw) wsl(P.rw[1], P.rw[0]);
-      P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) mesh(G.cyl, mat(0x111316), (ox || 0) + wx, r + .02, s * (w / 2 + .008), g, { s: [r * 2 + .2, .01, r * 2 + .2], rx: Math.PI / 2, ns: 1 }); wheel((ox || 0) + wx, w / 2 - .12, r); wheel((ox || 0) + wx, -w / 2 + .12, r); });
+      P.wh.forEach(([wx, r]) => { for (const s of [-1, 1]) meshS(G.cyl, mat(0x111316), (ox || 0) + wx, r + .02, s * (w / 2 + .008), g, { s: [r * 2 + .2, .01, r * 2 + .2], rx: Math.PI / 2, ns: 1 }); wheel((ox || 0) + wx, w / 2 - .12, r); wheel((ox || 0) + wx, -w / 2 + .12, r); });
       for (const s of [-1, 1]) { b(.05, .13, .34, 0xfff3d1, (ox || 0) + fx, P.hl[1], s * (w / 2 - .3), { ns: 1 }); if (P.tl) b(.05, .26, .16, 0xd8322a, (ox || 0) + rx2, P.tl[1], s * (w / 2 - .14), { ns: 1 }); }
       plateAt((ox || 0) + fx + .03, P.plateF[1], Math.PI / 2); if (P.plateR) plateAt((ox || 0) + rx2 - .03, P.plateR[1], -Math.PI / 2);
       return body;
@@ -1210,7 +1244,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       b(5.7, .28, 1.1, 0x2b2f35, -.4, .42, 0); b(5.6, 3.0, 2.42, 0xf3f3f1, -1.35, 2.28, 0); b(5.62, .08, 2.44, 0xe1e3e6, -1.35, 3.82, 0, { ns: 1 });
       b(.04, 2.85, 2.36, 0xe6e8eb, -4.17, 2.28, 0, { ns: 1 }); b(.05, 2.85, .05, 0x9aa0a8, -4.2, 2.28, 0, { ns: 1 }); for (const s of [-1, 1]) b(.06, .22, .14, 0xd8322a, -4.2, .95, s * 1.05, { ns: 1 });
       livery(5.2, -1.35, 1.4, 2.42); plateAt(-4.21, .7, -Math.PI / 2);
-      [[3.0, .5], [-2.3, .5], [-3.35, .5]].forEach(([wx, r]) => { for (const s of [-1, 1]) { mesh(G.cyl, mat(0x111316), wx, r + .03, s * 1.13, g, { s: [r * 2 + .22, .02, r * 2 + .22], rx: Math.PI / 2, ns: 1 }); wheel(wx, s * 1.05, r); } });
+      [[3.0, .5], [-2.3, .5], [-3.35, .5]].forEach(([wx, r]) => { for (const s of [-1, 1]) { meshS(G.cyl, mat(0x111316), wx, r + .03, s * 1.13, g, { s: [r * 2 + .22, .02, r * 2 + .22], rx: Math.PI / 2, ns: 1 }); wheel(wx, s * 1.05, r); } });
     } else if (v.kind === 'car') {
       const P = VP.car; shell('car', [0xe9ebee, 0xc8ccd2, 0x2f3540, 0x9fb3c8][v.p.charCodeAt(1) % 4], P);
       b(.04, .2, P.w - .5, dark, P.fx, .55, 0, { ns: 1 }); mirror(.85, 1.02, P.w); for (const s of [-1, 1]) b(3.6, .06, .02, 0xf47b20, 0, .66, s * (P.w / 2 + .1), { ns: 1 });
@@ -1246,8 +1280,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const GD = D.gas; if (!GD) return; const F = FL(), g = new T.Group(); WH.add(g);
     const w = F.x1 - F.x0, d = F.z1 - F.z0, cx = (F.x0 + F.x1) / 2, cz = (F.z0 + F.z1) / 2, B = new Batch(g);
     const asp = mesh(G.box, new T.MeshLambertMaterial({ map: TX.road }), cx, .08, cz, g, { s: [w, .16, d], ns: 1 }); OWN.push(asp.material);
-    bx(g, 9, .15, L.D / 2 + 31 - 5.7 - F.z1 - .05, 0x575c64, F.st.x, 0, (F.z1 + .05 + L.D / 2 + 31 - 5.7) / 2, { ns: 1 });
-    for (const xx of [F.x0, F.x1]) bx(g, .3, .22, d, 0xd9d6cf, xx, 0, cz, { ns: 1 });
+    bxS(g, 9, .15, L.D / 2 + 31 - 5.7 - F.z1 - .05, 0x575c64, F.st.x, 0, (F.z1 + .05 + L.D / 2 + 31 - 5.7) / 2, { ns: 1 });
+    for (const xx of [F.x0, F.x1]) bxS(g, .3, .22, d, 0xd9d6cf, xx, 0, cz, { ns: 1 });
     // stalli: due file di posti con strisce bianche e numeri
     const rowX = [F.x0 + 4.4, F.x1 - 4.4], sz = 3.9, z0 = F.z0 + 2.4, n = Math.max(1, Math.floor((F.st.z - 8 - z0) / sz)), slots = [];
     rowX.forEach((rx, ri) => { for (let i = 0; i <= n; i++) B.add('str', G.box, mat(0xf4f4f2), m4(rx, .17, z0 + i * sz - sz / 2, 7.6, .02, .12)); for (let i = 0; i < n; i++) { slots.push({ x: rx, z: z0 + i * sz, ry: ri ? 0 : Math.PI }); B.add('stop', G.box, mat(0xf2c418), m4(rx + (ri ? 3.3 : -3.3), .24, z0 + i * sz, .25, .14, 1.6)); } });
@@ -1256,7 +1290,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     for (let zz = z0; zz < F.st.z - 9; zz += 3) B.add('lm', G.box, mat(0xf4f4f2), m4(cx, .17, zz, .14, .02, 1.6));
     // ---- area di rifornimento (v284): piazzale in cemento con giunti e canaline, pensilina, due isole con erogatori, terminale badge, arresto d'emergenza
     const st = F.st, cw = 15, cd = 13, IX = 2.9, cy0 = 5.4; CANO = { mats: [], u: CANO ? CANO.u : 1, want: CANO ? CANO.want : 1 };
-    bx(g, cw + 3.4, .05, cd + 4.4, 0xc9c7c2, st.x, .16, st.z, { ns: 1 });
+    bxS(g, cw + 3.4, .05, cd + 4.4, 0xc9c7c2, st.x, .16, st.z, { ns: 1 });
     for (let i = -3; i <= 3; i++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x + i * 2.6, .214, st.z, .04, .008, cd + 3.0));
     for (let j = -3; j <= 3; j++) B.add('jt', G.box, mat(0xb3b0aa), m4(st.x, .216, st.z + j * 2.6, cw + 2.1, .008, .04));
     for (const s of [-1, 1]) { B.add('drn', G.box, mat(0x3a3f46), m4(st.x, .228, st.z + s * (cd / 2 + 1.75), cw + 2.2, .012, .32)); B.add('drn', G.box, mat(0x3a3f46), m4(st.x + s * (cw / 2 + 1.25), .228, st.z, .32, .012, cd + 3.2)); }
@@ -1266,15 +1300,15 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     B.add('stopl', G.box, mat(0xf4f4f2), m4(st.x, .232, st.z - 3.6, 4, .012, .22));
     { const t2 = textTex([['STOP', 90, 800, 70, null, 'rgba(255,255,255,.92)']], { w: 320, h: 120 }); const p2 = planeT(t2, 2.2, .82, g, st.x, .242, st.z - 4.4, {}); p2.rotation.x = -Math.PI / 2; p2.rotation.z = Math.PI; }
     // pensilina: colonne rivestite con piede arancione, copertura, fascia, luci a led, telecamere
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bx(g, .46, cy0 - .44, .46, 0xeef0f2, px, .44, pz); bx(g, .52, .9, .52, 0xf47b20, px, .44, pz); B.add('ccl', G.box, mat(0xd9dce0), m4(px, cy0 - .2, pz, .62, .3, .62)); }
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bxS(g, .46, cy0 - .44, .46, 0xeef0f2, px, .44, pz); bxS(g, .52, .9, .52, 0xf47b20, px, .44, pz); B.add('ccl', G.box, mat(0xd9dce0), m4(px, cy0 - .2, pz, .62, .3, .62)); }
     const cM = c => { const m = new T.MeshLambertMaterial({ color: c, transparent: true }); m.userData.o0 = 1; OWN.push(m); CANO.mats.push(m); return m; }, cDeck = cM(0xfbfbfa), cOr = cM(0xf47b20), cCap = cM(0xffffff);
-    bx(g, cw, .8, cd, cDeck, st.x, cy0, st.z);
-    for (const s of [-1, 1]) { bx(g, cw + .14, .52, .1, cOr, st.x, cy0 + .14, st.z + s * (cd / 2 + .05)); bx(g, .1, .52, cd + .14, cOr, st.x + s * (cw / 2 + .05), cy0 + .14, st.z); }
-    bx(g, cw + .2, .1, cd + .2, cCap, st.x, cy0 + .8, st.z);
+    bxS(g, cw, .8, cd, cDeck, st.x, cy0, st.z);
+    for (const s of [-1, 1]) { bxS(g, cw + .14, .52, .1, cOr, st.x, cy0 + .14, st.z + s * (cd / 2 + .05)); bxS(g, .1, .52, cd + .14, cOr, st.x + s * (cw / 2 + .05), cy0 + .14, st.z); }
+    bxS(g, cw + .2, .1, cd + .2, cCap, st.x, cy0 + .8, st.z);
     for (let i = -2; i <= 2; i++) for (const j of [-1, 0, 1]) { const m2 = new T.MeshBasicMaterial({ color: 0xfffbe6, transparent: true }); m2.userData.o0 = 1; OWN.push(m2); CANO.mats.push(m2); const lp = new T.Mesh(G.plane, m2); lp.scale.set(1.7, .42, 1); lp.rotation.x = Math.PI / 2; lp.position.set(st.x + i * 2.8, cy0 - .012, st.z + j * 3.6); g.add(lp); }
     const sg = textTex([['GASOLIO · AdBlue', 66, 800, 56, null, '#ffffff'], [C.orgName().toUpperCase().slice(0, 30) + ' · DISTRIBUTORE INTERNO', 26, 700, 108, null, 'rgba(255,255,255,.9)']], { bg: '#f47b20', w: 1024, h: 140 });
     for (const s of [-1, 1]) { const pq = planeT(sg, 7, .96, g, st.x, cy0 + .42, st.z + s * (cd / 2 + .135), s < 0 ? { ry: Math.PI } : {}); pq.material.transparent = true; pq.material.userData.o0 = 1; CANO.mats.push(pq.material); }
-    for (const [sx, sz] of [[-1, -1], [1, 1]]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bx(g, .16, .16, .3, 0x2b2f35, px, cy0 - .62, pz + sz * .33); mesh(G.cyl, mat(0x1d1f22), px, cy0 - .55, pz + sz * .5, g, { s: [.1, .1, .1], rx: Math.PI / 2, ns: 1 }); }
+    for (const [sx, sz] of [[-1, -1], [1, 1]]) { const px = st.x + sx * IX, pz = st.z + sz * 2.3; bxS(g, .16, .16, .3, 0x2b2f35, px, cy0 - .62, pz + sz * .33); meshS(G.cyl, mat(0x1d1f22), px, cy0 - .55, pz + sz * .5, g, { s: [.1, .1, .1], rx: Math.PI / 2, ns: 1 }); }
     // cartello di sicurezza su una colonna
     { const t2 = textTex([['AREA DI RIFORNIMENTO', 30, 800, 40, null, '#ffffff'], ['Spegnere il motore', 28, 700, 92, null, '#ffffff'], ['Vietato fumare · usare il badge', 24, 600, 136, null, 'rgba(255,255,255,.88)']], { bg: '#1f4fb4', w: 420, h: 170, round: 12 }); planeT(t2, 1.3, .53, g, st.x - IX, 2.6, st.z + 2.3 + .245, {}); }
     pumpDraw(0, GD.price); pumpTex = new T.CanvasTexture(pumpCv); pumpTex.colorSpace = T.SRGBColorSpace; OWN.push(pumpTex);
@@ -1282,54 +1316,54 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const hoseM = mat(0x1d1f22);
     [-IX, IX].forEach(ix => {
       const px = st.x + ix, pz = st.z, fc = ix < 0 ? 1 : -1; // lato verso la corsia centrale
-      bx(g, 1.3, .26, 6.4, 0xd8d5ce, px, .2, pz); bx(g, 1.34, .03, 6.44, 0xbcb8b0, px, .46, pz, { ns: 1 });
-      for (const s of [-1, 1]) { bx(g, 1.4, .3, .3, M.haz, px, .19, pz + s * 3.08); mesh(G.cyl, mat(0xf2c418), px, .85, pz + s * 3.55, g, { s: [.2, 1.3, .2] }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.05, pz + s * 3.55, .23, .12, .23)); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .7, pz + s * 3.55, .23, .12, .23)); }
+      bxS(g, 1.3, .26, 6.4, 0xd8d5ce, px, .2, pz); bxS(g, 1.34, .03, 6.44, 0xbcb8b0, px, .46, pz, { ns: 1 });
+      for (const s of [-1, 1]) { bxS(g, 1.4, .34, .3, M.haz, px, .19, pz + s * 3.09, { ns: 1 }); meshS(G.cyl, mat(0xf2c418), px, .85, pz + s * 3.66, g, { s: [.2, 1.3, .2], ns: 1 }); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, 1.05, pz + s * 3.66, .23, .12, .23)); B.add('bb', G.cyl, mat(0x1d1f22), m4(px, .7, pz + s * 3.66, .23, .12, .23)); }
       // erogatore: zoccolo, corpo, pannelli, testata con display su due lati, pistole gasolio e AdBlue, tubi
-      bx(g, 1.0, .16, .76, 0x8e959e, px, .48, pz); bx(g, .86, 1.5, .62, 0xf4f5f6, px, .64, pz); for (const s of [-1, 1]) bx(g, .025, 1.1, .5, 0xf47b20, px + s * .445, .84, pz, { ns: 1 });
-      bx(g, .92, .58, .68, 0x2b2f35, px, 2.14, pz); bx(g, .96, .08, .72, 0xf47b20, px, 2.72, pz);
+      bxS(g, 1.0, .16, .76, 0x8e959e, px, .48, pz); bxS(g, .86, 1.5, .62, 0xf4f5f6, px, .64, pz); for (const s of [-1, 1]) bxS(g, .025, 1.1, .5, 0xf47b20, px + s * .445, .84, pz, { ns: 1 });
+      bxS(g, .92, .58, .68, 0x2b2f35, px, 2.14, pz); bxS(g, .96, .08, .72, 0xf47b20, px, 2.72, pz);
       for (const s of [-1, 1]) { const dm = new T.MeshBasicMaterial({ map: pumpTex }); OWN.push(dm); const sc = new T.Mesh(G.plane, dm); sc.scale.set(.56, .37, 1); sc.position.set(px + s * .475, 2.43, pz); sc.rotation.y = s * Math.PI / 2; g.add(sc); }
       for (const s of [-1, 1]) for (const [dz, col, nm] of [[-.18, 0x1d1f22, 'd'], [.18, 0x2f6db4, 'a']]) {
-        bx(g, .14, .3, .16, 0x3a3f46, px + s * .5, 1.15, pz + dz);
+        bxS(g, .14, .3, .16, 0x3a3f46, px + s * .5, 1.15, pz + dz);
         const busy = s === fc && nm === 'd' && ix < 0; if (busy) continue; // pistola in uso
-        bx(g, .1, .12, .26, col, px + s * .6, 1.27, pz + dz); mesh(G.cyl, mat(0x9aa1a9), px + s * .6, 1.2, pz + dz + .16, g, { s: [.03, .14, .03], rx: .6, ns: 1 });
-        const hs = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(px + s * .44, 2.0, pz + dz), new T.Vector3(px + s * .62, 1.35, pz + dz * 1.4), new T.Vector3(px + s * .72, .7, pz + dz), new T.Vector3(px + s * .62, 1.2, pz + dz)]), 20, .025, 6); OWN.push(hs); mesh(hs, col === 0x2f6db4 ? mat(0x2a4f86) : hoseM, 0, 0, 0, g, { ns: 1 });
+        bxS(g, .1, .12, .26, col, px + s * .6, 1.27, pz + dz); meshS(G.cyl, mat(0x9aa1a9), px + s * .6, 1.2, pz + dz + .16, g, { s: [.03, .14, .03], rx: .6, ns: 1 });
+        const hs = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(px + s * .44, 2.0, pz + dz), new T.Vector3(px + s * .62, 1.35, pz + dz * 1.4), new T.Vector3(px + s * .72, .7, pz + dz), new T.Vector3(px + s * .62, 1.2, pz + dz)]), 20, .025, 6); OWN.push(hs); meshS(hs, col === 0x2f6db4 ? mat(0x2a4f86) : hoseM, 0, 0, 0, g, { ns: 1 });
       }
       // terminale badge e arresto d'emergenza alle estremità dell'isola
-      const tz = pz + 2.55; bx(g, .3, 1.0, .24, 0x2b2f35, px, .47, tz); bx(g, .44, .52, .3, 0x1d1f22, px, 1.47, tz); const ts = planeT(termT, .36, .23, g, px + fc * .232, 1.8, tz, { ry: fc * Math.PI / 2 }); ts.renderOrder = 1;
-      bx(g, .03, .14, .2, 0x3a3f46, px + fc * .235, 1.55, tz, { ns: 1 });
-      const ez = pz - 2.6; bx(g, .1, 1.0, .1, 0xc5cad1, px, .47, ez); bx(g, .24, .24, .14, 0xf2c418, px, 1.47, ez); mesh(G.sph, mat(0xd62b1f), px + fc * .1, 1.59, ez, g, { s: [.14, .14, .14], ns: 1 });
-      mesh(G.cyl, mat(0x2f6db4), px, .82, pz - 1.6, g, { s: [.3, .7, .3] }); mesh(G.cyl, mat(0xeef0f2), px, 1.25, pz + 1.55, g, { s: [.18, .26, .18] });
+      const tz = pz + 2.55; bxS(g, .3, 1.0, .24, 0x2b2f35, px, .47, tz); bxS(g, .44, .52, .3, 0x1d1f22, px, 1.47, tz); const ts = planeT(termT, .36, .23, g, px + fc * .232, 1.8, tz, { ry: fc * Math.PI / 2 }); ts.renderOrder = 1;
+      bxS(g, .03, .14, .2, 0x3a3f46, px + fc * .235, 1.55, tz, { ns: 1 });
+      const ez = pz - 2.6; bxS(g, .1, 1.0, .1, 0xc5cad1, px, .47, ez); bxS(g, .24, .24, .14, 0xf2c418, px, 1.47, ez); meshS(G.sph, mat(0xd62b1f), px + fc * .1, 1.59, ez, g, { s: [.14, .14, .14], ns: 1 });
+      meshS(G.cyl, mat(0x2f6db4), px, .82, pz - 1.6, g, { s: [.3, .7, .3] }); meshS(G.cyl, mat(0xeef0f2), px, 1.25, pz + 1.55, g, { s: [.18, .26, .18] });
     });
     // totem del prezzo a led
     const tot = textTex([['GASOLIO', 44, 800, 46, null, '#ffffff'], [GD.price ? GD.price.toFixed(3).replace('.', ',') : '—', 90, 800, 142, null, '#ffb02e'], ['€ / litro', 30, 600, 204, null, 'rgba(255,255,255,.85)'], [`${N(Math.round(GD.lM))} L nel mese`, 26, 600, 262, null, 'rgba(255,255,255,.8)']], { bg: '#111316', w: 320, h: 300, round: 18 });
     const ttx = st.x + cw / 2 + 2.6, ttz = st.z + cd / 2 + 1.4;
-    bx(g, 1.8, .5, .7, 0x8e959e, ttx, .2, ttz); bx(g, 1.6, 4.4, .42, 0xf47b20, ttx, .7, ttz); bx(g, 1.66, .52, .48, 0xffffff, ttx, 4.64, ttz); planeT(tot, 1.4, 1.31, g, ttx, 3.4, ttz + .228);
+    bxS(g, 1.8, .5, .7, 0x8e959e, ttx, .2, ttz); bxS(g, 1.6, 4.4, .42, 0xf47b20, ttx, .7, ttz); bxS(g, 1.66, .52, .48, 0xffffff, ttx, 4.64, ttz); planeT(tot, 1.4, 1.31, g, ttx, 3.4, ttz + .228);
     // deposito: vasca di contenimento, cisterna a doppia parete con piastre ADR, sfiato, armadio di carico, pompa, parapetto, antincendio, kit antisversamento
     const tx = F.x0 + 5, tz = st.z + 1.5;
-    bx(g, 4.4, .62, 8.6, 0xc9c6bf, tx, .16, tz); bx(g, 3.9, .04, 8.1, 0x8f8c85, tx, .79, tz, { ns: 1 }); for (const s of [-1, 1]) { bx(g, .25, .16, 8.6, 0xbab7b0, tx + s * 2.08, .78, tz); bx(g, 4.4, .16, .25, 0xbab7b0, tx, .78, tz + s * 4.18); }
-    mesh(G.cyl, mat(0xeef0f2), tx, 2.35, tz, g, { s: [2.5, 6, 2.5], rx: Math.PI / 2 }); mesh(G.sph, mat(0xeef0f2), tx, 2.35, tz + 3, g, { s: [2.5, 2.5, .7] }); mesh(G.sph, mat(0xeef0f2), tx, 2.35, tz - 3, g, { s: [2.5, 2.5, .7] });
-    for (const zz of [-1.6, 1.6]) mesh(G.cyl, mat(0xf47b20), tx, 2.35, tz + zz, g, { s: [2.56, .35, 2.56], rx: Math.PI / 2 });
-    for (const s of [-1, 1]) { bx(g, 2.3, 1.0, .35, 0x7d848d, tx, .76, tz + s * 2); }
+    bxS(g, 4.4, .62, 8.6, 0xc9c6bf, tx, .16, tz); bxS(g, 3.9, .04, 8.1, 0x8f8c85, tx, .79, tz, { ns: 1 }); for (const s of [-1, 1]) { bxS(g, .25, .16, 8.6, 0xbab7b0, tx + s * 2.08, .78, tz); bxS(g, 4.4, .16, .25, 0xbab7b0, tx, .78, tz + s * 4.18); }
+    meshS(G.cyl, mat(0xeef0f2), tx, 2.35, tz, g, { s: [2.5, 6, 2.5], rx: Math.PI / 2 }); meshS(G.sph, mat(0xeef0f2), tx, 2.35, tz + 3, g, { s: [2.5, 2.5, .7] }); meshS(G.sph, mat(0xeef0f2), tx, 2.35, tz - 3, g, { s: [2.5, 2.5, .7] });
+    for (const zz of [-1.6, 1.6]) meshS(G.cyl, mat(0xf47b20), tx, 2.35, tz + zz, g, { s: [2.56, .35, 2.56], rx: Math.PI / 2 });
+    for (const s of [-1, 1]) { bxS(g, 2.3, 1.0, .35, 0x7d848d, tx, .76, tz + s * 2); }
     const adr = textTex([['30', 70, 800, 62, null, '#111'], ['1202', 70, 800, 142, null, '#111']], { bg: '#f28a1d', w: 220, h: 180, round: 6 });
     for (const s of [-1, 1]) { planeT(adr, .5, .41, g, tx + s * 1.3, 2.35, tz + .3, { ry: s * Math.PI / 2 }); }
     const tl = textTex([['GASOLIO', 60, 800, 46, null, '#1d1f22'], ['doppia parete · infiammabile', 22, 600, 96, null, '#55585e']], { bg: '#ffffff', w: 420, h: 120, round: 10 });
     for (const s of [-1, 1]) planeT(tl, 1.9, .54, g, tx + s * 1.3, 2.35, tz - 1.25, { ry: s * Math.PI / 2 });
-    mesh(G.cyl, mat(0x9aa1a9), tx + .6, 4.4, tz - 2.2, g, { s: [.1, 1.8, .1] }); mesh(G.cyl, mat(0x2b2f35), tx + .6, 5.35, tz - 2.2, g, { s: [.22, .12, .22] });
-    bx(g, .5, .32, .5, 0x2b2f35, tx - .3, 3.6, tz + 1.2); mesh(G.cyl, mat(0x9aa1a9), tx - .3, 4.0, tz + 1.2, g, { s: [.12, .5, .12] });
-    bx(g, 1.0, 1.3, .6, 0xd8dbe0, tx + 1.4, .78, tz + 4.7); bx(g, .9, .02, .02, 0x2b2f35, tx + 1.4, 1.55, tz + 5.01, { ns: 1 });
-    bx(g, .9, .6, .7, 0x4f6b54, tx - 1.2, .78, tz + 3.6); mesh(G.cyl, mat(0x6f7680), tx - .6, 1.1, tz + 3.6, g, { s: [.3, .5, .3], rz: Math.PI / 2 });
+    meshS(G.cyl, mat(0x9aa1a9), tx + .6, 4.4, tz - 2.2, g, { s: [.1, 1.8, .1] }); meshS(G.cyl, mat(0x2b2f35), tx + .6, 5.35, tz - 2.2, g, { s: [.22, .12, .22] });
+    bxS(g, .5, .32, .5, 0x2b2f35, tx - .3, 3.6, tz + 1.2); meshS(G.cyl, mat(0x9aa1a9), tx - .3, 4.0, tz + 1.2, g, { s: [.12, .5, .12] });
+    bxS(g, 1.0, 1.3, .6, 0xd8dbe0, tx + 1.4, .78, tz + 4.7); bxS(g, .9, .02, .02, 0x2b2f35, tx + 1.4, 1.55, tz + 5.01, { ns: 1 });
+    bxS(g, .9, .6, .7, 0x4f6b54, tx - 1.2, .78, tz + 3.6); meshS(G.cyl, mat(0x6f7680), tx - .6, 1.1, tz + 3.6, g, { s: [.3, .5, .3], rz: Math.PI / 2 });
     for (let i = 0; i < 10; i++) { const zz = tz - 4.2 + i * .93; for (const s of [-1, 1]) B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.36, zz, .05, 1.1, .05)); }
     for (const s of [-1, 1]) { B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.9, tz, .06, .06, 8.4)); B.add('rl', G.box, mat(0xf2c418), m4(tx + s * 2.15, 1.4, tz, .04, .04, 8.4)); }
-    for (const zz of [-1, 1]) { bx(g, .4, .7, .3, 0xd62b1f, tx - 2.7, .2, tz + zz * 2.6); mesh(G.cyl, mat(0xd62b1f), tx - 2.7, 1.2, tz + zz * 2.6, g, { s: [.3, .55, .3] }); }
-    bx(g, 1.0, .9, .7, 0xf2c418, tx + 2.9, .2, tz - 3.4); planeT(textTex([['KIT', 40, 800, 44, null, '#1d1f22'], ['antisversamento', 22, 700, 86, null, '#1d1f22']], { w: 256, h: 110 }), .9, .39, g, tx + 2.9, .78, tz - 3.4 + .37);
+    for (const zz of [-1, 1]) { bxS(g, .4, .7, .3, 0xd62b1f, tx - 2.7, .2, tz + zz * 2.6); meshS(G.cyl, mat(0xd62b1f), tx - 2.7, 1.2, tz + zz * 2.6, g, { s: [.3, .55, .3] }); }
+    bxS(g, 1.0, .9, .7, 0xf2c418, tx + 2.9, .2, tz - 3.4); planeT(textTex([['KIT', 40, 800, 44, null, '#1d1f22'], ['antisversamento', 22, 700, 86, null, '#1d1f22']], { w: 256, h: 110 }), .9, .39, g, tx + 2.9, .78, tz - 3.4 + .37);
     planeT(textTex([['DEPOSITO GASOLIO', 34, 800, 44, null, '#fff'], ['Vietato fumare e usare fiamme libere', 22, 600, 92, null, 'rgba(255,255,255,.9)']], { bg: '#d62b1f', w: 512, h: 120, round: 10 }), 2.4, .56, g, tx, 1.55, tz + 4.33);
     // AdBlue: cisternetta da 1000 L su pallet con gabbia
-    { const ax = tx, az = tz - 6.4; bx(g, 1.2, .15, 1.0, 0xc8a27a, ax, .2, az); bx(g, 1.08, .95, .9, 0xf4f6f8, ax, .36, az); bx(g, .3, .12, .3, 0x2f6db4, ax, 1.31, az);
+    { const ax = tx, az = tz - 6.4; bxS(g, 1.2, .15, 1.0, 0xc8a27a, ax, .2, az); bxS(g, 1.08, .95, .9, 0xf4f6f8, ax, .36, az); bxS(g, .3, .12, .3, 0x2f6db4, ax, 1.31, az);
       for (let i = 0; i < 5; i++) { B.add('ibc', G.box, mat(0x9aa1a9), m4(ax - .55 + i * .275, .85, az + .46, .025, 1.0, .025)); B.add('ibc', G.box, mat(0x9aa1a9), m4(ax - .55 + i * .275, .85, az - .46, .025, 1.0, .025)); }
       for (const y of [.6, 1.0, 1.32]) { B.add('ibc', G.box, mat(0x9aa1a9), m4(ax, y, az + .46, 1.12, .025, .025)); B.add('ibc', G.box, mat(0x9aa1a9), m4(ax, y, az - .46, 1.12, .025, .025)); }
       planeT(textTex([['AdBlue', 52, 800, 56, null, '#ffffff']], { bg: '#2f6db4', w: 256, h: 96, round: 8 }), .6, .23, g, ax, .85, az + .5); }
     // tubazione interrata segnalata dalla cisterna alle isole
-    const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .5, tz - 2), new T.Vector3(tx + 4, .24, tz - 3), new T.Vector3(st.x - IX, .24, st.z + 1)]), 24, .07, 6); OWN.push(tube); mesh(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
+    const tube = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(tx + 1.2, .5, tz - 2), new T.Vector3(tx + 4, .24, tz - 3), new T.Vector3(st.x - IX, .24, st.z + 1)]), 24, .07, 6); OWN.push(tube); meshS(tube, mat(0x3a3f46), 0, 0, 0, g, { ns: 1 });
     B.flush();
     // mezzi: quello dell'ultimo rifornimento è alla colonnina, gli altri nei posti
     const lastP = GD.lastR[0] ? C.plate(GD.lastR[0].targa) : '';
@@ -1343,8 +1377,8 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     // tubo della colonnina fino al bocchettone del mezzo al rifornimento
     const vp = fleetVeh.find(f => f.v.atPump);
     if (vp) { const hw2 = { truck: 1.3, van: .99, car: .87, pickup: .92 }[vp.v.kind] || 1, fx = st.x - hw2 - .03, fz = st.z + .55, pxD = st.x - IX + .44;
-      const nz = new T.Group(); nz.position.set(fx - .04, 1.16, fz); g.add(nz); bx(nz, .26, .1, .09, 0x1d1f22, -.15, -.06, 0); bx(nz, .08, .16, .07, 0x1d1f22, -.22, -.2, 0); mesh(G.cyl, mat(0x9aa1a9), .03, -.01, 0, nz, { s: [.035, .14, .035], rz: Math.PI / 2, ns: 1 });
-      const h2 = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(pxD, 2.0, st.z - .18), new T.Vector3(pxD + .3, 1.2, st.z + .05), new T.Vector3(fx - .7, .62, fz - .2), new T.Vector3(fx - .36, 1.08, fz)]), 28, .028, 6); OWN.push(h2); mesh(h2, mat(0x1d1f22), 0, 0, 0, g, { ns: 1 });
+      const nz = new T.Group(); nz.position.set(fx - .04, 1.16, fz); g.add(nz); bxS(nz, .26, .1, .09, 0x1d1f22, -.15, -.06, 0); bxS(nz, .08, .16, .07, 0x1d1f22, -.22, -.2, 0); meshS(G.cyl, mat(0x9aa1a9), .03, -.01, 0, nz, { s: [.035, .14, .035], rz: Math.PI / 2, ns: 1 });
+      const h2 = new T.TubeGeometry(new T.CatmullRomCurve3([new T.Vector3(pxD, 2.0, st.z - .18), new T.Vector3(pxD + .3, 1.2, st.z + .05), new T.Vector3(fx - .7, .62, fz - .2), new T.Vector3(fx - .36, 1.08, fz)]), 28, .028, 6); OWN.push(h2); meshS(h2, mat(0x1d1f22), 0, 0, 0, g, { ns: 1 });
       const op = person(g, fx - .6, fz + .2, 0xf47b20, null, { mode: 'fuel' }); op.position.y = .21; op.rotation.y = Math.PI / 2; movers.push({ o: op, t: 'bob', ph: 3 });
       movers.push({ t: 'pump', l: C.num(GD.lastR[0].litri) || 40, price: GD.price, last: 0 }); }
     // area cliccabile del parco mezzi e del distributore
@@ -1411,6 +1445,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   const domeG = () => G.dome || (G.dome = new T.SphereGeometry(.5, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2));
   const torG = () => G.tor || (G.tor = new T.TorusGeometry(.16, .022, 8, 28));
   const angD = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+  function partS(...a) { const e = part(...a); e.__s = 1; return e; }
   function part(geo, m, x, y, z, par, s, r, ns) { const e = new T.Mesh(geo, m); e.position.set(x, y, z); if (s) e.scale.set(s[0], s[1], s[2]); if (r) e.rotation.set(r[0], r[1], r[2]); e.castShadow = !ns; e.receiveShadow = true; par.add(e); return e; }
   const grp = (par, x, y, z) => { const q = new T.Group(); q.position.set(x, y, z); par.add(q); return q; };
   function blobMat() { if (M.blob) return M.blob; const t = cvTex(64, 64, (gx, w, h) => { const gr = gx.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(20,22,26,.42)'); gr.addColorStop(1, 'rgba(20,22,26,0)'); gx.fillStyle = gr; gx.fillRect(0, 0, w, h); }); return (M.blob = new T.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false })); }
@@ -1424,28 +1459,28 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const sk = mat(SKIN[Math.floor(rr() * SKIN.length)]), pn = mat(o.pants || [0x2b3440, 0x33363b, 0x3b4a5e][Math.floor(rr() * 3)]), sh = mat(o.shirt || [0xf4f4f2, 0x3f4a5a, 0xe4e7eb, 0x2f3a4a][Math.floor(rr() * 4)]);
     const vs = mat(vest || 0x39a85a), rf = mat(0xe8ebee), dk = mat(0x1b1d20), bt = mat(0x2a2522), gl = mat(o.glove || [0x4a4f57, 0xe0a03a, 0x5b6068][Math.floor(rr() * 3)]), hm = mat(helmet || 0xf5f5f2);
     const root = grp(g, 0, 0, 0);
-    const leg = s => { const hip = grp(root, s * .1, .92, 0); part(capG(.084, .3), pn, 0, -.21, 0, hip, [1, 1, 1.05]); const knee = grp(hip, 0, -.43, 0); part(G.sph, pn, 0, 0, .005, knee, [.15, .15, .155]); part(capG(.07, .3), pn, 0, -.2, 0, knee); part(G.cyl, rf, 0, -.27, 0, knee, [.155, .035, .155]);
-      const ank = grp(knee, 0, -.42, 0); part(G.box, bt, 0, .035, .03, ank, [.13, .1, .22]); part(G.sph, bt, 0, .03, .13, ank, [.13, .1, .12]); part(G.box, dk, 0, -.008, .045, ank, [.138, .022, .28]); part(G.box, mat(0x3a332e), 0, .055, .16, ank, [.12, .05, .06]); return { hip, knee, ank }; };
+    const leg = s => { const hip = grp(root, s * .1, .92, 0); partS(capG(.084, .3), pn, 0, -.21, 0, hip, [1, 1, 1.05]); const knee = grp(hip, 0, -.43, 0); partS(G.sph, pn, 0, 0, .005, knee, [.15, .15, .155]); partS(capG(.07, .3), pn, 0, -.2, 0, knee); partS(G.cyl, rf, 0, -.27, 0, knee, [.155, .035, .155]);
+      const ank = grp(knee, 0, -.42, 0); partS(G.box, bt, 0, .035, .03, ank, [.13, .1, .22]); partS(G.sph, bt, 0, .03, .13, ank, [.13, .1, .12]); partS(G.box, dk, 0, -.008, .045, ank, [.138, .022, .28]); partS(G.box, mat(0x3a332e), 0, .055, .16, ank, [.12, .05, .06]); return { hip, knee, ank }; };
     const L1 = leg(-1), R1 = leg(1);
-    part(capG(.12, .14), pn, 0, .98, 0, root, [1, 1, .78], [0, 0, Math.PI / 2]);
-    part(G.cyl, dk, 0, 1.045, 0, root, [.39, .055, .29]); part(G.box, mat(0xb7bcc3), 0, 1.045, .152, root, [.06, .04, .014]);
-    part(G.box, dk, .19, 1.0, -.03, root, [.05, .12, .07]); part(G.cyl, dk, .2, 1.11, -.04, root, [.012, .12, .012]); part(G.box, mat(0xf47b20), .2, 1.04, .01, root, [.04, .03, .012], null, 1);
+    partS(capG(.12, .14), pn, 0, .98, 0, root, [1, 1, .78], [0, 0, Math.PI / 2]);
+    partS(G.cyl, dk, 0, 1.045, 0, root, [.39, .055, .29]); partS(G.box, mat(0xb7bcc3), 0, 1.045, .152, root, [.06, .04, .014]);
+    partS(G.box, dk, .19, 1.0, -.03, root, [.05, .12, .07]); partS(G.cyl, dk, .2, 1.11, -.04, root, [.012, .12, .012]); partS(G.box, mat(0xf47b20), .2, 1.04, .01, root, [.04, .03, .012], null, 1);
     const spine = grp(root, 0, 1.02, 0);
-    part(capG(.16, .26), sh, 0, .23, 0, spine, [1.05, 1, .72]);
-    part(capG(.168, .2), vs, 0, .2, 0, spine, [1.07, 1, .77]);
-    for (const y of [.12, .25]) part(G.cyl, rf, 0, y, 0, spine, [.385, .04, .284], null, 1);
-    for (const s of [-1, 1]) { part(G.box, rf, s * .085, .34, .14, spine, [.036, .17, .014], null, 1); part(G.box, rf, s * .085, .31, -.14, spine, [.036, .22, .014], null, 1); }
-    part(G.box, mat(0xffffff), -.06, .3, .143, spine, [.06, .045, .012], null, 1); part(G.box, mat(0xf47b20), -.06, .313, .151, spine, [.06, .012, .006], null, 1);
-    part(G.cyl, sk, 0, .53, 0, spine, [.095, .1, .095]);
+    partS(capG(.16, .26), sh, 0, .23, 0, spine, [1.05, 1, .72]);
+    partS(capG(.168, .2), vs, 0, .2, 0, spine, [1.07, 1, .77]);
+    for (const y of [.12, .25]) partS(G.cyl, rf, 0, y, 0, spine, [.385, .04, .284], null, 1);
+    for (const s of [-1, 1]) { partS(G.box, rf, s * .085, .34, .14, spine, [.036, .17, .014], null, 1); partS(G.box, rf, s * .085, .31, -.14, spine, [.036, .22, .014], null, 1); }
+    partS(G.box, mat(0xffffff), -.06, .3, .143, spine, [.06, .045, .012], null, 1); partS(G.box, mat(0xf47b20), -.06, .313, .151, spine, [.06, .012, .006], null, 1);
+    partS(G.cyl, sk, 0, .53, 0, spine, [.095, .1, .095]);
     const hd = grp(spine, 0, .58, 0);
-    part(G.sph, sk, 0, .1, .005, hd, [.215, .245, .225]);
-    part(G.box, mat(HAIR[Math.floor(rr() * HAIR.length)]), 0, .075, -.098, hd, [.15, .07, .03]);
-    for (const s of [-1, 1]) { part(G.sph, mat(0x1d1f22), s * .041, .115, .106, hd, [.026, .03, .02], null, 1); part(G.box, mat(0x3a2e26), s * .042, .147, .104, hd, [.042, .01, .016], [-.15, 0, 0], 1); part(G.sph, sk, s * .11, .1, 0, hd, [.035, .06, .045]); }
-    part(G.sph, sk, 0, .088, .113, hd, [.032, .042, .03], null, 1); part(G.box, mat(0xa0675a), 0, .047, .108, hd, [.045, .009, .014], null, 1);
-    part(domeG(), hm, 0, .148, -.005, hd, [.27, .26, .285]); part(G.cyl, hm, 0, .15, -.005, hd, [.285, .018, .3]); part(G.box, hm, 0, .152, .14, hd, [.15, .016, .07]); part(G.box, hm, 0, .27, -.01, hd, [.035, .035, .22]);
-    const arm = s => { const sh2 = grp(spine, s * .21, .43, 0); part(G.sph, sh, 0, -.01, 0, sh2, [.125, .125, .125]); part(capG(.05, .19), sh, 0, -.14, 0, sh2); const el = grp(sh2, 0, -.29, 0); part(G.sph, sh, 0, 0, 0, el, [.095, .095, .095]); part(capG(.045, .19), sh, 0, -.13, 0, el); const wr = grp(el, 0, -.28, 0); part(G.sph, gl, 0, -.035, .01, wr, [.085, .115, .07]); part(G.sph, gl, s * -.035, -.02, .035, wr, [.035, .06, .035]); return { sh: sh2, el, wr }; };
+    partS(G.sph, sk, 0, .1, .005, hd, [.215, .245, .225]);
+    partS(G.box, mat(HAIR[Math.floor(rr() * HAIR.length)]), 0, .075, -.098, hd, [.15, .07, .03]);
+    for (const s of [-1, 1]) { partS(G.sph, mat(0x1d1f22), s * .041, .115, .106, hd, [.026, .03, .02], null, 1); partS(G.box, mat(0x3a2e26), s * .042, .147, .104, hd, [.042, .01, .016], [-.15, 0, 0], 1); partS(G.sph, sk, s * .11, .1, 0, hd, [.035, .06, .045]); }
+    partS(G.sph, sk, 0, .088, .113, hd, [.032, .042, .03], null, 1); partS(G.box, mat(0xa0675a), 0, .047, .108, hd, [.045, .009, .014], null, 1);
+    partS(domeG(), hm, 0, .148, -.005, hd, [.27, .26, .285]); partS(G.cyl, hm, 0, .15, -.005, hd, [.285, .018, .3]); partS(G.box, hm, 0, .152, .14, hd, [.15, .016, .07]); partS(G.box, hm, 0, .27, -.01, hd, [.035, .035, .22]);
+    const arm = s => { const sh2 = grp(spine, s * .21, .43, 0); partS(G.sph, sh, 0, -.01, 0, sh2, [.125, .125, .125]); partS(capG(.05, .19), sh, 0, -.14, 0, sh2); const el = grp(sh2, 0, -.29, 0); partS(G.sph, sh, 0, 0, 0, el, [.095, .095, .095]); partS(capG(.045, .19), sh, 0, -.13, 0, el); const wr = grp(el, 0, -.28, 0); partS(G.sph, gl, 0, -.035, .01, wr, [.085, .115, .07]); partS(G.sph, gl, s * -.035, -.02, .035, wr, [.035, .06, .035]); return { sh: sh2, el, wr }; };
     const LA = arm(-1), RA = arm(1);
-    if (o.tool === 'tablet' || o.mode === 'scan') { part(G.box, dk, 0, -.06, .07, RA.wr, [.06, .045, .17]); part(G.box, mat(0xf47b20), 0, -.04, .02, RA.wr, [.07, .06, .06]); part(G.box, dk, .02, -.05, .1, LA.wr, [.22, .015, .3], [0, 0, .2]); part(G.box, mat(0x9fc9e8), .02, -.04, .1, LA.wr, [.19, .006, .26], [0, 0, .2], 1); }
+    if (o.tool === 'tablet' || o.mode === 'scan') { partS(G.box, dk, 0, -.06, .07, RA.wr, [.06, .045, .17]); partS(G.box, mat(0xf47b20), 0, -.04, .02, RA.wr, [.07, .06, .06]); partS(G.box, dk, .02, -.05, .1, LA.wr, [.22, .015, .3], [0, 0, .2]); partS(G.box, mat(0x9fc9e8), .02, -.04, .1, LA.wr, [.19, .006, .26], [0, 0, .2], 1); }
     const bl = part(G.plane, blobMat(), 0, .095, 0, g, [.75, .75, 1], [-Math.PI / 2, 0, 0], 1); bl.castShadow = false; bl.renderOrder = 1;
     g.traverse(e => { if (e.isMesh) { e.castShadow = false; e.receiveShadow = false; } });
     g.userData.rig = { root, spine, hd, hipL: L1.hip, hipR: R1.hip, knL: L1.knee, knR: R1.knee, anL: L1.ank, anR: R1.ank, shL: LA.sh, shR: RA.sh, elL: LA.el, elR: RA.el, wrL: LA.wr, wrR: RA.wr, ph: rr() * 6, amp: 0, mode: o.mode || 'walk', seed: rr() * 10, steer: 0, look: 0, lp: null, blob: bl };
@@ -1499,56 +1534,56 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     o = o || {};
     const g = new T.Group(); g.position.set(x, .5, z); p.add(g);
     const OR = mat(0xf47b20), DK = mat(0x2b2f35), BK = mat(0x17191c), GR = mat(0x8e959e), LG = mat(0xc5cad1), ST = mat(0x3a3f46), SEAT = mat(0x26292d);
-    part(G.box, DK, 0, .34, -.25, g, [.98, .3, 1.9]);
-    part(sideG('fkSide', [[-.78, .42], [.66, .42], [.66, .7], [.1, .7], [-.03, .99], [-.72, .99], [-.79, .9]], 1.04, .035), OR, 0, 0, 0, g);
-    part(sideG('fkCW', [[-1.33, .17], [-.72, .17], [-.72, 1.07], [-1.06, 1.07], Object.assign([-1.33, .8], { q: [-1.33, 1.07] })], 1.1, .05), ST, 0, 0, 0, g);
-    for (let i = 0; i < 5; i++) part(G.box, BK, 0, 1.03, -.62 + i * .09, g, [.56, .012, .035], null, 1);
-    part(G.box, mat(0x1d1f22), 0, .748, .37, g, [.9, .024, .54], null, 1); for (let i = 0; i < 5; i++) part(G.box, mat(0x2b2f35), 0, .766, .16 + i * .1, g, [.86, .012, .025], null, 1);
-    part(G.box, SEAT, 0, 1.1, -.42, g, [.52, .11, .46]); part(G.box, SEAT, 0, 1.39, -.67, g, [.5, .5, .1], [-.14, 0, 0]); part(G.box, SEAT, 0, 1.66, -.71, g, [.3, .12, .09], [-.14, 0, 0]);
-    for (const s of [-1, 1]) part(G.box, SEAT, s * .29, 1.22, -.42, g, [.05, .06, .34]);
-    part(G.box, mat(0xf47b20), .17, 1.36, -.6, g, [.05, .48, .012], [-.14, 0, 0], 1);
-    part(G.box, DK, 0, .95, .6, g, [.88, .48, .14], [.2, 0, 0]);
-    part(G.box, new T.MeshBasicMaterial({ color: 0x8fe0b4 }), .14, 1.15, .508, g, [.16, .08, .012], [.2, 0, 0], 1);
-    part(G.cyl, DK, 0, 1.2, .43, g, [.07, .42, .07], [.8, 0, 0]);
-    const stw = grp(g, 0, 1.37, .28); stw.rotation.x = -.85; const spin = grp(stw, 0, 0, 0); part(torG(), BK, 0, 0, 0, spin, null, [Math.PI / 2, 0, 0]); part(G.box, BK, 0, 0, 0, spin, [.3, .02, .03]); part(G.sph, mat(0xd62b1f), .13, .03, 0, spin, [.05, .06, .05]);
-    for (let i = 0; i < 3; i++) { part(G.cyl, BK, .3 + i * .05, 1.08, .5, g, [.018, .26, .018], [-.35, 0, 0]); part(G.sph, mat([0xd62b1f, 0x2f6db4, 0x2b2f35][i]), .3 + i * .05, 1.2, .46, g, [.045, .045, .045]); }
+    partS(G.box, DK, 0, .34, -.25, g, [.98, .3, 1.9]);
+    partS(sideG('fkSide', [[-.78, .42], [.66, .42], [.66, .7], [.1, .7], [-.03, .99], [-.72, .99], [-.79, .9]], 1.04, .035), OR, 0, 0, 0, g);
+    partS(sideG('fkCW', [[-1.33, .17], [-.72, .17], [-.72, 1.07], [-1.06, 1.07], Object.assign([-1.33, .8], { q: [-1.33, 1.07] })], 1.1, .05), ST, 0, 0, 0, g);
+    for (let i = 0; i < 5; i++) partS(G.box, BK, 0, 1.03, -.62 + i * .09, g, [.56, .012, .035], null, 1);
+    partS(G.box, mat(0x1d1f22), 0, .748, .37, g, [.9, .024, .54], null, 1); for (let i = 0; i < 5; i++) partS(G.box, mat(0x2b2f35), 0, .766, .16 + i * .1, g, [.86, .012, .025], null, 1);
+    partS(G.box, SEAT, 0, 1.1, -.42, g, [.52, .11, .46]); partS(G.box, SEAT, 0, 1.39, -.67, g, [.5, .5, .1], [-.14, 0, 0]); partS(G.box, SEAT, 0, 1.66, -.71, g, [.3, .12, .09], [-.14, 0, 0]);
+    for (const s of [-1, 1]) partS(G.box, SEAT, s * .29, 1.22, -.42, g, [.05, .06, .34]);
+    partS(G.box, mat(0xf47b20), .17, 1.36, -.6, g, [.05, .48, .012], [-.14, 0, 0], 1);
+    partS(G.box, DK, 0, .95, .6, g, [.88, .48, .14], [.2, 0, 0]);
+    partS(G.box, new T.MeshBasicMaterial({ color: 0x8fe0b4 }), .14, 1.15, .508, g, [.16, .08, .012], [.2, 0, 0], 1);
+    partS(G.cyl, DK, 0, 1.2, .43, g, [.07, .42, .07], [.8, 0, 0]);
+    const stw = grp(g, 0, 1.37, .28); stw.rotation.x = -.85; const spin = grp(stw, 0, 0, 0); partS(torG(), BK, 0, 0, 0, spin, null, [Math.PI / 2, 0, 0]); partS(G.box, BK, 0, 0, 0, spin, [.3, .02, .03]); partS(G.sph, mat(0xd62b1f), .13, .03, 0, spin, [.05, .06, .05]);
+    for (let i = 0; i < 3; i++) { partS(G.cyl, BK, .3 + i * .05, 1.08, .5, g, [.018, .26, .018], [-.35, 0, 0]); partS(G.sph, mat([0xd62b1f, 0x2f6db4, 0x2b2f35][i]), .3 + i * .05, 1.2, .46, g, [.045, .045, .045]); }
     // tettuccio di protezione
-    for (const s of [-1, 1]) { part(G.box, DK, s * .47, 1.6, -.82, g, [.07, 1.24, .07]); part(G.box, DK, s * .47, 1.47, .53, g, [.07, 1.52, .07], [-.08, 0, 0]); part(G.box, DK, s * .47, 2.23, -.14, g, [.07, .07, 1.5]); }
-    for (const zz of [-.84, .5]) part(G.box, DK, 0, 2.23, zz, g, [1.0, .07, .07]);
-    for (let i = 0; i < 6; i++) part(G.box, DK, 0, 2.23, -.66 + i * .2, g, [.92, .025, .045]);
-    for (const s of [-1, 1]) { part(G.box, DK, s * .4, 2.17, .52, g, [.14, .1, .08]); part(G.box, new T.MeshBasicMaterial({ color: 0xfff6dc }), s * .4, 2.17, .565, g, [.1, .06, .01], null, 1); }
+    for (const s of [-1, 1]) { partS(G.box, DK, s * .47, 1.6, -.82, g, [.07, 1.24, .07]); partS(G.box, DK, s * .47, 1.47, .53, g, [.07, 1.52, .07], [-.08, 0, 0]); partS(G.box, DK, s * .47, 2.23, -.14, g, [.07, .07, 1.5]); }
+    for (const zz of [-.84, .5]) partS(G.box, DK, 0, 2.23, zz, g, [1.0, .07, .07]);
+    for (let i = 0; i < 6; i++) partS(G.box, DK, 0, 2.23, -.66 + i * .2, g, [.92, .025, .045]);
+    for (const s of [-1, 1]) { partS(G.box, DK, s * .4, 2.17, .52, g, [.14, .1, .08]); partS(G.box, new T.MeshBasicMaterial({ color: 0xfff6dc }), s * .4, 2.17, .565, g, [.1, .06, .01], null, 1); }
     // luci posteriori, bande di sicurezza, numero
-    for (const s of [-1, 1]) { part(G.box, new T.MeshBasicMaterial({ color: 0xd8261c }), s * .38, .9, -1.395, g, [.1, .08, .03], null, 1); part(G.box, new T.MeshBasicMaterial({ color: 0xf6f6f0 }), s * .25, .9, -1.395, g, [.07, .06, .03], null, 1); }
-    part(G.box, M.haz, 0, .3, -1.397, g, [.92, .14, .03], null, 1);
+    for (const s of [-1, 1]) { partS(G.box, new T.MeshBasicMaterial({ color: 0xd8261c }), s * .38, .9, -1.395, g, [.1, .08, .03], null, 1); partS(G.box, new T.MeshBasicMaterial({ color: 0xf6f6f0 }), s * .25, .9, -1.395, g, [.07, .06, .03], null, 1); }
+    partS(G.box, M.haz, 0, .3, -1.397, g, [.92, .14, .03], null, 1);
     const num = String(++fkN).padStart(2, '0'); planeT(textTex([[num, 74, 800, 50, null, '#fff']], { bg: '#1d1f22', w: 128, h: 100, round: 14 }), .2, .16, g, 0, .6, -1.415, { ry: Math.PI });
     for (const s of [-1, 1]) planeT(textTex([['C' + num, 60, 800, 50, null, '#fff']], { w: 160, h: 100 }), .26, .16, g, s * .538, .82, -.35, { ry: s * Math.PI / 2 });
     // ruote
-    const wf = [-1, 1].map(s => { const w = grp(g, s * .5, .3, .42); part(G.cyl, BK, 0, 0, 0, w, [.6, .24, .6], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .122, 0, 0, w, [.34, .01, .34], [0, 0, Math.PI / 2], 1); for (let k = 0; k < 5; k++) { const a2 = k / 5 * Math.PI * 2; part(G.cyl, DK, s * .133, Math.cos(a2) * .08, Math.sin(a2) * .08, w, [.035, .014, .035], [0, 0, Math.PI / 2], 1); } for (let k = 0; k < 10; k++) { const a2 = k / 10 * Math.PI * 2; part(G.box, mat(0x232528), 0, Math.cos(a2) * .305, Math.sin(a2) * .305, w, [.2, .03, .05], [a2, 0, 0], 1); } return w; });
-    const rs = [-1, 1].map(s => { const st = grp(g, s * .4, .23, -.98); const w = grp(st, 0, 0, 0); part(G.cyl, BK, 0, 0, 0, w, [.46, .18, .46], [0, 0, Math.PI / 2]); part(G.cyl, LG, s * .092, 0, 0, w, [.24, .01, .24], [0, 0, Math.PI / 2], 1); return { st, w }; });
-    for (const s of [-1, 1]) part(G.box, OR, s * .57, .67, .42, g, [.14, .035, .66], null, 1);
+    const wf = [-1, 1].map(s => { const w = grp(g, s * .5, .3, .42); partS(G.cyl, BK, 0, 0, 0, w, [.6, .24, .6], [0, 0, Math.PI / 2]); partS(G.cyl, LG, s * .122, 0, 0, w, [.34, .01, .34], [0, 0, Math.PI / 2], 1); for (let k = 0; k < 5; k++) { const a2 = k / 5 * Math.PI * 2; partS(G.cyl, DK, s * .133, Math.cos(a2) * .08, Math.sin(a2) * .08, w, [.035, .014, .035], [0, 0, Math.PI / 2], 1); } for (let k = 0; k < 10; k++) { const a2 = k / 10 * Math.PI * 2; partS(G.box, mat(0x232528), 0, Math.cos(a2) * .305, Math.sin(a2) * .305, w, [.2, .03, .05], [a2, 0, 0], 1); } return w; });
+    const rs = [-1, 1].map(s => { const st = grp(g, s * .4, .23, -.98); const w = grp(st, 0, 0, 0); partS(G.cyl, BK, 0, 0, 0, w, [.46, .18, .46], [0, 0, Math.PI / 2]); partS(G.cyl, LG, s * .092, 0, 0, w, [.24, .01, .24], [0, 0, Math.PI / 2], 1); return { st, w }; });
+    for (const s of [-1, 1]) partS(G.box, OR, s * .57, .67, .42, g, [.14, .035, .66], null, 1);
     // montante
     const mast = grp(g, 0, .12, .8);
-    for (const s of [-1, 1]) { part(G.box, GR, s * .33, 1.25, 0, mast, [.08, 2.5, .13]); part(G.box, mat(0x6f7680), s * .29, 1.25, 0, mast, [.02, 2.5, .09], null, 1); }
-    part(G.box, GR, 0, .15, -.03, mast, [.74, .1, .08]); part(G.box, GR, 0, 2.46, -.03, mast, [.74, .08, .08]); part(G.box, GR, 0, 1.3, -.06, mast, [.62, .06, .05]);
-    part(G.cyl, LG, 0, .95, -.12, mast, [.09, 1.7, .09]); part(G.cyl, mat(0xdfe3e6), 0, 1.95, -.12, mast, [.05, .4, .05]);
-    for (const s of [-1, 1]) part(G.cyl, BK, s * .16, .7, -.12, mast, [.025, 1.0, .025], [.0, 0, 0]);
+    for (const s of [-1, 1]) { partS(G.box, GR, s * .33, 1.25, 0, mast, [.08, 2.5, .13]); partS(G.box, mat(0x6f7680), s * .29, 1.25, 0, mast, [.02, 2.5, .09], null, 1); }
+    partS(G.box, GR, 0, .15, -.03, mast, [.74, .1, .08]); partS(G.box, GR, 0, 2.46, -.03, mast, [.74, .08, .08]); partS(G.box, GR, 0, 1.3, -.06, mast, [.62, .06, .05]);
+    partS(G.cyl, LG, 0, .95, -.12, mast, [.09, 1.7, .09]); partS(G.cyl, mat(0xdfe3e6), 0, 1.95, -.12, mast, [.05, .4, .05]);
+    for (const s of [-1, 1]) partS(G.cyl, BK, s * .16, .7, -.12, mast, [.025, 1.0, .025], [.0, 0, 0]);
     const inner = grp(mast, 0, 0, .05);
-    for (const s of [-1, 1]) part(G.box, mat(0xa3aab2), s * .25, 1.2, 0, inner, [.06, 2.36, .1]);
-    part(G.box, mat(0xa3aab2), 0, 2.36, 0, inner, [.56, .07, .07]); for (const s of [-1, 1]) part(G.cyl, DK, s * .12, 2.3, .07, inner, [.13, .045, .13], [0, 0, Math.PI / 2]);
+    for (const s of [-1, 1]) partS(G.box, mat(0xa3aab2), s * .25, 1.2, 0, inner, [.06, 2.36, .1]);
+    partS(G.box, mat(0xa3aab2), 0, 2.36, 0, inner, [.56, .07, .07]); for (const s of [-1, 1]) partS(G.cyl, DK, s * .12, 2.3, .07, inner, [.13, .045, .13], [0, 0, Math.PI / 2]);
     const carr = grp(mast, 0, 0, .14);
-    part(G.box, DK, 0, .3, 0, carr, [.84, .36, .06]); part(G.box, M.haz, 0, .41, .042, carr, [.8, .06, .014], null, 1);
-    for (const yy of [.5, 1.06]) part(G.box, DK, 0, yy, -.01, carr, [.84, .04, .04]);
-    for (let i = -3; i <= 3; i++) part(G.box, DK, i * .13, .79, -.01, carr, [.022, .56, .022]);
-    for (const s of [-1, 1]) { part(G.box, DK, s * .41, .79, -.01, carr, [.035, .56, .035]); part(G.box, ST, s * .22, .3, .055, carr, [.1, .56, .05]); part(G.box, ST, s * .22, .045, .66, carr, [.1, .045, 1.15]); }
+    partS(G.box, DK, 0, .3, 0, carr, [.84, .36, .06]); partS(G.box, M.haz, 0, .41, .042, carr, [.8, .06, .014], null, 1);
+    for (const yy of [.5, 1.06]) partS(G.box, DK, 0, yy, -.01, carr, [.84, .04, .04]);
+    for (let i = -3; i <= 3; i++) partS(G.box, DK, i * .13, .79, -.01, carr, [.022, .56, .022]);
+    for (const s of [-1, 1]) { partS(G.box, DK, s * .41, .79, -.01, carr, [.035, .56, .035]); partS(G.box, ST, s * .22, .3, .055, carr, [.1, .56, .05]); partS(G.box, ST, s * .22, .045, .66, carr, [.1, .045, 1.15]); }
     const chains = [-1, 1].map(s => part(G.box, BK, s * .12, 1, .02, mast, [.03, 1, .02], null, 1));
     const load = grp(carr, 0, -.005, .66); const LB = new Batch(load); palletStack(LB, 0, 0, 0, .65 + rr() * .35, PAL[Math.floor(rr() * PAL.length)], 3, null); LB.flush(); load.visible = false;
     // lampeggiante arancione e faretto blu a terra
-    part(G.cyl, BK, -.32, 2.29, -.72, g, [.12, .05, .12]);
-    const bmat = new T.MeshBasicMaterial({ color: 0xffa020 }); OWN.push(bmat); part(G.cyl, bmat, -.32, 2.36, -.72, g, [.1, .1, .1], null, 1); part(G.sph, bmat, -.32, 2.41, -.72, g, [.1, .07, .1], null, 1);
+    partS(G.cyl, BK, -.32, 2.29, -.72, g, [.12, .05, .12]);
+    const bmat = new T.MeshBasicMaterial({ color: 0xffa020 }); OWN.push(bmat); partS(G.cyl, bmat, -.32, 2.36, -.72, g, [.1, .1, .1], null, 1); partS(G.sph, bmat, -.32, 2.41, -.72, g, [.1, .07, .1], null, 1);
     const glow = new T.Sprite(new T.SpriteMaterial({ map: radTex('glowA', 'rgba(255,190,80,1)', 'rgba(255,140,20,.35)'), transparent: true, depthWrite: false, blending: T.AdditiveBlending })); glow.position.set(-.32, 2.38, -.72); glow.scale.set(.9, .9, 1); g.add(glow); OWN.push(glow.material);
     const spM = new T.MeshBasicMaterial({ map: radTex('spotB', 'rgba(90,170,255,1)', 'rgba(40,110,255,.45)'), transparent: true, depthWrite: false, blending: T.AdditiveBlending }); OWN.push(spM);
     const spot = part(G.plane, spM, 0, .1, 3.3, g, [.9, .9, 1], [-Math.PI / 2, 0, 0], 1); spot.castShadow = false;
-    part(G.plane, blobMat(), 0, .095, -.2, g, [1.7, 2.9, 1], [-Math.PI / 2, 0, 0], 1).castShadow = false;
+    partS(G.plane, blobMat(), 0, .095, -.2, g, [1.7, 2.9, 1], [-Math.PI / 2, 0, 0], 1).castShadow = false;
     const drv = person(g, 0, -.4, 0xf47b20, 0xf2c418, { mode: 'drive' }); drv.position.y = .28; drv.userData.rig.blob.visible = false;
     const big = new Set(); g.children.slice(0, 3).forEach(e => big.add(e)); g.traverse(e => { if (e.isMesh) { e.receiveShadow = false; e.castShadow = big.has(e); } }); [mast.children[0], mast.children[2]].forEach(e => { if (e) e.castShadow = true; });
     g.userData.fk = { mast, inner, carr, chains, load, wf, rs, spin, bmat, glow, spot, spM, drv: drv.userData.rig, f: .1, tilt: 0, steer: 0, rev: 0, revS: 0, ds: 0, v: 0 };
@@ -1606,10 +1641,10 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
   // transpallet manuale: forche con rulli, pompa idraulica, timone con impugnatura
   function palletJack(par) {
     const j = new T.Group(); par.add(j); const OR = mat(0xf47b20), DK = mat(0x2b2f35), BK = mat(0x17191c), LG = mat(0xc5cad1);
-    for (const s of [-1, 1]) { part(G.box, OR, s * .2, .55, .45, j, [.16, .07, 1.15]); part(G.box, DK, s * .2, .515, .45, j, [.13, .02, 1.1], null, 1); part(G.cyl, BK, s * .2, .535, .98, j, [.07, .1, .07], [0, 0, Math.PI / 2]); part(G.cyl, BK, s * .2, .535, .86, j, [.07, .1, .07], [0, 0, Math.PI / 2]); }
-    part(G.box, OR, 0, .62, -.16, j, [.56, .2, .16]); part(G.cyl, LG, 0, .8, -.18, j, [.09, .34, .09]); part(G.cyl, DK, 0, .99, -.18, j, [.12, .05, .12]);
-    for (const s of [-1, 1]) part(G.cyl, BK, s * .07, .58, -.22, j, [.16, .06, .16], [0, 0, Math.PI / 2]);
-    const tl = grp(j, 0, .74, -.2); tl.rotation.x = -.6; part(G.cyl, DK, 0, .47, 0, tl, [.04, .94, .04]); part(G.box, DK, 0, .95, 0, tl, [.34, .045, .045]); for (const s of [-1, 1]) part(G.box, DK, s * .16, .85, 0, tl, [.04, .22, .04]); part(G.box, mat(0xd62b1f), .07, .8, .025, tl, [.05, .09, .03]); part(G.box, BK, 0, .95, 0, tl, [.22, .06, .06]);
+    for (const s of [-1, 1]) { partS(G.box, OR, s * .2, .55, .45, j, [.16, .07, 1.15]); partS(G.box, DK, s * .2, .515, .45, j, [.13, .02, 1.1], null, 1); partS(G.cyl, BK, s * .2, .535, .98, j, [.07, .1, .07], [0, 0, Math.PI / 2]); partS(G.cyl, BK, s * .2, .535, .86, j, [.07, .1, .07], [0, 0, Math.PI / 2]); }
+    partS(G.box, OR, 0, .62, -.16, j, [.56, .2, .16]); partS(G.cyl, LG, 0, .8, -.18, j, [.09, .34, .09]); partS(G.cyl, DK, 0, .99, -.18, j, [.12, .05, .12]);
+    for (const s of [-1, 1]) partS(G.cyl, BK, s * .07, .58, -.22, j, [.16, .06, .16], [0, 0, Math.PI / 2]);
+    const tl = grp(j, 0, .74, -.2); tl.rotation.x = -.6; partS(G.cyl, DK, 0, .47, 0, tl, [.04, .94, .04]); partS(G.box, DK, 0, .95, 0, tl, [.34, .045, .045]); for (const s of [-1, 1]) partS(G.box, DK, s * .16, .85, 0, tl, [.04, .22, .04]); partS(G.box, mat(0xd62b1f), .07, .8, .025, tl, [.05, .09, .03]); partS(G.box, BK, 0, .95, 0, tl, [.22, .06, .06]);
     j.traverse(e => { if (e.isMesh) e.receiveShadow = false; });
     return j;
   }
@@ -1659,10 +1694,10 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const FM = [], fm = (c, o) => { const m = new T.MeshLambertMaterial({ color: c, transparent: true, opacity: o == null ? 1 : o }); m.userData.o0 = m.opacity; FM.push(m); OWN.push(m); return m; };
     const glassF = fm(0x7f9db6, .92), frameF = fm(0xf7f7f5), darkF = fm(0x2b2f35), orF = fm(0xf47b20), roofF = fm(0xeeeeec), pvF = fm(0x27416e);
     // basamento, piazza d'ingresso, totem
-    bx(g, BW + .8, .14, BD + .8, 0x3a3f46, 0, 0, 0, { ns: 1 }); bx(g, BW, .12, BD, 0xe7e5e0, 0, .12, 0, { ns: 1 });
-    bx(g, 14, .1, 5, 0xdcd8d0, 0, 0, BD / 2 + 2.9, { ns: 1 }); for (let i = 0; i < 6; i++) bx(g, .1, .012, 4.6, 0xc9c4bb, -6 + i * 2.4, .1, BD / 2 + 2.9, { ns: 1 });
-    for (const s of [-1, 1]) { bx(g, 2.6, .45, .7, 0x8a8d93, s * 5.6, .1, BD / 2 + 4.3); bx(g, 2.6, .07, .7, 0xc8a27a, s * 5.6, .55, BD / 2 + 4.3, { ns: 1 }); }
-    bx(g, 1.1, 2.6, .3, 0x1d1f22, 8.6, .1, BD / 2 + 4.4);
+    bxS(g, BW + .8, .14, BD + .8, 0x3a3f46, 0, 0, 0, { ns: 1 }); bxS(g, BW, .12, BD, 0xe7e5e0, 0, .12, 0, { ns: 1 });
+    bxS(g, 14, .1, 5, 0xdcd8d0, 0, 0, BD / 2 + 2.9, { ns: 1 }); for (let i = 0; i < 6; i++) bxS(g, .1, .012, 4.6, 0xc9c4bb, -6 + i * 2.4, .1, BD / 2 + 2.9, { ns: 1 });
+    for (const s of [-1, 1]) { bxS(g, 2.6, .45, .7, 0x8a8d93, s * 5.6, .1, BD / 2 + 4.3); bxS(g, 2.6, .07, .7, 0xc8a27a, s * 5.6, .55, BD / 2 + 4.3, { ns: 1 }); }
+    bxS(g, 1.1, 2.6, .3, 0x1d1f22, 8.6, .1, BD / 2 + 4.4);
     planeT(textTex([['UFFICI', 30, 800, 38, null, '#f47b20'], [`${OD.CL.length} clienti`, 28, 700, 86, null, '#fff'], [`${OD.FR.length} fornitori`, 28, 700, 124, null, '#fff']], { bg: '#1d1f22', w: 200, h: 170, round: 10 }), .95, .8, g, 8.6, 1.9, BD / 2 + 4.56);
     // ---- interni (si vedono quando l'edificio si apre)
     const inner = grp(g, 0, 0, 0); inner.visible = false;
@@ -1671,9 +1706,9 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const glassI = new T.MeshLambertMaterial({ color: 0xc9dceb, transparent: true, opacity: .26, depthWrite: false }); OWN.push(glassI);
     const floorG = (fg, lvl) => {
       const B = new Batch(fg);
-      if (lvl) { bx(fg, BW, .22, BD, 0xdcdad5, 0, -.22, 0); bx(fg, BW + .02, .06, BD + .02, 0xf47b20, 0, -.08, 0, { ns: 1 }); }
-      bx(fg, BW - .3, .02, BD - .3, lvl ? 0xf3f1ec : 0xefece6, 0, .0, 0, { ns: 1 });
-      bx(fg, BW - .4, .012, 2.4, 0xdedad2, 0, .02, -.3, { ns: 1 });
+      if (lvl) { bxS(fg, BW, .22, BD, 0xdcdad5, 0, -.22, 0); bxS(fg, BW + .02, .06, BD + .02, 0xf47b20, 0, -.08, 0, { ns: 1 }); }
+      bxS(fg, BW - .3, .02, BD - .3, lvl ? 0xf3f1ec : 0xefece6, 0, .0, 0, { ns: 1 });
+      bxS(fg, BW - .4, .012, 2.4, 0xdedad2, 0, .02, -.3, { ns: 1 });
       // ali: clienti a sinistra, fornitori a destra
       for (const [x0, t, c] of [[-9, 'CLIENTI', 'rgba(244,123,32,.55)'], [9, 'FORNITORI', 'rgba(47,109,180,.5)']]) { const tx = textTex([[t, 70, 800, 60, null, c]], { w: 512, h: 120 }); const p = planeT(tx, 5.2, 1.2, fg, x0, .04, -.3, {}); p.rotation.x = -Math.PI / 2; }
       // uffici: 3 per fila, 2 file per ala
@@ -1708,7 +1743,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         B.add('rug', G.box, mat(0xd9cfc0), m4(0, .03, 2.2, 5.2, .015, 3.6));
         B.add('rec', G.box, mat(0xfafafa), m4(0, .55, -1.2, 3.4, 1.1, .7)); B.add('recf', G.box, mat(0xf47b20), m4(0, .5, -.84, 3.4, .9, .04)); B.add('rect', G.box, mat(0x2b2f35), m4(0, 1.12, -1.2, 3.6, .05, .9));
         B.add('mon', G.box, mat(0x1d1f22), m4(.7, 1.35, -1.4, .55, .34, .03)); B.add('scr', G.box, new T.MeshBasicMaterial({ color: 0x9fc9e8 }), m4(.7, 1.35, -1.38, .5, .28, .01));
-        bx(f0, 5.4, 2.8, .25, 0x1d1f22, 0, 0, -5.9); planeT(textTex([[C.orgName().slice(0, 28), 46, 800, 70, null, '#fff'], ['Benvenuti', 26, 600, 128, null, '#f47b20']], { w: 768, h: 180 }), 5, 1.17, f0, 0, 1.75, -5.76);
+        bxS(f0, 5.4, 2.8, .25, 0x1d1f22, 0, 0, -5.9); planeT(textTex([[C.orgName().slice(0, 28), 46, 800, 70, null, '#fff'], ['Benvenuti', 26, 600, 128, null, '#f47b20']], { w: 768, h: 180 }), 5, 1.17, f0, 0, 1.75, -5.76);
         for (const s of [-1, 1]) { B.add('sofa', G.box, mat(0x3f4a5a), m4(s * 1.6, .3, 3.6, 1.8, .45, .8)); B.add('sofb', G.box, mat(0x3f4a5a), m4(s * 1.6, .65, 3.95 * 1, 1.8, .5, .2)); B.add('pot', G.cyl, mat(0xc9c4bb), m4(s * 2.6, .35, -4.6, .5, .7, .5)); B.add('leaf', G.sph, mat(0x5e9e4a), m4(s * 2.6, 1.3, -4.6, 1.0, 1.5, 1.0)); }
         B.add('ctab', G.cyl, mat(0xfafafa), m4(0, .25, 2.6, 1.1, .05, 1.1));
         for (let i = -1; i <= 1; i++) { B.add('turn', G.box, mat(0x8e959e), m4(i * 1.1, .5, 1.1, .18, 1.0, .9)); B.add('gw', G.box, glassI, m4(i * 1.1 + .38, .65, 1.1, .55, .55, .03)); }
@@ -1720,7 +1755,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
         B.add('mtab', G.box, mat(0xfafafa), m4(0, .74, 0, 1.4, .06, 5)); B.add('mtl', G.box, mat(0x2b2f35), m4(0, .37, 0, .5, .72, 4));
         for (let i = 0; i < 4; i++) for (const s of [-1, 1]) B.add('mch', G.box, mat(0xffffff), m4(s * 1.05, .5, -1.8 + i * 1.2, .45, .08, .45), s < 0 ? 0xf47b20 : 0x2f6db4);
         const OPN = OD.CL.reduce((s, e) => s + e.open, 0), OPF = OD.FR.reduce((s, e) => s + e.open, 0);
-        bx(f1, .1, 1.5, 2.6, 0x1d1f22, -2.6, .9, 0); const sc = planeT(textTex([['SALA RIUNIONI', 26, 800, 36, null, '#f47b20'], [`Da incassare ${C.eur0(OPN)}`, 28, 700, 84, null, '#fff'], [`Da pagare ${C.eur0(OPF)}`, 28, 700, 126, null, '#fff']], { bg: '#1d1f22', w: 400, h: 170, round: 10 }), 2.4, 1.02, f1, -2.53, 1.65, 0, { ry: Math.PI / 2 });
+        bxS(f1, .1, 1.5, 2.6, 0x1d1f22, -2.6, .9, 0); const sc = planeT(textTex([['SALA RIUNIONI', 26, 800, 36, null, '#f47b20'], [`Da incassare ${C.eur0(OPN)}`, 28, 700, 84, null, '#fff'], [`Da pagare ${C.eur0(OPF)}`, 28, 700, 126, null, '#fff']], { bg: '#1d1f22', w: 400, h: 170, round: 10 }), 2.4, 1.02, f1, -2.53, 1.65, 0, { ry: Math.PI / 2 });
         sc.renderOrder = 2;
       }
       const ims = B.flush(); Object.values(ims).forEach(im => { im.castShadow = false; });
@@ -1729,7 +1764,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const anc = [[f0, -9, 'Clienti', 'piano terra'], [f0, 9, 'Fornitori', 'piano terra'], [f1, -9, 'Clienti', '1° piano'], [f1, 9, 'Fornitori', '1° piano']].map(([fg, x, t2, s2]) => { const a = new T.Object3D(); a.position.set(x, 3.9, -6.3); fg.add(a); return { a, t: t2, s: s2, kd: x < 0 ? 'cli' : 'for' }; });
     // ---- facciata in vetro, fasce, pensilina, insegna (svaniscono quando si apre)
     const fac = grp(g, 0, 0, 0), FB = new Batch(fac), H2 = FH * 2 + .1;
-    for (const [w, d, x, z] of [[BW, .16, 0, BD / 2], [BW, .16, 0, -BD / 2], [.16, BD, BW / 2, 0], [.16, BD, -BW / 2, 0]]) mesh(G.box, glassF, x, .24 + H2 / 2, z, fac, { s: [w, H2, d] });
+    for (const [w, d, x, z] of [[BW, .16, 0, BD / 2], [BW, .16, 0, -BD / 2], [.16, BD, BW / 2, 0], [.16, BD, -BW / 2, 0]]) meshS(G.box, glassF, x, .24 + H2 / 2, z, fac, { s: [w, H2, d] });
     for (let x = -BW / 2; x <= BW / 2 + .01; x += 2.5) for (const z of [BD / 2 + .1, -BD / 2 - .1]) FB.add('mul', G.box, frameF, m4(x, .24 + H2 / 2, z, .14, H2, .12));
     for (let z = -BD / 2; z <= BD / 2 + .01; z += 2.6) for (const x of [BW / 2 + .1, -BW / 2 - .1]) FB.add('mul', G.box, frameF, m4(x, .24 + H2 / 2, z, .12, H2, .14));
     for (const y of [.24 + FH, .24 + H2]) { FB.add('band', G.box, frameF, m4(0, y, BD / 2 + .12, BW + .3, .42, .12)); FB.add('band', G.box, frameF, m4(0, y, -BD / 2 - .12, BW + .3, .42, .12)); FB.add('band', G.box, frameF, m4(BW / 2 + .12, y, 0, .12, .42, BD + .3)); FB.add('band', G.box, frameF, m4(-BW / 2 - .12, y, 0, .12, .42, BD + .3)); }
@@ -1842,21 +1877,21 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     const roomOut = !!side && !(side[0] === 'L' && D.gas); // a sinistra c'è il parco mezzi: niente camion fuori
     const nd = side ? clamp(Math.floor((Dl - frontRes - 1) / 6.2), 1, 4) : 0, doors = [];
     if (roomOut && nd) { const z0 = -Dl / 2 + .2, z1 = -Dl / 2 + 3.4 + (nd - 1) * 6.2 + 3.1; const ap = mesh(G.box, mat(0x575c64), wallX - 9.6, .075, (z0 + z1) / 2, q, { s: [18.6, .15, z1 - z0], ns: 1 }); ap.receiveShadow = true;
-      for (let i = 0; i <= nd; i++) bx(q, 16, .012, .14, 0xf4f4f2, wallX - 9.2, .15, -Dl / 2 + 3.4 + (i - .5) * 6.2, { ns: 1 }); }
+      for (let i = 0; i <= nd; i++) bxS(q, 16, .012, .14, 0xf4f4f2, wallX - 9.2, .15, -Dl / 2 + 3.4 + (i - .5) * 6.2, { ns: 1 }); }
     for (let i = 0; i < nd; i++) {
       const zc = -Dl / 2 + 3.4 + i * 6.2, r = R2[i] && R2[i].age <= 7 ? R2[i] : null; doors.push({ zc, r });
-      for (const s of [-1, 1]) { bx(q, .3, 3.3, .26, 0x1b1d20, wallX + .15, .5, zc + s * 1.95); B.add('bol', G.cyl, mat(0xf2c418), m4(wallX + .55, 1.05, zc + s * 2.35, .2, 1.1, .2)); B.add('bolc', G.cyl, mat(0x2b2f35), m4(wallX + .55, 1.62, zc + s * 2.35, .21, .06, .21)); }
-      bx(q, .32, .32, 4.2, 0x1b1d20, wallX + .16, 3.55, zc);
-      mesh(G.cyl, mat(0xd8dbe0), wallX + .4, 3.62, zc, q, { s: [.46, 3.7, .46], rx: Math.PI / 2 });
-      if (r) { bx(q, .04, 3.0, 3.5, 0x23262b, wallX + .05, .52, zc, { ns: 1 }); // portone alzato: si vede il rimorchio
+      for (const s of [-1, 1]) { bxS(q, .3, 3.3, .26, 0x1b1d20, wallX + .15, .5, zc + s * 1.95); B.add('bol', G.cyl, mat(0xf2c418), m4(wallX + .55, 1.05, zc + s * 2.35, .2, 1.1, .2)); B.add('bolc', G.cyl, mat(0x2b2f35), m4(wallX + .55, 1.62, zc + s * 2.35, .21, .06, .21)); }
+      bxS(q, .32, .32, 4.2, 0x1b1d20, wallX + .16, 3.55, zc);
+      meshS(G.cyl, mat(0xd8dbe0), wallX + .4, 3.62, zc, q, { s: [.46, 3.7, .46], rx: Math.PI / 2 });
+      if (r) { bxS(q, .04, 3.0, 3.5, 0x23262b, wallX + .05, .52, zc, { ns: 1 }); // portone alzato: si vede il rimorchio
         const P0 = new Batch(q); palletStack(P0, wallX + 1.05, .56, zc - .5, .9, r.col, 3, r.key); palletStack(P0, wallX + 1.05, .56, zc + .5, .55, r.col, 3, r.key); const pi = P0.flush(); Object.values(pi).forEach(im => { im.userData.k = { t: 'ricl', key: r.key, id: it.id }; im.userData.eid = it.id; pick.push(im); });
-      } else mesh(G.box, M.door, wallX + .05, .5 + 1.5, zc, q, { s: [.04, 3.0, 3.5] });
+      } else meshS(G.box, M.door, wallX + .05, .5 + 1.5, zc, q, { s: [.04, 3.0, 3.5] });
       // rampa livellatrice con bordi gialli e neri
-      bx(q, 2.4, .06, 2.3, 0x9ba1a8, wallX + 1.35, .5, zc, { ns: 1 }); for (const s of [-1, 1]) bx(q, 2.4, .07, .14, M.haz, wallX + 1.35, .5, zc + s * 1.08, { ns: 1 });
-      bx(q, .16, .07, 2.3, M.haz, wallX + 2.6, .5, zc, { ns: 1 });
-      if (r) bx(q, .5, .05, 2.2, 0x7d848d, wallX + .05, .52, zc, { ns: 1, rz: .08 });
+      bxS(q, 2.4, .06, 2.3, 0x9ba1a8, wallX + 1.35, .5, zc, { ns: 1 }); for (const s of [-1, 1]) bxS(q, 2.4, .07, .14, M.haz, wallX + 1.35, .5, zc + s * 1.08, { ns: 1 });
+      bxS(q, .16, .07, 2.3, M.haz, wallX + 2.6, .5, zc, { ns: 1 });
+      if (r) bxS(q, .5, .05, 2.2, 0x7d848d, wallX + .05, .52, zc, { ns: 1, rz: .08 });
       // semaforo e cartello a bandiera con il numero della porta
-      bx(q, .18, .5, .28, 0x2b2f35, wallX + .2, 2.2, zc - 2.35, { ns: 1 });
+      bxS(q, .18, .5, .28, 0x2b2f35, wallX + .2, 2.2, zc - 2.35, { ns: 1 });
       B.add(r ? 'lgOn' : 'lgOff', G.sph, MB(r ? 0x2cbf5d : 0x5b6068), m4(wallX + .31, 2.55, zc - 2.35, .1, .1, .1));
       B.add(r ? 'lrOff' : 'lrOn', G.sph, MB(r ? 0x5b6068 : 0xe8432a), m4(wallX + .31, 2.32, zc - 2.35, .1, .1, .1));
       sign(textTex([['R' + (i + 1), 92, 800, 70, null, '#fff'], [r ? 'IN SCARICO' : 'LIBERA', 26, 700, 140, null, 'rgba(255,255,255,.88)']], { bg: r ? '#f47b20' : '#3a3f46', w: 256, h: 180, round: 22 }), .95, .67, wallX + (side[0] === 'B' ? .1 : .9), 3.35, zc - 2.6);
@@ -1866,7 +1901,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
       if (r && roomOut) supTruck(q, r, wallX - 9.34, zc, Math.PI, { t: 'ricl', key: r.key, id: it.id }, it.id);
       const hb = new T.Mesh(G.box, M.hit); hb.scale.set(3, 3.4, 4.4); hb.position.set(wallX + 1.5, 2.2, zc); hb.userData.k = r ? { t: 'ricl', key: r.key, id: it.id } : { t: 'zone', z: 'ric', id: it.id }; hb.userData.eid = it.id; q.add(hb); pick.push(hb);
     }
-    if (side) { bx(q, .22, .013, Dl - frontRes - .6, M.haz, wallX + AP + .55, .542, -frontRes / 2, { ns: 1 }); }
+    if (side) { bxS(q, .22, .013, Dl - frontRes - .6, M.haz, wallX + AP + .55, .542, -frontRes / 2, { ns: 1 }); }
     // ---- corsie di sosta: un arrivo per corsia (pallet, cartello, codice a terra)
     const LW = 2.5, LD = 3.0, xL0 = wallX + AP + 1.6, xL1 = W / 2 - .7, zL0 = -Dl / 2 + 1.1, zL1 = Dl / 2 - frontRes - .6;
     const cols = Math.max(1, Math.floor((xL1 - xL0 + .8) / (LW + .8))), rows = Math.max(1, Math.floor((zL1 - zL0 + .9) / (LD + .9)));
@@ -1895,25 +1930,25 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     // ---- accettazione: bancone, bilancia a pavimento, pallet vuoti, pressa per cartoni, roll
     if (frontRes) {
       const zF = Dl / 2 - frontRes / 2 - .2, xA = wallX + AP + 2.6;
-      bx(q, W - 1.2, .012, .9, 0x4caf6a, (wallX + W / 2) / 2 + .4, .542, Dl / 2 - frontRes + .2, { ns: 1 });
+      bxS(q, W - 1.2, .012, .9, 0x4caf6a, (wallX + W / 2) / 2 + .4, .542, Dl / 2 - frontRes + .2, { ns: 1 });
       for (let x = wallX + 1; x < W / 2 - 1; x += 1.4) B.add('wk', G.box, mat(0xffffff), m4(x, .558, Dl / 2 - frontRes + .2, .55, .01, .12));
       // bancone con monitor, stampante etichette e lettore
-      bx(q, 3.2, .08, 1.3, 0xfafafa, xA, 1.32, zF); for (const sx of [-1.5, 1.5]) for (const sz of [-.55, .55]) bx(q, .07, .82, .07, 0x8e959e, xA + sx, .5, zF + sz);
-      bx(q, 3.1, .5, .05, 0xf47b20, xA, .85, zF + .6, { ns: 1 });
-      bx(q, .07, .3, .07, 0x2b2f35, xA - .6, 1.4, zF - .35); const mon = textTex([['ACCETTAZIONE', 30, 800, 34, null, '#f47b20'], [String(R2.filter(r => r.age <= 0).length), 64, 800, 92, null, '#ffffff'], ['arrivi oggi', 22, 600, 140, null, 'rgba(255,255,255,.7)']], { bg: '#1d2025', w: 256, h: 170, round: 10 });
-      bx(q, .95, .62, .05, 0x1d2025, xA - .6, 1.62, zF - .38); sign(mon, .86, .55, xA - .6, 1.93, zF - .35);
-      bx(q, .34, .26, .32, 0xeeeeec, xA + .55, 1.4, zF - .3); bx(q, .24, .02, .14, 0xffffff, xA + .55, 1.66, zF - .18, { ns: 1 });
-      bx(q, .1, .06, .26, 0x2b2f35, xA + 1.05, 1.4, zF); bx(q, .08, .16, .08, 0xf47b20, xA + 1.05, 1.44, zF + .12);
-      bx(q, .5, .32, .4, 0xe3b073, xA + .1, 1.4, zF + .15);
+      bxS(q, 3.2, .08, 1.3, 0xfafafa, xA, 1.32, zF); for (const sx of [-1.5, 1.5]) for (const sz of [-.55, .55]) bxS(q, .07, .82, .07, 0x8e959e, xA + sx, .5, zF + sz);
+      bxS(q, 3.1, .5, .05, 0xf47b20, xA, .85, zF + .6, { ns: 1 });
+      bxS(q, .07, .3, .07, 0x2b2f35, xA - .6, 1.4, zF - .35); const mon = textTex([['ACCETTAZIONE', 30, 800, 34, null, '#f47b20'], [String(R2.filter(r => r.age <= 0).length), 64, 800, 92, null, '#ffffff'], ['arrivi oggi', 22, 600, 140, null, 'rgba(255,255,255,.7)']], { bg: '#1d2025', w: 256, h: 170, round: 10 });
+      bxS(q, .95, .62, .05, 0x1d2025, xA - .6, 1.62, zF - .38); sign(mon, .86, .55, xA - .6, 1.93, zF - .35);
+      bxS(q, .34, .26, .32, 0xeeeeec, xA + .55, 1.4, zF - .3); bxS(q, .24, .02, .14, 0xffffff, xA + .55, 1.66, zF - .18, { ns: 1 });
+      bxS(q, .1, .06, .26, 0x2b2f35, xA + 1.05, 1.4, zF); bxS(q, .08, .16, .08, 0xf47b20, xA + 1.05, 1.44, zF + .12);
+      bxS(q, .5, .32, .4, 0xe3b073, xA + .1, 1.4, zF + .15);
       const op = person(q, xA - .2, zF + 1.0, 0x39a85a, null, { mode: 'work' }); op.rotation.y = Math.PI; movers.push({ o: op, t: 'bob', ph: 1.3 });
       // bilancia a pavimento
-      const xS = xA + 4.2; bx(q, 1.7, .07, 1.7, 0x8e959e, xS, .5, zF, { ns: 1 }); for (const s of [-1, 1]) { bx(q, 1.9, .08, .12, M.haz, xS, .5, zF + s * .91, { ns: 1 }); bx(q, .12, .08, 1.9, M.haz, xS + s * .91, .5, zF, { ns: 1 }); }
-      bx(q, .07, 1.3, .07, 0x2b2f35, xS + 1.25, .5, zF - .7); bx(q, .5, .32, .14, 0x2b2f35, xS + 1.25, 1.75, zF - .7);
+      const xS = xA + 4.2; bxS(q, 1.7, .07, 1.7, 0x8e959e, xS, .5, zF, { ns: 1 }); for (const s of [-1, 1]) { bxS(q, 1.9, .08, .12, M.haz, xS, .5, zF + s * .91, { ns: 1 }); bxS(q, .12, .08, 1.9, M.haz, xS + s * .91, .5, zF, { ns: 1 }); }
+      bxS(q, .07, 1.3, .07, 0x2b2f35, xS + 1.25, .5, zF - .7); bxS(q, .5, .32, .14, 0x2b2f35, xS + 1.25, 1.75, zF - .7);
       sign(textTex([['0,0 kg', 50, 700, 40, null, '#ff5a3c']], { bg: '#121416', w: 192, h: 80, round: 8 }), .42, .18, xS + 1.25, 1.92, zF - .62);
       // pallet vuoti impilati, pressa per cartoni, roll
       const xP = W / 2 - 1.6; for (let k = 0; k < 9; k++) palletStack(B, xP, .505 + k * .145, zF - 1.2, 0, 0, 1, null);
-      bx(q, 1.5, 2.3, 1.2, 0x8e959e, xP - 2.6, .5, zF + 1.1); bx(q, 1.52, .3, 1.22, 0xf47b20, xP - 2.6, 2.5, zF + 1.1); bx(q, .9, .7, .03, 0x2b3440, xP - 2.6, 1.3, zF + 1.71, { ns: 1 });
-      bx(q, 1.1, .8, .75, 0xc9a273, xP - 2.6, .5, zF - .6); for (const s of [-.25, .25]) bx(q, 1.12, .82, .04, 0x3a3f46, xP - 2.6, .49, zF - .6 + s, { ns: 1 });
+      bxS(q, 1.5, 2.3, 1.2, 0x8e959e, xP - 2.6, .5, zF + 1.1); bxS(q, 1.54, .34, 1.24, 0xf47b20, xP - 2.6, 2.5, zF + 1.1); bxS(q, .9, .7, .03, 0x2b3440, xP - 2.6, 1.3, zF + 1.725, { ns: 1 });
+      bxS(q, 1.1, .8, .75, 0xc9a273, xP - 2.6, .5, zF - .6); for (const s of [-.25, .25]) bxS(q, 1.12, .82, .04, 0x3a3f46, xP - 2.6, .49, zF - .6 + s, { ns: 1 });
       for (let k = 0; k < 3; k++) { const rx = xP - 5.2 - k * .95, rz = zF + 1.2; B.add('rcb', G.box, mat(0x8e959e), m4(rx, .6, rz, .8, .08, .7)); for (const sx of [-.38, .38]) for (const sz of [-.33, .33]) B.add('rcp', G.box, mat(0xb7bcc3), m4(rx + sx, 1.35, rz + sz, .03, 1.5, .03)); for (let y = .9; y < 2.1; y += .3) { B.add('rcw', G.box, mat(0xc5cad1), m4(rx, 0 + y + .5, rz - .33, .78, .015, .015)); B.add('rcw', G.box, mat(0xc5cad1), m4(rx - .38, y + .5, rz, .015, .015, .66)); } if (k < 2) B.add('rcc', G.box, M.carton, m4(rx, .95, rz, .6, .6, .5), mixC(0xffffff, PAL[k + 2], .35)); }
       for (const [cx, cc] of [[wallX + 1.2, 0x2f6db4], [wallX + 2, 0xf2c418]]) { B.add('bin2', G.cyl, mat(0xffffff), m4(cx, .5 + .5, Dl / 2 - 1, .6, 1, .6), cc); B.add('bin2l', G.cyl, mat(0x2b2f35), m4(cx, 1.03, Dl / 2 - 1, .64, .06, .64)); }
       const hb = new T.Mesh(G.box, M.hit); hb.scale.set(W - 1, 2, frontRes - 1); hb.position.set(0, 1, zF); hb.userData.k = { t: 'zone', z: 'ric', id: it.id }; hb.userData.eid = it.id; q.add(hb); pick.push(hb);
@@ -1955,7 +1990,7 @@ button.m3-chip{border:0;cursor:pointer;font:inherit}
     b(2.5, 2.9, 2.5, 0xffffff, 5.9, 2.25, 0); b(.08, 1.1, 2.2, 0x2b3440, 7.17, 3.05, 0); b(.6, 1.2, 2.3, 0xffffff, 6.9, 1.4, 0); b(.05, .5, 1.6, 0x2b2f35, 7.235, 1.3, 0);
     b(2.52, .45, 2.52, band, 5.9, 1.25, 0); for (const s2 of [-1, 1]) { b(.1, .55, .12, 0x1d1f22, 6.9, 3, s2 * 1.42); b(.5, .1, .7, 0x2b2f35, 4.6, .9, s2 * 1.1); }
     b(2.2, .25, 2.2, 0x2b2f35, 4.2, .9, 0);
-    [[-8, 1.05], [-6.9, 1.05], [-5.8, 1.05], [5.9, 1.05], [3.9, 1.05]].forEach(([wx, wz]) => { for (const s2 of [-1, 1]) { mesh(G.cyl, mat(0x1d1f22), wx, .58, s2 * wz, g, { s: [1.1, .38, 1.1], rx: Math.PI / 2 }); mesh(G.cyl, mat(0xc5cad1), wx, .58, s2 * (wz + .2), g, { s: [.5, .02, .5], rx: Math.PI / 2, ns: 1 }); } });
+    [[-8, 1.05], [-6.9, 1.05], [-5.8, 1.05], [5.9, 1.05], [3.9, 1.05]].forEach(([wx, wz]) => { for (const s2 of [-1, 1]) { meshS(G.cyl, mat(0x1d1f22), wx, .58, s2 * wz, g, { s: [1.1, .38, 1.1], rx: Math.PI / 2 }); meshS(G.cyl, mat(0xc5cad1), wx, .58, s2 * (wz + .2), g, { s: [.5, .02, .5], rx: Math.PI / 2, ns: 1 }); } });
     g.traverse(o => { if (o.isMesh) { o.userData.k = k; o.userData.eid = eid; pick.push(o); } });
     return g;
   }
