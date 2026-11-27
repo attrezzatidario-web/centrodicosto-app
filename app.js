@@ -274,7 +274,7 @@
     return 'w';
   }
   const SHEET_SEC = { Movimenti: 'attrezzatura', GLS: 'gls', Gasolio: 'gasolio', Fatture: 'fatture', Lyreco: 'lyreco', LyrecoFatture: 'lyreco', Amazon: 'amazon', AmazonArticoli: 'amazon', Clienti: 'clienti', Articoli: 'magazzino', MagMov: 'magazzino', DDT: 'vendite', Vendite: 'vendite', Incassi: 'incassi', Fornitori: 'fornitori', DocForn: 'fornitori', Dipendenti: 'dipendenti', Presenze: 'dipendenti', Assenze: 'dipendenti', Carte: 'notespese', Fondi: 'notespese', Spese: 'notespese', Estratti: 'notespese' };
-  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fi[fd]?:|^fiFatt$/.test(k) ? 'fischer' : /^cnt/.test(k) ? 'cantieri' : 'impostazioni'; };
+  const cfgSec = k => { k = String(k || ''); return /^pv:|^pvClienti$|^pvAcq|^pvLink|^pvList|^persList$|^servizi$|^pvRic/.test(k) ? 'preventivi' : /^tro:|^tr[A-Z]|^trClienti$|^torental/.test(k) ? 'torental' : /^fif?:|^fiFatt$/.test(k) ? 'fischer' : /^cnt/.test(k) ? 'cantieri' : 'impostazioni'; };
   const opSec = op => op.sheet === 'Config' ? cfgSec(op.row ? op.row.chiave : op.id) : (SHEET_SEC[op.sheet] || 'impostazioni');
   const AREA_MOD = { gls: 'gls', gas: 'gasolio', ly: 'lyreco', am: 'amazon' };
   // la demo ricorda sul dispositivo il settore scelto; gli altri gestionali lo prendono dal registro «Gestionali»
@@ -773,10 +773,10 @@
     });
   }
 
-  /* v183: Fischer — ordini al fornitore Fischer (v300: anche DDT e link di tracciamento) (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
+  /* v183: Fischer — ordini al fornitore Fischer (fischer.js, caricato quando serve; solo gestionale principale, settore veicoli) */
   async function renderFi() {
     const el = $('#fi-body'); if (!el) return;
-    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=300').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
+    if (!window.CDC_FI) { el.innerHTML = '<div class="card"><div class="empty">Carico Fischer…</div></div>'; try { await (renderFi.L || (renderFi.L = loadLib('fischer.js?v=189').catch(e => { renderFi.L = null; throw e; }))); } catch { el.innerHTML = '<div class="card"><div class="empty">Sezione non caricata: controlla la connessione e riprova</div></div>'; return; } }
     if (!window.CDC_FI || $('#fi-body') !== el) return;
     window.CDC_FI.render(el, {
       db: () => db, cfg, write, quiet: ops => { applyMany(ops); if (!isLocal()) queue.push(...ops); save(); flush(); },

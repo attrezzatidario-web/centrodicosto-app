@@ -2,15 +2,14 @@
    Si caricano le conferme d'ordine in PDF: vengono lette, controllate (righe, sconto, IVA, totale) e assegnate
    al piazzale di destinazione. Ogni ordine ha le sue movimentazioni e una spunta verde «fatturato» (come in GLS).
    Dati: Config «fi:<id>» = un ordine; «fif:<id>» = una fattura Fischer (righe con DDT e piazzale di destinazione);
-   «fiFatt» = { 'f<numero fattura>|<PIAZZALE>': 'AAAA-MM-GG' } = parte di fattura già fatturata al piazzale;
-   «fid:<id>» = un DDT Fischer (colli, segnacollo, corriere, link di tracciamento), collegato all'ordine dal numero d'ordine.
+   «fiFatt» = { 'f<numero fattura>|<PIAZZALE>': 'AAAA-MM-GG' } = parte di fattura già fatturata al piazzale.
    Uso: window.CDC_FI.render(el, ctx) — caricato da app.js quando si apre la sezione. */
 (() => {
   'use strict';
   const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
   const ST = { confermato: ['Confermato', ''], spedito: ['In consegna', 'soon'], consegnato: ['Consegnato', 'paid'], annullato: ['Annullato', 'late'] };
   const ST_K = Object.keys(ST);
-  let X = null, tab = 'pan', openId = '', openInv = '', openDdt = '', fq = '', fpz = '', fst = '', fqf = '', fpzf = '', fsf = '', gq = '', gback = '', lq = '', anim = true, lim = 40, limF = 40;
+  let X = null, tab = 'pan', openId = '', openInv = '', fq = '', fpz = '', fst = '', fqf = '', fpzf = '', fsf = '', gq = '', gback = '', lq = '', anim = true, lim = 40, limF = 40;
 
   /* ---------- lettura del PDF ---------- */
   const N = s => { s = String(s == null ? '' : s).trim(); if (!s) return 0; const neg = /-$/.test(s) || /^-/.test(s); const v = parseFloat(s.replace(/[^\d.,]/g, '').replace(/\./g, '').replace(',', '.')); return isNaN(v) ? 0 : (neg ? -v : v); };
@@ -177,79 +176,6 @@
     return A;
   }
 
-  /* ---------- DDT Fischer (documento di trasporto: articoli consegnati, colli, segnacollo, corriere) ---------- */
-  const isDdt = txt => /Documento di Trasporto/i.test(txt) && /fischer/i.test(txt) && /\bDDT:\s*\d+/i.test(txt);
-  const QTY = /^\d{1,3}(?:\.\d{3})*(?:,\d+)?$/;
-  function parseDdt(items) {
-    const all = lines(items), txt = all.map(l => l.t).join('\n');
-    if (!isDdt(txt)) throw new Error('non sembra un DDT Fischer');
-    const d = { righe: [], dest: {}, colliN: [] };
-    const left = lines(items, i => i.p === 1 && i.x < 290), right = lines(items, i => i.p === 1 && i.x >= 290);
-    const g = (re, from) => { for (const l of from) { const m = re.exec(l.t); if (m) return m; } return null; };
-    let m;
-    if ((m = g(/^Data:\s*(\d{2}\.\d{2}\.\d{4})/i, left))) d.data = dIso(m[1]);
-    if ((m = g(/Numero di Cliente:\s*(\d+)/i, left))) d.cliente = m[1];
-    if ((m = g(/^Consegna:\s*(\d+)/i, left))) d.consegna = m[1];
-    if ((m = g(/^DDT:\s*(\d+)/i, left))) d.num = m[1];
-    if (!d.num) throw new Error('numero del DDT non trovato');
-    if ((m = g(/No\.?\s*ordine\s+(\d+)(?:\s+(\d{2}\.\d{2}\.\d{4}))?/i, all))) { d.ord = m[1]; d.ordData = dIso(m[2] || ''); }
-    if ((m = g(/No\.?\s*ord\.? d.acquisto\s+(.+)$/i, right))) d.ordAcq = m[1].trim();
-    if ((m = g(/Peso totale:?\s*([\d.,]+)\s*KG/i, all))) d.peso = N(m[1]);
-    if ((m = g(/^Colli\s+(\d+)/i, left))) d.colli = +m[1];
-    if ((m = g(/^Corriere\s+(.+)$/i, right))) d.corriere = m[1].trim();
-    if ((m = g(/^Magazzino\s+(.*(?:fiit|Warehouse).*)$/i, right))) d.magForn = m[1].trim();
-    if ((m = g(/^Porto\s*\/?\s*Resa\s+(.+)$/i, all))) d.porto = m[1].trim();
-    if ((m = g(/^Causale del trasporto\s+(.+)$/i, all))) d.causale = m[1].trim();
-    if ((m = /SEGNACOLL[OI]:?\s*([\d,;\s]+)/i.exec(txt))) d.colliN = m[1].split(/[,;\s]+/).filter(s => /^\d{6,}$/.test(s));
-    const nt = all.find(l => /^CONSEGNARE\b/i.test(l.t)); if (nt) d.istr = nt.t;
-    // destinatario: colonna di destra sotto «Destinatario Merce», fino ad «Agente»
-    const i0 = right.findIndex(l => /Destinatario Merce/i.test(l.t)), D = [];
-    if (i0 >= 0) for (let k = i0 + 1; k < right.length && !/^(Agente|No\.|Corriere|Magazzino\s+fiit)/i.test(right[k].t); k++) if (!/^Spett\.?\s*le$/i.test(right[k].t)) D.push(right[k].t);
-    const last = D[D.length - 1], cm = last && /^(\d{5})\s+(.+?)\s+([A-Z]{2})$/.exec(last);
-    if (cm) { d.dest.cap = cm[1]; d.dest.citta = title(cm[2]); d.dest.prov = cm[3]; D.pop(); }
-    d.dest.rs = title(D[0] || '');
-    const mg = D.slice(1).find(t => /^\(?\s*(magazzino|mag\.?)\s+/i.test(t));
-    if (mg) d.dest.mag = title(mg.replace(/^\(?\s*(magazzino|mag\.?)\s+/i, '').replace(/\)\s*$/, '').trim());
-    d.dest.via = title(D.slice(1).filter(t => t !== mg).join(', '));
-    d.pz = d.dest.mag || d.dest.citta || d.dest.rs;
-    // righe: la colonna «Qta. res» (residuo) si separa dalla descrizione per posizione
-    let resX = null, r = null;
-    all.forEach(l => {
-      if (/COD\.?\s*ART/i.test(l.t)) { const h = l.it.find(i => /Qta/i.test(i.s)); resX = h ? h.x : null; r = null; return; }
-      if (/^\d{8}\s/.test(l.t)) {
-        let a = l.t, tk;
-        if (resX != null) { a = l.it.filter(i => i.x < resX - 4).map(i => i.s).join(' ').replace(/\s+/g, ' ').trim(); tk = l.it.filter(i => i.x >= resX - 4).map(i => i.s).join(' ').trim().split(/\s+/).filter(Boolean); }
-        else { const mm = /^(.+?)\s+(\S+)\s+([A-Z]{2})$/.exec(l.t); if (!mm) return; a = mm[1]; tk = [mm[2], mm[3]]; }
-        const um = tk[tk.length - 1], q = tk[tk.length - 2], res = tk.length >= 3 ? tk[tk.length - 3] : '';
-        const mm = /^(\d{8})\s+(.+)$/.exec(a);
-        if (!mm || !/^[A-Z]{2}$/.test(um || '') || !QTY.test(q || '')) return;
-        r = { cod: mm[1], desc: mm[2].trim().replace(/(\d)(con\b)/gi, '$1 $2').replace(/\.$/, ''), ean: '', q: N(q), um, res: QTY.test(res) ? N(res) : null };
-        d.righe.push(r); return;
-      }
-      if (r && /^\d{13}$/.test(l.t)) { r.ean = l.t; r = null; }
-    });
-    if (!d.righe.length) throw new Error('nessuna riga articolo trovata nel DDT');
-    d.id = 'd' + d.num;
-    return d;
-  }
-  // controlli sul DDT rispetto alla sua conferma d'ordine
-  function checksD(d) {
-    const A = [], o = ordOf(d);
-    if (!d.ord) A.push({ t: 'warn', h: 'Numero d\'ordine non indicato', d: 'Il DDT non riporta il numero d\'ordine Fischer: non si può collegare.' });
-    else if (!o) A.push({ t: 'warn', h: 'Conferma d\'ordine non caricata', d: `Il DDT si riferisce all'ordine ${d.ord}${d.ordData ? ' del ' + X.shortDate(d.ordData) : ''}: carica quella conferma e si collegano da soli.` });
-    else {
-      const oc = new Set(o.righe.map(x => x.cod)), fuori = d.righe.filter(x => !oc.has(x.cod));
-      if (fuori.length) A.push({ t: 'warn', h: 'Articoli non presenti nell\'ordine', d: `${fuori.map(x => x.cod + ' ' + x.desc).join(', ')}: non sono nella conferma ${o.num}.` });
-      const sh = shipped(o), over = o.righe.filter(x => (sh.get(x.cod) || 0) > x.q);
-      if (over.length) A.push({ t: 'warn', h: 'Spedito più del confermato', d: over.map(x => `${x.cod}: ${X.fmtNum(sh.get(x.cod), 0)} spediti su ${X.fmtNum(x.q, 0)} confermati`).join(' · ') });
-      if (pzKey(d.pz) && pzKey(o.pz) && pzKey(d.pz) !== pzKey(o.pz)) A.push({ t: 'warn', h: 'Destinazione diversa dall\'ordine', d: `Il DDT va a «${d.pz}», la conferma d'ordine a «${o.pz}».` });
-      const sl = shortOf(o, sh); if (sl.length && !over.length) A.push({ t: 'info', h: 'Consegna parziale', d: `Ancora da spedire: ${sl.map(x => `${x.cod} ${X.fmtNum(x.r, 0)} ${x.um}`).join(' · ')}.` });
-    }
-    if (d.colli && d.colliN.length && d.colliN.length !== d.colli) A.push({ t: 'warn', h: 'Segnacolli e colli non coincidono', d: `${plur(d.colli, 'collo dichiarato', 'colli dichiarati')}, ${plur(d.colliN.length, 'segnacollo', 'segnacolli')} sul documento.` });
-    if (!d.track) A.push({ t: 'info', h: 'Link di tracciamento da inserire', d: 'Incolla il link del corriere (es. Shippeo) nel campo Tracciamento.' });
-    return A;
-  }
-
   // controlli sui numeri e sui dati dell'ordine (calcolati ogni volta, non salvati)
   function checks(o) {
     const A = [], ids = o.righe || [];
@@ -262,7 +188,6 @@
     if (!same(r2(o.imponibile * o.ivaPct / 100), o.iva)) A.push({ t: 'warn', h: 'IVA diversa dal calcolo', d: `${o.ivaPct}% di ${num2(o.imponibile)} € = ${r2(o.imponibile * o.ivaPct / 100).toFixed(2)} €, sul documento ${num2(o.iva)} €.` });
     if (!same(r2(o.imponibile + o.iva), o.totale)) A.push({ t: 'warn', h: 'Totale diverso dal calcolo', d: `Imponibile + IVA = ${r2(o.imponibile + o.iva).toFixed(2)} €, sul documento ${num2(o.totale)} €.` });
     if (!o.cdc) A.push({ t: 'info', h: 'Piazzale da collegare', d: `«${o.pz}» non è collegato a un centro di costo: aprilo e scegli il piazzale.` });
-    { const L = ddtsOf(o), sh = shipped(o), sl = shortOf(o, sh); if (L.length && sl.length) A.push({ t: 'info', h: 'Consegna parziale', d: `Ancora da spedire: ${sl.map(x => `${x.cod} ${X.fmtNum(x.r, 0)} ${x.um}`).join(' · ')}.` }); }
     if (o.spese > 0) A.push({ t: 'info', h: 'Spese di spedizione', d: `${num2(o.spese)} € addebitati (ordine sotto la soglia di porto franco).` });
     if (/anticip/i.test(o.pagamento || '') && !evaso(o)) A.push({ t: 'info', h: 'Pagamento anticipato', d: 'Da pagare prima della spedizione.' });
     return A;
@@ -273,16 +198,6 @@
   const byKey = p => Object.keys(X.db().config || {}).filter(k => k.startsWith(p)).map(k => X.cfg(k)).filter(o => o && o.id);
   const list = () => byKey('fi:').filter(o => Array.isArray(o.righe)).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
   const listF = () => byKey('fif:').filter(o => Array.isArray(o.righe)).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
-  const listD = () => byKey('fid:').filter(o => Array.isArray(o.righe)).sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.num).localeCompare(String(a.num)));
-  const getD = id => { const o = X.cfg('fid:' + id); return o ? JSON.parse(JSON.stringify(o)) : null; };
-  const opSaveD = d => ({ action: 'upsert', sheet: 'Config', row: { chiave: 'fid:' + d.id, valore: JSON.stringify(d) } });
-  // collegamento DDT ↔ conferma d'ordine: il «No. ordine» del DDT è il numero della conferma
-  const ordOf = d => d && d.ord ? (X.cfg('fi:o' + d.ord) || null) : null;
-  const ddtsOf = o => (M ? M.D : listD()).filter(d => d.ord && d.ord === o.num);
-  const shipped = o => { const s = new Map(); ddtsOf(o).forEach(d => d.righe.forEach(x => s.set(x.cod, (s.get(x.cod) || 0) + x.q))); return s; };
-  const shortOf = (o, sh) => o.righe.map(x => ({ cod: x.cod, um: x.um, r: x.q - (sh.get(x.cod) || 0) })).filter(x => x.r > 0);
-  const shipSt = o => { if (!ddtsOf(o).length) return ''; return shortOf(o, shipped(o)).length ? 'parte' : 'tutto'; };
-  const okUrl = s => /^https?:\/\/[^\s"'<>]+$/i.test(String(s || '').trim());
   const FA = () => { const c = X.cfg('fiFatt'); return c && typeof c === 'object' && !Array.isArray(c) ? c : {}; };
   const get = id => { const o = X.cfg('fi:' + id); return o ? JSON.parse(JSON.stringify(o)) : null; };
   const getF = id => { const o = X.cfg('fif:' + id); return o ? JSON.parse(JSON.stringify(o)) : null; };
@@ -324,7 +239,7 @@
     return R;
   }
   const evaso = o => !!(M && M.rec[o.id] && M.rec[o.id].full);
-  const late = o => o.stato !== 'consegnato' && o.stato !== 'annullato' && !evaso(o) && shipSt(o) !== 'tutto' && nextDel(o) && nextDel(o) < X.today();
+  const late = o => o.stato !== 'consegnato' && o.stato !== 'annullato' && !evaso(o) && nextDel(o) && nextDel(o) < X.today();
 
   function model() {
     gm = new Map();
@@ -347,7 +262,7 @@
     const groups = [...G.values()].map(g => { const done = g.P.filter(p => p.done), todo = g.P.filter(p => !p.done); return { ...g, tot: r2(g.tot), done, todo, tTodo: r2(todo.reduce((s, p) => s + p.imp, 0)), nd: g.ddt.size }; })
       .sort((a, b) => b.tTodo - a.tTodo || b.tot - a.tot || a.n.localeCompare(b.n, 'it'));
     const scad = buy.filter(f => f.scad && f.scad[0] && f.scad[0].d >= X.today() && !/pagato/i.test(f.cond || '')).sort((a, b) => a.scad[0].d.localeCompare(b.scad[0].d));
-    return { D: listD(), O, FI, buy, acc, act, parts, groups, fa, rec: reconcile(act, buy), scad, arts: [...arts.values()].map(a => ({ ...a, n: a.f.size })).sort((a, b) => b.imp - a.imp), months: [...mm.values()].sort((a, b) => a.k.localeCompare(b.k)).slice(-12), spese: r2(buy.reduce((s, f) => s + f.righe.filter(x => x.spese).reduce((a, x) => a + x.importo, 0) * mulF(f), 0)) };
+    return { O, FI, buy, acc, act, parts, groups, fa, rec: reconcile(act, buy), scad, arts: [...arts.values()].map(a => ({ ...a, n: a.f.size })).sort((a, b) => b.imp - a.imp), months: [...mm.values()].sort((a, b) => a.k.localeCompare(b.k)).slice(-12), spese: r2(buy.reduce((s, f) => s + f.righe.filter(x => x.spese).reduce((a, x) => a + x.importo, 0) * mulF(f), 0)) };
   }
 
   /* ---------- pagina ---------- */
@@ -362,10 +277,10 @@
     X.sub(`acquisti dal fornitore Fischer · ${vat() ? 'IVA inclusa' : 'IVA esclusa'}`);
     M = model();
     const can = X.canWrite();
-    if (openId && !get(openId)) openId = ''; if (openInv && !getF(openInv)) openInv = ''; if (openDdt && !getD(openDdt)) openDdt = '';
-    const t = openInv || openId || openDdt ? 'ord' : tab, has = M.O.length || M.FI.length || M.D.length;
+    if (openId && !get(openId)) openId = ''; if (openInv && !getF(openInv)) openInv = '';
+    const t = openInv || openId ? 'ord' : tab, has = M.O.length || M.FI.length;
     el.innerHTML = `<div class="gl-bar"><div class="tr-seg tr-tabs" role="tablist"><button type="button" data-fitab="pan" class="${t === 'pan' ? 'on' : ''}">Panoramica</button><button type="button" data-fitab="ord" class="${t === 'ord' ? 'on' : ''}">Ordini</button><button type="button" data-fitab="lst" class="${t === 'lst' ? 'on' : ''}">Listino</button></div>
-      <div class="gl-act">${has ? exportMenu() : ''}${can ? '<button type="button" class="btn sm primary" id="fi-up" title="Conferme d&#39;ordine, DDT e fatture Fischer in PDF (anche uno zip con tutti)"><span class="lb-d">+ Carica conferme, DDT, fatture</span><span class="lb-m">+ Carica</span></button>' : ''}</div></div>
+      <div class="gl-act">${has ? exportMenu() : ''}${can ? '<button type="button" class="btn sm primary" id="fi-up"><span class="lb-d">+ Carica ordini</span><span class="lb-m">+ Carica</span></button>' : ''}</div></div>
       ${has || (X.cfg('fif:listino') || {}).v ? `<div class="pv-sb tro-sb fi-gs"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-gq" type="search" placeholder="Cerca in Fischer: ordine, DDT, piazzale, articolo, città…" value="${esc(gq)}" autocomplete="off"></div>` : ''}
       <input type="file" id="fi-file" accept="application/pdf,.pdf,application/zip,.zip" multiple hidden>
       <div class="fi-body${anim && !X.reduced() ? ' cc-anim' : ''}">${bodyHtml()}</div>`;
@@ -375,9 +290,9 @@
   function bodyHtml() {
     const can = X.canWrite();
     if (gq.trim()) return searchView();
-    return openDdt ? ddtDetail(getD(openDdt), can) : openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : tab === 'lst' ? lstView() : overview();
+    return openInv ? invDetail(getF(openInv), can) : openId ? detail(get(openId), can) : tab === 'ord' ? orders() : tab === 'lst' ? lstView() : overview();
   }
-  function after(el) { counters(el); if (!openId && !openInv && !openDdt && tab === 'pan' && !gq.trim()) { const f = el.querySelector('.fx-card'); if (f) fxCount(el); reveal(el); } if (!gq.trim() && !openId && !openInv && !openDdt && tab === 'pan') drawMap(); }
+  function after(el) { counters(el); if (!openId && !openInv && tab === 'pan' && !gq.trim()) { const f = el.querySelector('.fx-card'); if (f) fxCount(el); reveal(el); } if (!gq.trim() && !openId && !openInv && tab === 'pan') drawMap(); }
   function refreshBody(el) { const b = el.querySelector('.fi-body'); if (!b) return draw(el); b.classList.remove('cc-anim'); b.innerHTML = bodyHtml(); after(el); }
   const gq0 = () => gq.trim();
 
@@ -667,19 +582,18 @@
   function orders() {
     const O = M.O, FI = M.FI, q = fq.toLowerCase().split(/\s+/).filter(Boolean);
     const partsOf = f => M.parts.filter(p => p.f.id === f.id);
-    const E = [...M.D.filter(b => !ordOf(b)).map(b => ({ t: 'b', b, d: b.data, id: b.id })), ...O.map(o => ({ t: 'c', o, d: o.data, id: o.id })), ...FI.map(f => ({ t: 'd', f, d: f.data, id: f.id, P: partsOf(f) }))].sort((a, b) => String(b.d).localeCompare(String(a.d)) || String(b.id).localeCompare(String(a.id)));
+    const E = [...O.map(o => ({ t: 'c', o, d: o.data, id: o.id })), ...FI.map(f => ({ t: 'd', f, d: f.data, id: f.id, P: partsOf(f) }))].sort((a, b) => String(b.d).localeCompare(String(a.d)) || String(b.id).localeCompare(String(a.id)));
     const pzs = new Map(); M.groups.forEach(g => pzs.set(g.k, g.n)); O.forEach(o => pzs.set(gkey(o), gname(o)));
-    const hay = e => e.t === 'b' ? `${e.b.num} ${e.b.ord} ${e.b.pz} ${e.b.righe.map(x => x.desc + ' ' + x.cod).join(' ')}`.toLowerCase() : e.t === 'c' ? `${e.o.num} ${gname(e.o)} ${e.o.dest && e.o.dest.citta || ''} ${e.o.righe.map(x => x.desc + ' ' + x.cod).join(' ')} ${ddtsOf(e.o).map(d => d.num + ' ' + d.colliN.join(' ')).join(' ')}`.toLowerCase() : `${e.f.num} ${e.f.righe.map(x => `${x.desc} ${x.cod} ${x.pz} ${x.ddt}`).join(' ')}`.toLowerCase();
-    const is = (e, k) => k === 'ddtx' ? e.t === 'b' : k === 'sped' ? e.t === 'c' && shipSt(e.o) === 'parte' : k === 'dafatt' ? e.t === 'd' && e.f.tipo !== 'TD02' && e.P.some(p => !p.done) : k === 'fatt' ? e.t === 'd' && e.P.length > 0 && e.P.every(p => p.done) : k === 'attesa' ? e.t === 'c' && e.o.stato !== 'annullato' && !evaso(e.o) : k === 'conf' ? e.t === 'c' : k === 'acc' ? e.t === 'd' && e.f.tipo === 'TD02' : true;
-    const R = E.filter(e => (!q.length || q.every(w => hay(e).includes(w))) && (!fpz || (e.t === 'b' ? gOf(e.b.pz).k === fpz : e.t === 'c' ? gkey(e.o) === fpz : e.P.some(p => p.g.k === fpz))) && (!fst || is(e, fst)));
+    const hay = e => e.t === 'c' ? `${e.o.num} ${gname(e.o)} ${e.o.dest && e.o.dest.citta || ''} ${e.o.righe.map(x => x.desc + ' ' + x.cod).join(' ')}`.toLowerCase() : `${e.f.num} ${e.f.righe.map(x => `${x.desc} ${x.cod} ${x.pz} ${x.ddt}`).join(' ')}`.toLowerCase();
+    const is = (e, k) => k === 'dafatt' ? e.t === 'd' && e.f.tipo !== 'TD02' && e.P.some(p => !p.done) : k === 'fatt' ? e.t === 'd' && e.P.length > 0 && e.P.every(p => p.done) : k === 'attesa' ? e.t === 'c' && e.o.stato !== 'annullato' && !evaso(e.o) : k === 'conf' ? e.t === 'c' : k === 'acc' ? e.t === 'd' && e.f.tipo === 'TD02' : true;
+    const R = E.filter(e => (!q.length || q.every(w => hay(e).includes(w))) && (!fpz || (e.t === 'c' ? gkey(e.o) === fpz : e.P.some(p => p.g.k === fpz))) && (!fst || is(e, fst)));
     const cnt = k => E.filter(e => is(e, k)).length;
     return `<div class="card"><div class="card-h"><h3>Ordini Fischer</h3><span class="muted small">${plur(E.length, 'ordine', 'ordini')}</span></div>
       ${E.length ? `<div class="pv-sb tro-sb"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="fi-q" type="search" placeholder="Cerca per numero, DDT, piazzale o articolo…" value="${esc(fq)}" autocomplete="off"></div>
-      <div class="fi-chips">${[['', 'Tutti', E.length], ['dafatt', 'Da fatturare ai piazzali', cnt('dafatt')], ['fatt', 'Fatturati ai piazzali', cnt('fatt')], ['conf', "Conferme d'ordine", cnt('conf')], ['attesa', 'Conferme in attesa', cnt('attesa')], ['acc', 'Acconti', cnt('acc')], ['sped', 'Spediti in parte', cnt('sped')], ['ddtx', 'DDT senza conferma', cnt('ddtx')]].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="chip-f${fst === k ? ' on' : ''}" data-fist="${k}">${l}<em>${n}</em></button>`).join('')}</div>
+      <div class="fi-chips">${[['', 'Tutti', E.length], ['dafatt', 'Da fatturare ai piazzali', cnt('dafatt')], ['fatt', 'Fatturati ai piazzali', cnt('fatt')], ['conf', "Conferme d'ordine", cnt('conf')], ['attesa', 'Conferme in attesa', cnt('attesa')], ['acc', 'Acconti', cnt('acc')]].filter(([k, , n]) => !k || n).map(([k, l, n]) => `<button type="button" class="chip-f${fst === k ? ' on' : ''}" data-fist="${k}">${l}<em>${n}</em></button>`).join('')}</div>
       ${pzs.size > 1 ? `<div class="fi-chips">${[['', 'Tutti i piazzali'], ...[...pzs.entries()].sort((a, b) => a[1].localeCompare(b[1], 'it'))].map(([k, l]) => `<button type="button" class="chip-f${fpz === k ? ' on' : ''}" data-fipz="${esc(k)}">${esc(l)}</button>`).join('')}</div>` : ''}
       <div class="fi-ol">${R.slice(0, lim).map(e => {
-        if (e.t === 'b') return ddtRow(e.b);
-        if (e.t === 'c') { const o = e.o, st = ST[o.stato] || ST.confermato, rc = M.rec[o.id], w = checks(o).some(c => c.t === 'warn'); return `<button type="button" class="fi-or" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>conferma d'ordine · ${plur(o.righe.length, 'riga', 'righe')}${ddtsOf(o).length ? ' · DDT ' + ddtsOf(o).map(d => esc(d.num)).join(', ') : ''}${nextDel(o) && o.stato !== 'consegnato' && !evaso(o) ? ' · consegna ' + esc(X.shortDate(nextDel(o))) : ''}</small></span><span class="fi-cs"><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${shipChip(o)}${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc && rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(oV(o))}</b></button>`; }
+        if (e.t === 'c') { const o = e.o, st = ST[o.stato] || ST.confermato, rc = M.rec[o.id], w = checks(o).some(c => c.t === 'warn'); return `<button type="button" class="fi-or" data-fiopen="${esc(o.id)}"><span class="pv-qn"><b>${esc(o.num)}</b><small>${esc(X.shortDate(o.data))}</small></span><span class="pv-qc"><b>${esc(gname(o))}</b><small>conferma d'ordine · ${plur(o.righe.length, 'riga', 'righe')}${nextDel(o) && o.stato !== 'consegnato' && !evaso(o) ? ' · consegna ' + esc(X.shortDate(nextDel(o))) : ''}</small></span><span class="fi-cs"><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc && rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(oV(o))}</b></button>`; }
         const f = e.f, P = e.P, nd = P.filter(p => !p.done).length, w = checksF(f).some(c => c.t === 'warn'), names = [...new Set(P.map(p => p.g.n))];
         return `<button type="button" class="fi-or" data-fiinv="${esc(f.id)}"><span class="pv-qn"><b>${esc(f.num)}</b><small>${esc(X.shortDate(f.data))}</small></span><span class="pv-qc"><b>${esc(f.tipo === 'TD02' ? 'Deposito a garanzia' : names.join(' · ') || '—')}</b><small>${plur(f.righe.length, 'riga', 'righe')}${f.scad && f.scad[0] ? ' · scade ' + esc(X.shortDate(f.scad[0].d)) : ''}</small></span><span class="fi-cs">${f.tipo === 'TD02' ? '<span class="chip">Acconto</span>' : !P.length ? '' : nd ? `<span class="chip soon">${nd === P.length ? 'Da fatturare' : `${nd} da fatturare`}</span>` : '<span class="chip paid">Fatturato</span>'}${w ? '<span class="chip late">Controlla</span>' : ''}</span><b class="pv-qt">${money(fV(f))}</b></button>`;
       }).join('') || '<div class="empty">Nessun ordine trovato</div>'}${R.length > lim ? `<button type="button" class="btn sm" id="fi-more" style="margin:12px auto 0;display:block">Mostra altri</button>` : ''}</div>`
@@ -689,13 +603,12 @@
   function detail(o, can) {
     const st = ST[o.stato] || ST.confermato, rc = M.rec[o.id] || { fatt: [], ids: [] }, C = checks(o), cd = X.cdcs();
     const kv = [['Piazzale', gname(o)], ['Destinatario', o.dest.rs], ['Indirizzo', [o.dest.via, [o.dest.cap, o.dest.citta, o.dest.prov].filter(Boolean).join(' ')].filter(Boolean).join(' · ')], ['Pagamento', o.pagamento], ['Corriere', o.corriere], ['Porto / resa', o.porto], ['Peso', o.peso ? X.fmtNum(o.peso, 3) + ' kg' : ''], ['Magazzino Fischer', o.magForn], ['N. cliente', o.cliente]].filter(([, v]) => v);
-    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Ordini</button><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${shipChip(o)}${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}<span class="pv-sp"></span>${o.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
+    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Ordini</button><span class="chip ${late(o) ? 'late' : st[1]}">${late(o) ? 'In ritardo' : st[0]}</span>${evaso(o) ? '<span class="chip paid">Evaso</span>' : rc.part ? '<span class="chip soon">Evaso in parte</span>' : ''}<span class="pv-sp"></span>${o.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
       <div class="card"><div class="card-h"><h3>Ordine ${esc(o.num)}</h3><span class="muted small">del ${esc(X.shortDate(o.data))}</span></div>
         <div class="fi-kv">${kv.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
         <div class="fi-act">${rc.fatt.length ? `<div class="fi-sel"><small>${evaso(o) ? 'Ordini consegnati collegati' : 'Consegne parziali'}</small><div class="fi-links">${rc.ids.map((id, i) => `<button type="button" class="chip-f" data-fiinv="${esc(id)}">${esc(rc.fatt[i])}</button>`).join('')}</div></div>` : '<div class="fi-sel"><small>Consegna</small><b class="fi-na">non ancora evaso</b></div>'}
           ${can ? `<label class="fi-sel"><small>Piazzale collegato</small><select id="fi-cdc"><option value="">— da collegare —</option>${cd.map(c => `<option value="${esc(c.cod)}"${o.cdc === c.cod ? ' selected' : ''}>${esc(c.n)}</option>`).join('')}</select></label>
           <div class="fi-sel"><small>Stato della consegna</small><div class="tr-seg">${ST_K.map(k => `<button type="button" data-fistato="${k}" class="${o.stato === k ? 'on' : ''}">${ST[k][0]}</button>`).join('')}</div></div>` : ''}</div></div>
-      ${shipCard(o, can)}
       <div class="card"><div class="card-h"><h3>Articoli</h3><span class="muted small">${plur(o.righe.length, 'riga', 'righe')}</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th><th>Prezzo ogni ${o.righe[0] ? X.fmtNum(o.righe[0].per, 0) : 100}${vat() ? ' + IVA' : ''}</th><th>Importo${vat() ? ' + IVA' : ''}</th><th>Consegna prevista</th></tr></thead><tbody>
         ${o.righe.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td>${X.fmtNum(x.q, 0)} ${esc(x.um)}</td><td>${money(x.prezzo * mulO(o))}</td><td><b>${money(x.importo * mulO(o))}</b></td><td>${x.consegna ? esc(X.shortDate(x.consegna)) : '—'}</td></tr>`).join('')}</tbody></table></div>
         <div class="fi-tot"><div><span>Importo righe</span><b>${money(o.importoRighe)}</b></div>${o.scontoImp ? `<div><span>Sconto di testata ${X.fmtNum(o.scontoPct, 2)}%</span><b>− ${money(o.scontoImp)}</b></div>` : ''}${o.spese ? `<div><span>Spese di spedizione</span><b>${money(o.spese)}</b></div>` : ''}<div><span>Imponibile</span><b>${money(o.imponibile)}</b></div><div><span>IVA ${X.fmtNum(o.ivaPct, 0)}%</span><b>${money(o.iva)}</b></div><div class="fi-tt"><span>Totale ordine</span><b>${money(o.totale)}</b></div></div></div>
@@ -704,38 +617,6 @@
       <div class="card"><div class="card-h"><h3>Movimentazioni</h3><span class="muted small">storico dell'ordine</span></div>
         <div class="fi-mv">${(o.mov || []).slice().reverse().map(v => `<div class="fi-mi"><i></i><span><b>${esc(v.n || (ST[v.st] || ST.confermato)[0])}</b><small>${esc(X.shortDate(v.d))}${v.st && v.n ? ' · ' + esc((ST[v.st] || [''])[0]) : ''}</small></span></div>`).join('') || '<div class="empty">Nessuna movimentazione</div>'}</div>
         ${can ? '<div class="fi-note"><input id="fi-note" type="text" placeholder="Aggiungi una nota (es. consegna parziale, DDT n. …)" autocomplete="off"><button type="button" class="btn sm" id="fi-note-add">Aggiungi</button></div>' : ''}</div>`;
-  }
-
-  /* ---------- spedizioni: DDT e tracciamento ---------- */
-  const shipChip = o => { const s = shipSt(o); return s === 'tutto' ? '<span class="chip paid">Spedito tutto</span>' : s === 'parte' ? '<span class="chip soon">Spedito in parte</span>' : ''; };
-  const carrier = s => title(String(s || '').split(',')[0].replace(/\s+S\.?\s?R\.?\s?L\.?$/i, '').trim());
-  const trkField = (k, x, can) => `<div class="fi-trk">${x.track ? `<a class="btn sm primary" href="${esc(x.track)}" target="_blank" rel="noopener noreferrer">Segui la spedizione ↗</a>` : '<small class="muted">Link di tracciamento non inserito</small>'}${can ? `<input type="url" data-fitrk="${k}:${esc(x.id)}" value="${esc(x.track || '')}" placeholder="Incolla qui il link di tracciamento (es. Shippeo)" autocomplete="off" aria-label="Link di tracciamento">` : ''}</div>`;
-  const ctlCard = (C, ok) => `<div class="card"><div class="card-h"><h3>Controlli</h3><span class="muted small">${C.some(c => c.t === 'warn') ? 'da verificare' : 'tutto torna'}</span></div>
-        ${C.length ? `<div class="gl-an">${C.map((c, i) => `<div class="ga-row ${c.t}" style="--d:${i * 60}ms"><span class="ci-ic"><svg viewBox="0 0 24 24">${c.t === 'warn' ? '<path d="M12 3 2 20h20zM12 10v4M12 17h.01"/>' : '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'}</svg></span><div class="ga-m"><b>${esc(c.h)}</b><span>${esc(c.d)}</span></div></div>`).join('')}</div>` : `<div class="empty">${ok}</div>`}</div>`;
-  function ddtRow(d) {
-    const o = ordOf(d), w = checksD(d).some(c => c.t === 'warn');
-    return `<button type="button" class="fi-or" data-fiddt="${esc(d.id)}"><span class="pv-qn"><b>DDT ${esc(d.num)}</b><small>${esc(X.shortDate(d.data))}</small></span><span class="pv-qc"><b>${esc(o ? gname(o) : gOf(d.pz).n)}</b><small>${[o ? '' : 'ordine ' + (d.ord || '—'), d.colli ? plur(d.colli, 'collo', 'colli') : '', carrier(d.corriere), plur(d.righe.length, 'articolo', 'articoli')].filter(Boolean).map(esc).join(' · ')}</small></span><span class="fi-cs">${o ? '' : '<span class="chip late">Conferma non caricata</span>'}${d.track ? '<span class="chip paid">Tracciamento</span>' : '<span class="chip">Senza tracciamento</span>'}${w && o ? '<span class="chip late">Controlla</span>' : ''}</span></button>`;
-  }
-  function shipCard(o, can) {
-    const L = ddtsOf(o), sh = shipped(o), st = shipSt(o);
-    return `<div class="card"><div class="card-h"><h3>Spedizioni</h3><span class="muted small">${L.length ? `${L.length} DDT · ${st === 'tutto' ? 'spedito tutto' : 'spedito in parte'}` : 'nessun DDT caricato'}</span></div>
-      ${L.length ? `<div class="fi-ol">${L.map(d => ddtRow(d) + trkField('d', d, can)).join('')}</div>
-      <div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Confermato</th><th>Spedito</th><th>Da spedire</th></tr></thead><tbody>${o.righe.map(x => { const q = sh.get(x.cod) || 0, r = x.q - q; return `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}</td><td>${X.fmtNum(x.q, 0)} ${esc(x.um)}</td><td><b>${X.fmtNum(q, 0)}</b></td><td>${r > 0 ? `<span class="chip soon">${X.fmtNum(r, 0)}</span>` : r < 0 ? `<span class="chip late">+${X.fmtNum(-r, 0)}</span>` : '<span class="chip paid">0</span>'}</td></tr>`; }).join('')}</tbody></table></div>`
-      : `<div class="empty">Quando arriva il DDT caricalo con «+ Carica»: si collega da solo a quest'ordine tramite il numero ${esc(o.num)}.</div>${trkField('o', o, can)}`}</div>`;
-  }
-  function ddtDetail(d, can) {
-    const o = ordOf(d), C = checksD(d), oq = new Map(o ? o.righe.map(x => [x.cod, x.q]) : []);
-    const kv = [['Piazzale', o ? gname(o) : gOf(d.pz).n], ['Destinatario', d.dest.rs], ['Indirizzo', [d.dest.via, [d.dest.cap, d.dest.citta, d.dest.prov].filter(Boolean).join(' ')].filter(Boolean).join(' · ')], ['Corriere', carrier(d.corriere)], ['Colli', d.colli ? String(d.colli) : ''], ['Peso', d.peso ? X.fmtNum(d.peso, 3) + ' kg' : ''], ['N. consegna Fischer', d.consegna], ['Porto / resa', d.porto], ['Causale', d.causale], ['Magazzino Fischer', d.magForn], ['N. cliente', d.cliente]].filter(([, v]) => v);
-    return `<div class="pv-back"><button type="button" class="btn sm" id="fi-back">‹ Ordini</button>${o ? '' : '<span class="chip late">Conferma non caricata</span>'}<span class="chip ${d.track ? 'paid' : ''}">${d.track ? 'Con tracciamento' : 'Senza tracciamento'}</span><span class="pv-sp"></span>${d.pdf ? '<button type="button" class="btn sm" id="fi-pdf">Apri PDF</button>' : ''}${can ? '<button type="button" class="btn sm st-btn-d" id="fi-del">Elimina</button>' : ''}</div>
-      <div class="card"><div class="card-h"><h3>DDT ${esc(d.num)}</h3><span class="muted small">del ${esc(X.shortDate(d.data))}</span></div>
-        <div class="fi-kv">${kv.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
-        <div class="fi-act"><div class="fi-sel"><small>Conferma d'ordine</small>${o ? `<div class="fi-links"><button type="button" class="chip-f" data-fiopen="${esc(o.id)}">Ordine ${esc(o.num)} del ${esc(X.shortDate(o.data))}</button></div>` : `<b class="fi-na">${d.ord ? 'ordine ' + esc(d.ord) + ' non ancora caricato' : 'non indicata'}</b>`}</div>
-          <div class="fi-sel"><small>Tracciamento</small>${trkField('d', d, can)}</div></div>
-        ${d.colliN.length ? `<div class="fi-sel"><small>Segnacollo</small><b>${d.colliN.map(esc).join(' · ')}</b></div>` : ''}
-        ${d.istr ? `<p class="muted small">${esc(d.istr)}</p>` : ''}</div>
-      <div class="card"><div class="card-h"><h3>Articoli consegnati</h3><span class="muted small">${plur(d.righe.length, 'riga', 'righe')}</span></div><div class="mx-wrap"><table class="mx"><thead><tr><th class="l">Codice</th><th class="l">Descrizione</th><th>Quantità</th>${o ? '<th>Nella conferma</th>' : ''}</tr></thead><tbody>
-        ${d.righe.map(x => `<tr><td class="l m2">${esc(x.cod)}</td><td class="l">${esc(x.desc)}${x.ean ? `<small class="fi-ean">EAN ${esc(x.ean)}</small>` : ''}</td><td><b>${X.fmtNum(x.q, 0)} ${esc(x.um)}</b></td>${o ? `<td>${oq.has(x.cod) ? X.fmtNum(oq.get(x.cod), 0) : '<span class="chip late">non c\'è</span>'}</td>` : ''}</tr>`).join('')}</tbody></table></div></div>
-      ${ctlCard(C, 'Articoli, quantità e destinazione coincidono con la conferma d\'ordine')}`;
   }
 
   /* ---------- zip (lettura locale, senza librerie) ---------- */
@@ -759,7 +640,7 @@
   /* ---------- azioni ---------- */
   const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768)); return btoa(s); };
   async function load(files) {
-    let ops = [], nD = 0, nO = 0, nF = 0, nUp = 0, nopdf = 0, warn = 0, last = null; const bad = [];
+    let ops = [], nO = 0, nF = 0, nUp = 0, nopdf = 0, warn = 0, last = null; const bad = [];
     const flush = () => { if (ops.length) { X.write(ops); ops = []; } };
     try {
       X.busy('Preparo i file…');
@@ -770,19 +651,7 @@
         try {
           X.busy(`Leggo ${i} di ${docs.length}…`);
           const u8 = new Uint8Array(await f.arrayBuffer()), items = await extract(u8), txt = lines(items).map(l => l.t).join('\n');
-          if (isDdt(txt)) {
-            const p = parseDdt(items), ex = X.cfg('fid:' + p.id), d2 = { ...p, nomeFile: f.name, track: ex ? ex.track || '' : '', pdf: ex ? ex.pdf || '' : '', creato: ex ? ex.creato : new Date().toISOString() };
-            if (!X.isLocal() && !d2.pdf) {
-              X.busy(`Salvo il PDF ${i} di ${docs.length} nel tuo Drive…`); nUp++;
-              try { d2.pdf = await X.api('uploadDoc', { name: `Fischer DDT ${d2.num} ${d2.data}.pdf`, mime: 'application/pdf', data: b64(u8) }); }
-              catch (e) { if (X.isAuth && X.isAuth(e)) throw e; nopdf++; }
-            }
-            ops.push(opSaveD(d2)); flush(); nD++; last = { ddt: d2.id };
-            // sulla conferma collegata: movimentazione e stato «In consegna»
-            const o0 = !ex && d2.ord ? get('o' + d2.ord) : null;
-            if (o0) { const sp = o0.stato === 'confermato'; if (sp) o0.stato = 'spedito'; o0.mov = [...(o0.mov || []), { d: X.today(), st: sp ? 'spedito' : '', n: `DDT ${d2.num} del ${X.shortDate(d2.data)} caricato${d2.colli ? ' · ' + plur(d2.colli, 'collo', 'colli') : ''}${d2.corriere ? ' · ' + carrier(d2.corriere) : ''}` }]; ops.push(opSave(o0)); flush(); }
-            if (checksD(d2).some(c => c.t === 'warn')) warn++;
-          } else if (isInvoice(txt)) {
+          if (isInvoice(txt)) {
             const p = parseInv(items), ex = X.cfg('fif:' + p.id), f2 = { ...p, nomeFile: f.name, pdf: ex ? ex.pdf || '' : '', creato: ex ? ex.creato : new Date().toISOString() };
             if (!X.isLocal() && !f2.pdf) {
               X.busy(`Salvo il PDF ${i} di ${docs.length} nel tuo Drive…`); nUp++;
@@ -794,7 +663,6 @@
             const p = parse(items), ex = X.cfg('fi:' + p.id);
             const o = { ...p, nomeFile: f.name, stato: ex ? ex.stato : 'confermato', mov: ex ? (ex.mov || []) : [{ d: X.today(), st: 'confermato', n: 'Conferma d\'ordine caricata' }], cdc: ex && ex.cdc ? ex.cdc : (X.guess(p.pz) || ''), pdf: ex ? ex.pdf || '' : '', creato: ex ? ex.creato : new Date().toISOString() };
             if (ex) o.mov = [...o.mov, { d: X.today(), st: o.stato, n: 'Conferma ricaricata e aggiornata' }];
-            else { const dd = listD().filter(x => x.ord === o.num); if (dd.length) { o.stato = 'spedito'; o.mov = [...o.mov, { d: X.today(), st: 'spedito', n: `Collegata ${dd.length === 1 ? 'al DDT' : 'ai DDT'} ${dd.map(x => x.num).join(', ')} già caricat${dd.length === 1 ? 'o' : 'i'}` }]; } }
             if (!X.isLocal() && !o.pdf) {
               X.busy(`Salvo il PDF ${i} di ${docs.length} nel tuo Drive…`); nUp++;
               try { o.pdf = await X.api('uploadDoc', { name: `Fischer ordine ${o.num} ${o.data}.pdf`, mime: 'application/pdf', data: b64(u8) }); }
@@ -806,12 +674,12 @@
         } catch (e) { if (X.isAuth && X.isAuth(e)) throw e; bad.push(`${f.name}: ${e.message}`); }
       }
     } finally { X.busy(); }
-    if (ops.length || nF || nO || nD) {
+    if (ops.length || nF || nO) {
       anim = true;
-      if (nF + nO + nD === 1 && last) { if (last.ddt) { openDdt = last.ddt; openId = openInv = ''; tab = 'ord'; } else if (last.inv) { openDdt = ''; openInv = last.inv; openId = ''; tab = 'fat'; } else { openDdt = ''; openId = last.ord; openInv = ''; tab = 'ord'; } } else { openId = ''; openInv = ''; openDdt = ''; tab = 'pan'; }
-      if (ops.length) flush(); else X.write([]); // ridisegna anche se tutto è già stato salvato a blocchi
+      if (nF + nO === 1 && last) { if (last.inv) { openInv = last.inv; openId = ''; tab = 'fat'; } else { openId = last.ord; openInv = ''; tab = 'ord'; } } else { openId = ''; openInv = ''; tab = 'pan'; }
+      flush();
     }
-    const parts = [nF ? plur(nF, 'ordine caricato', 'ordini caricati') : '', nO ? plur(nO, 'conferma d\'ordine caricata', 'conferme d\'ordine caricate') : '', nD ? plur(nD, 'DDT caricato', 'DDT caricati') : ''].filter(Boolean).join(' · ');
+    const parts = [nF ? plur(nF, 'ordine caricato', 'ordini caricati') : '', nO ? plur(nO, 'conferma d\'ordine caricata', 'conferme d\'ordine caricate') : ''].filter(Boolean).join(' · ');
     X.toast(parts ? `${parts}${warn ? ` · ${warn} da controllare` : ''}${nopdf ? ` · PDF non archiviato su Drive (${nopdf})` : ''}${bad.length ? ` · ${bad.length} non letti` : ''}` : `Non letto: ${bad[0] || 'file non valido'}`);
     if (bad.length && parts) setTimeout(() => X.toast('Non letti: ' + bad.slice(0, 3).join(' | ')), 2800);
   }
@@ -825,11 +693,10 @@
       const t = e.target, b = s => t.closest(s);
       let x;
       if (b('#fi-up') || b('#fi-up2')) return el.querySelector('#fi-file').click();
-      if ((x = b('[data-fitab]'))) { gq = gback = ''; tab = x.dataset.fitab; openId = ''; openInv = ''; openDdt = ''; anim = true; return draw(el); }
-      if ((x = b('[data-fiopen]'))) { if (gq.trim()) { gback = gq; gq = ''; } openId = x.dataset.fiopen; openInv = ''; openDdt = ''; tab = 'ord'; anim = true; return draw(el); }
-      if ((x = b('[data-fiinv]'))) { if (gq.trim()) { gback = gq; gq = ''; } openInv = x.dataset.fiinv; openId = ''; openDdt = ''; tab = 'ord'; anim = true; return draw(el); }
-      if ((x = b('[data-fiddt]'))) { if (gq.trim()) { gback = gq; gq = ''; } openDdt = x.dataset.fiddt; openId = ''; openInv = ''; tab = 'ord'; anim = true; return draw(el); }
-      if (b('#fi-back')) { openId = ''; openInv = ''; openDdt = ''; if (gback) { gq = gback; gback = ''; } anim = true; return draw(el); }
+      if ((x = b('[data-fitab]'))) { gq = gback = ''; tab = x.dataset.fitab; openId = ''; openInv = ''; anim = true; return draw(el); }
+      if ((x = b('[data-fiopen]'))) { if (gq.trim()) { gback = gq; gq = ''; } openId = x.dataset.fiopen; openInv = ''; tab = 'ord'; anim = true; return draw(el); }
+      if ((x = b('[data-fiinv]'))) { if (gq.trim()) { gback = gq; gq = ''; } openInv = x.dataset.fiinv; openId = ''; tab = 'ord'; anim = true; return draw(el); }
+      if (b('#fi-back')) { openId = ''; openInv = ''; if (gback) { gq = gback; gback = ''; } anim = true; return draw(el); }
       if ((x = b('[data-fist]'))) { fst = x.dataset.fist; lim = 40; return draw(el); }
       if ((x = b('[data-fipz]'))) { fpz = x.dataset.fipz; lim = 40; return draw(el); }
       if ((x = b('[data-fisf]'))) { fsf = x.dataset.fisf; limF = 40; return draw(el); }
@@ -838,7 +705,7 @@
       if (b('#fi-xb')) { const d = el.querySelector('#fi-xd'); d.hidden = !d.hidden; return; }
       if ((x = b('[data-fix]'))) { const k = x.dataset.fix; el.querySelector('#fi-xd').hidden = true; X.busy('Preparo il file…'); return (k === 'xlsx' ? exportXlsx() : exportPdf(k.slice(4))).then(() => X.busy(), err => { X.busy(); X.toast('Errore: ' + (err && err.message || err)); }); }
       if (!b('.fi-xm')) { const d = el.querySelector('#fi-xd'); if (d) d.hidden = true; }
-      if ((x = b('[data-ficdc]'))) { fpz = fpzf = x.dataset.ficdc; fst = fsf = ''; lim = limF = 40; gq = ''; openId = openInv = openDdt = ''; tab = 'ord'; anim = true; return draw(el); }
+      if ((x = b('[data-ficdc]'))) { fpz = fpzf = x.dataset.ficdc; fst = fsf = ''; lim = limF = 40; gq = ''; openId = openInv = ''; tab = 'ord'; anim = true; return draw(el); }
       if (b('[data-fiall2]')) { tab = 'ord'; fqf = gq; gq = ''; limF = 40; anim = true; return draw(el); }
       if ((x = b('[data-filst]'))) { lq = x.dataset.filst; gq = gback = ''; tab = 'lst'; anim = true; return draw(el); }
       if ((x = b('[data-filx]'))) { const c = x.dataset.filx; lstSave(v => { delete v[c]; }); return refreshBody(el); }
@@ -854,10 +721,8 @@
         if (confirm(`Segnare come fatturati i ${g.todo.length} ordini da fatturare di «${g.n}» (${pzTot(g.tTodo)})?`)) { const fa = { ...FA() }; g.todo.forEach(p => { fa[p.key] = X.today(); }); X.quiet([opFatt(fa)]); if (b('.fx-card')) fxSync(el); else draw(el); }
         return;
       }
-      if (b('#fi-pdf') && openDdt) { const d = getD(openDdt); return d && d.pdf && X.openDoc(d.pdf, `Fischer DDT ${d.num}`); }
       if (b('#fi-pdf')) { const o = openInv ? getF(openInv) : get(openId); return o && o.pdf && X.openDoc(o.pdf, openInv ? `Fischer ordine ${o.num}` : `Fischer ordine ${o.num}`); }
       if (b('#fi-del')) {
-        if (openDdt) { const d = getD(openDdt); if (d && confirm(`Eliminare il DDT ${d.num}?`)) { X.write([{ action: 'delete', sheet: 'Config', id: 'fid:' + d.id }]); openDdt = ''; X.toast('DDT eliminato'); } return; }
         if (openInv) { const f = getF(openInv); if (f && confirm(`Eliminare l\'ordine ${f.num}?`)) { const fa = { ...FA() }; Object.keys(fa).forEach(k => { if (k.startsWith(f.id + '|')) delete fa[k]; }); X.write([{ action: 'delete', sheet: 'Config', id: 'fif:' + f.id }, opFatt(fa)]); openInv = ''; X.toast('Ordine eliminato'); } return; }
         const o = get(openId); if (o && confirm(`Eliminare l'ordine ${o.num}?`)) { X.write([{ action: 'delete', sheet: 'Config', id: 'fi:' + o.id }]); openId = ''; X.toast('Ordine eliminato'); } return;
       }
@@ -866,14 +731,6 @@
     });
     el.addEventListener('change', e => {
       const t = e.target;
-      if (t.dataset && t.dataset.fitrk) {
-        const [k, id] = t.dataset.fitrk.split(':'), v = t.value.trim();
-        if (v && !okUrl(v)) { X.toast('Il link deve iniziare con https://'); return; }
-        const x = k === 'd' ? getD(id) : get(id); if (!x || (x.track || '') === v) return;
-        x.track = v; const ops = [k === 'd' ? opSaveD(x) : opSave(x)], o = k === 'd' ? (ordOf(x) ? get(ordOf(x).id) : null) : x;
-        if (o) { o.mov = [...(o.mov || []), { d: X.today(), st: '', n: `${v ? 'Link di tracciamento inserito' : 'Link di tracciamento tolto'}${k === 'd' ? ' · DDT ' + x.num : ''}` }]; if (k === 'd') ops.push(opSave(o)); else ops[0] = opSave(o); }
-        X.write(ops); X.toast(v ? 'Link di tracciamento salvato' : 'Link di tracciamento tolto'); return;
-      }
       if (t.id === 'fi-file') { const fs = [...t.files]; t.value = ''; if (fs.length) load(fs).catch(err => { X.busy(); X.toast('Errore: ' + (err && err.message || err)); }); return; }
       if (t.dataset && t.dataset.fi) {
         const o = { ...FA() }; if (t.checked) o[t.dataset.fi] = X.today(); else delete o[t.dataset.fi];
@@ -902,5 +759,5 @@
     });
   }
 
-  window.CDC_FI = { init: c => { X = c; }, render, parse, parseInv, parseDdt, isDdt, checksD, checksF, extract, checks, lines, isInvoice, unzip };
+  window.CDC_FI = { init: c => { X = c; }, render, parse, parseInv, checksF, extract, checks, lines, isInvoice, unzip };
 })();
